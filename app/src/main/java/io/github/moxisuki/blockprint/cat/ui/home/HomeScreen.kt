@@ -278,7 +278,7 @@ fun HomeScreen(
             dismissButton = { TextButton(onClick = { renameTarget = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
     sheetTarget?.let { bp ->
-        PcActionSheet(blueprint = bp, onDownloadOnly = { bridgeVm.requestDownload(bp.fileName) }, onViewOnly = { bridgeVm.requestDownload(bp.fileName) }, onDismiss = { sheetTarget = null })
+        PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName) }, onDismiss = { sheetTarget = null })
     }
 }
 

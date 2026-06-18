@@ -34,4 +34,4 @@ git clone https://github.com/moxisuki/blockprint-cat.git
 
 依赖 [blockprint-core](https://github.com/moxisuki/blockprint-core) 解析蓝图并生成 GLB 模型。
 
-配套 [PC 端模组](https://github.com/moxisuki/blockprint-mod) 实现局域网实时同步。
+配套 [PC 端模组]([moxisuki/blockprint-link](https://github.com/moxisuki/blockprint-link)) 实现局域网实时同步。

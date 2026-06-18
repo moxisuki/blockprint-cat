@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Bridge protocol uses ws:// to connect to a Minecraft mod on the
+         same LAN. Allow cleartext for all domains — this is a gaming tool,
+         not a banking app. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

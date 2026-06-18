@@ -1,0 +1,28 @@
+# Build
+/build/
+/app/build/
+/app/release/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Kotlin errors
+.kotlin/
+
+# Gradle
+.gradle/
+
+# Misc
+.opencode/
+.claude/
+
+# Local
+local.properties
+
+
+
+/tools

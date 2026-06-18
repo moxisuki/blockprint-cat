@@ -1,0 +1,512 @@
+<resources>
+    <string name="app_name">BlockPrint Cat</string>
+
+    <!-- Error messages -->
+    <string name="error_network">Network unavailable</string>
+    <string name="error_timeout">Request timed out</string>
+    <string name="error_cms_cloudflare">CMS site requires browser verification, please retry later</string>
+    <string name="error_http_code">HTTP error: %1$d</string>
+    <string name="error_unknown">Unknown error</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_theme_subtitle_light">Light mode</string>
+    <string name="settings_theme_subtitle_dark">Dark mode</string>
+    <string name="settings_theme_subtitle_system">Follow system</string>
+    <string name="settings_render_title">Blueprint Rendering</string>
+    <string name="settings_render_subtitle">Manage render resource packs and update sources</string>
+    <string name="settings_cache_title">Cache</string>
+    <string name="settings_cache_subtitle">Manage Room database and GLB model cache (persistent)</string>
+    <string name="settings_backup_title">Backup</string>
+    <string name="settings_backup_subtitle">Bundle local blueprints and save to Downloads</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_subtitle">BlockPrint Cat v1.0</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_subtitle_system">Follow system</string>
+    <string name="settings_language_subtitle_zh">简体中文</string>
+    <string name="settings_language_subtitle_en">English</string>
+
+    <!-- Top bar titles -->
+    <string name="nav_title_home">Blueprints</string>
+    <string name="nav_title_community">Community</string>
+    <string name="nav_title_detail_default">Blueprint</string>
+    <string name="nav_title_render">Rendering</string>
+    <string name="nav_title_preview">Preview</string>
+    <string name="nav_title_about">About</string>
+    <string name="nav_title_terms">Terms</string>
+    <string name="nav_title_community_detail">Community blueprint</string>
+    <string name="nav_title_community_login">Community login</string>
+    <string name="dialog_connect_pc_title">Connect PC</string>
+    <string name="nav_title_connection">Device Connection</string>
+    <string name="bridge_session_status_disconnected">Disconnected</string>
+    <string name="bridge_session_status_connecting">Connecting…</string>
+    <string name="bridge_session_status_connected">Connected</string>
+    <string name="bridge_section_devices">Discovered</string>
+    <string name="bridge_section_devices_empty">No devices. Scan or add one manually.</string>
+    <string name="bridge_section_paired">Paired</string>
+    <string name="bridge_section_paired_empty">No paired devices yet. Scan QR or manual connect to save.</string>
+    <string name="bridge_section_discovered">LAN Discovery</string>
+    <string name="bridge_section_discovered_empty">Devices on your network will appear here after scanning.</string>
+    <string name="bridge_section_manual">Manual Connection</string>
+    <string name="bridge_action_scan">Scan</string>
+    <string name="bridge_action_stop_scan">Stop Scan</string>
+    <string name="bridge_scanning_now">Scanning…</string>
+    <string name="bridge_no_devices">No devices found</string>
+    <string name="bridge_action_disconnect">Disconnect</string>
+    <string name="bridge_action_clear_log">Clear</string>
+    <string name="bridge_action_connect">Connect</string>
+    <string name="bridge_action_rename">Rename</string>
+    <string name="bridge_action_delete">Delete</string>
+    <string name="bridge_action_delete_confirm_title">Delete Paired Device?</string>
+    <string name="bridge_action_delete_confirm_body">You will need to re-enter the token to reconnect.</string>
+    <string name="bridge_rename_dialog_title">Rename Device</string>
+    <string name="bridge_field_host">Host</string>
+    <string name="bridge_field_port">Port</string>
+    <string name="bridge_field_token">Token</string>
+    <string name="nav_title_settings">Settings</string>
+    <string name="bottom_nav_home">Blueprints</string>
+    <string name="bottom_nav_community">Community</string>
+    <string name="bottom_nav_settings">Settings</string>
+    <string name="bottom_nav_connection">Connection</string>
+
+    <!-- HomeScreen -->
+    <string name="home_empty_title">No blueprints yet</string>
+    <string name="home_empty_with_folder">No blockprintCat subfolder yet, or no blueprint files inside</string>
+    <string name="home_empty_no_folder">Please pick a directory to store blueprints</string>
+    <string name="home_empty_folder_label">Selected: %1$s</string>
+    <string name="home_pick_folder">Pick blueprint folder</string>
+    <string name="home_rescan_folder">Change folder and rescan</string>
+    <string name="home_supported_formats">Supports .litematic / .schematic / .nbt formats</string>
+    <string name="home_pick_hint">Pick a parent directory that contains a blockprintCat subfolder</string>
+    <string name="home_subdir_hint">The app reads the blockprintCat/ subfolder under the chosen directory (created if absent)</string>
+    <string name="home_scanning">Scanning blueprints…</string>
+    <string name="home_connect_pc_hint">Connect a PC device via the top status bar first</string>
+    <string name="home_pc_empty_title">No blueprints on this PC yet</string>
+    <string name="home_pc_empty_hint">Place or save a new .litematic in-game to see it here</string>
+
+    <!-- BlueprintDetailScreen -->
+    <string name="detail_preview_button">Preview model</string>
+    <string name="detail_view_cached">View preview</string>
+    <string name="detail_regenerate">Regenerate</string>
+    <string name="detail_generate">Generate preview</string>
+    <string name="detail_perf_title">Performance notice</string>
+    <string name="detail_perf_msg">This blueprint has %1$d blocks (over 70,000); preview may stutter or OOM.\n\nContinue?</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="detail_no_vanilla_title">Missing vanilla resource pack</string>
+    <string name="detail_no_vanilla_msg">Vanilla resource pack (minecraft) is required for rendering.</string>
+    <string name="action_goto_download">Go to download</string>
+    <string name="detail_no_mod_title">Missing Mod assets</string>
+    <string name="detail_no_mod_msg_lead">The following Mod assets are missing, render may be incomplete:</string>
+    <string name="detail_no_mod_bullet">• %1$s</string>
+    <string name="detail_no_mod_msg_trail">You can still preview, but Mod blocks will not display correctly.</string>
+    <string name="detail_continue_anyway">Continue anyway</string>
+    <string name="detail_generating_title">Generating 3D preview</string>
+    <string name="detail_generating_progress">%1$d%% — %2$ds</string>
+    <string name="detail_meta_title">Information</string>
+    <string name="detail_meta_name">Name</string>
+    <string name="detail_meta_author">Author</string>
+    <string name="detail_meta_unknown">Unknown</string>
+    <string name="detail_meta_mc_version">Minecraft version</string>
+    <string name="detail_meta_format_version">Format version</string>
+    <string name="detail_meta_region_count">Regions</string>
+    <string name="detail_meta_block_count">Blocks (excluding air)</string>
+    <string name="detail_resource_status">Resource pack status</string>
+    <string name="detail_region_list">Regions</string>
+    <string name="detail_region_unnamed">Unnamed region</string>
+    <string name="detail_material_top10">Materials (top 10)</string>
+    <string name="detail_material_empty">No material data</string>
+
+    <!-- SettingsScreen - extended -->
+    <string name="theme_color_scheme">Color scheme</string>
+    <string name="theme_display_mode">Display mode</string>
+    <string name="theme_mode_system">System</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="theme_custom_color">Custom color</string>
+    <string name="action_confirm">OK</string>
+    <string name="theme_custom_title">Custom colors</string>
+    <string name="theme_primary">Primary</string>
+    <string name="theme_secondary">Secondary</string>
+    <string name="theme_preview">Preview</string>
+    <string name="backup_title">Backup blueprints</string>
+    <string name="backup_in_progress">Bundling…</string>
+    <string name="backup_done">Backup complete</string>
+    <string name="backup_failed">Backup failed: %1$s</string>
+    <string name="action_close">Close</string>
+    <string name="backup_file_count">Files: %1$d</string>
+    <string name="backup_size">Bundle size: %1$s</string>
+    <string name="backup_location">Saved to: Downloads root</string>
+    <string name="backup_desc">Bundle all local blueprints as a ZIP and save to device Downloads.</string>
+    <string name="backup_empty">No blueprints to back up</string>
+    <string name="backup_count_label">File count</string>
+    <string name="backup_size_label">Estimated size</string>
+    <string name="cache_room_title">Room database</string>
+    <string name="cache_room_stats">%1$d records · %2$s</string>
+    <string name="cache_calculating">Calculating…</string>
+    <string name="action_clear">Clear</string>
+    <string name="cache_clearing">Clearing…</string>
+    <string name="action_confirm_clear">Confirm clear</string>
+    <string name="cache_room_confirm_msg">Clear all blueprint metadata? This cannot be undone, but the SAF directory blueprints stay. They reappear on next refresh.</string>
+    <string name="cache_glb_title">GLB model cache</string>
+    <string name="cache_glb_stats">%1$d files · %2$s</string>
+    <string name="cache_glb_confirm_msg">Delete all generated 3D preview cache? They will be regenerated on next view.</string>
+    <string name="cache_note">Clearing cache does not affect blueprints in your SAF directory.</string>
+    <string name="community_dialog_title">MCS community account / Cookie management</string>
+    <string name="community_logged_in_with">Signed in (%1$s)</string>
+    <string name="community_logged_in_short">Signed in</string>
+    <string name="community_logged_out_short">Not signed in</string>
+    <string name="cookie_uuid">uuid</string>
+    <string name="cookie_user_auth">user_auth</string>
+    <string name="cookie_user_auth_required">user_auth (required)</string>
+    <string name="cookie_cf_clearance_optional">cf_clearance (optional)</string>
+    <string name="action_logout">Sign out</string>
+    <string name="cookie_manual">Enter cookies manually</string>
+    <string name="cookie_manual_hint">Enter manually (copy from browser DevTools)</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="dialog_delete_title">Confirm delete</string>
+    <string name="dialog_delete_msg">Delete %1$s? This cannot be undone.</string>
+    <string name="dialog_rename_title">Rename file</string>
+    <string name="dialog_rename_label">File name</string>
+    <string name="dialog_rename_preview">Will save as: %1$s</string>
+    <string name="about_tagline">Minecraft blueprint manager</string>
+    <string name="about_desc">Import, browse and manage litematic blueprints, with local storage and PC sync.</string>
+
+    <!-- CommunityScreen -->
+    <string name="community_search_hint">Search tags…</string>
+    <string name="community_filter_apply">Apply</string>
+    <string name="community_filter_clear_input">Clear input</string>
+    <string name="community_filter_clear">Clear filter</string>
+    <string name="community_filter_label">Filter: %1$s</string>
+    <string name="community_total_x">%1$d blueprints total</string>
+    <string name="community_loaded_x">%1$d loaded</string>
+    <string name="community_empty">No data</string>
+    <string name="community_cms_need_verify">CMS requires browser verification (Cloudflare)</string>
+    <string name="community_cms_open_verify">Open CMS site to verify</string>
+    <string name="community_cms_verify_hint">Reopen the CMS tab after verification</string>
+    <string name="disclaimer_title">⚠ Disclaimer</string>
+    <string name="disclaimer_intro">This community uses crawlers to fetch data from third-party sites.</string>
+    <string name="disclaimer_no_store">This app does not store, modify, or commercialize any third-party content.</string>
+    <string name="disclaimer_copyright">All blueprint copyrights belong to their original authors.</string>
+    <string name="disclaimer_license">Comply with the author\'s license when downloading.</string>
+    <string name="disclaimer_dmca">If infringement is involved, contact us to remove.</string>
+    <string name="disclaimer_consent">Using the community feature means you have read and agree.</string>
+    <string name="disclaimer_accept">I understand</string>
+    <string name="disclaimer_countdown">Please read (%1$d s)</string>
+    <string name="community_login_title">Sign in to mcschematic.top</string>
+    <string name="community_login_desc">Sign in via QQ to browse and download community blueprints</string>
+    <string name="community_login_qq">Sign in with QQ</string>
+
+    <!-- CommunityDetailScreen -->
+    <string name="cdl_download">Download</string>
+    <string name="cdl_downloaded">Downloaded</string>
+    <string name="cdl_downloading_pct">Downloading… %1$d%%</string>
+    <string name="cdl_redownload">Re-download</string>
+    <string name="cdl_cancel_download">Cancel download</string>
+    <string name="cdl_name">Name</string>
+    <string name="cdl_author">Author</string>
+    <string name="cdl_size">Size</string>
+    <string name="cdl_tags">Tags</string>
+    <string name="cdl_size_format">× %1$s</string>
+    <string name="cdl_no_value">—</string>
+    <string name="cdl_loading">Loading…</string>
+    <string name="cdl_no_desc">No description</string>
+    <string name="cdl_production">Production</string>
+    <string name="cdl_dependencies">Required mods</string>
+    <string name="cdl_stress">Stress: %1$s</string>
+    <string name="cdl_info_title">Blueprint info</string>
+    <string name="cdl_heat">Heat</string>
+    <string name="cdl_downloads">Downloads</string>
+    <string name="cdl_desc_label">Description</string>
+    <string name="cdl_requirements">Requirements (%1$d)</string>
+    <string name="cdl_requirements_zero">Requirements</string>
+    <string name="cdl_production_count">Production (%1$d)</string>
+    <string name="cdl_dependencies_label">Required mods</string>
+    <string name="cdl_stress_value">Stress: %1$s</string>
+    <string name="cdl_comments">Comments (%1$d)</string>
+    <string name="cdl_size_label">Size: %1$s</string>
+    <string name="cdl_downloading_name">Downloading %1$s</string>
+
+    <!-- RenderManagerScreen -->
+    <string name="render_title">Resources</string>
+    <string name="render_subtitle">Manage vanilla resources required for Minecraft 3D preview</string>
+    <string name="render_vanilla">Vanilla resource pack</string>
+    <string name="render_vanilla_installed">Installed v%1$s · %2$d files · %3$s</string>
+    <string name="render_mod_installed">Installed v%1$s · %2$d files · %3$s</string>
+    <string name="render_third_party_mod_label">Third-party Mod</string>
+    <string name="render_no_versions">No versions found</string>
+    <string name="render_no_results">No results</string>
+    <string name="render_installed">Installed</string>
+    <string name="render_not_installed">Not installed</string>
+    <string name="render_downloading">Downloading…</string>
+    <string name="render_redownload">Re-download</string>
+    <string name="render_recheck">Re-check</string>
+    <string name="render_check_update">Check update</string>
+    <string name="render_update">Update</string>
+    <string name="render_delete">Delete resources</string>
+    <string name="render_delete_confirm">Delete %1$s resources?</string>
+    <string name="render_mod">Mod resources</string>
+    <string name="render_install_mod">Install mod</string>
+    <string name="render_mod_search_hint">Search mods (e.g. Create)...</string>
+    <string name="action_search">Search</string>
+    <string name="render_mod_installing">Installing…</string>
+    <string name="action_install">Install</string>
+    <string name="render_resource_type">Resource type</string>
+    <string name="render_source">Source</string>
+    <string name="render_version">Version</string>
+    <string name="render_status">Status</string>
+    <string name="render_size">Size</string>
+    <string name="render_mirror">Mirror</string>
+    <string name="render_source_official">Official</string>
+    <string name="render_source_bmcl">BMCLAPI</string>
+    <string name="render_filter_all">All</string>
+    <string name="render_filter_vanilla">Vanilla</string>
+    <string name="render_filter_mod">Mod</string>
+    <string name="render_third_party_mod">Third-party mods</string>
+
+    <!-- BlueprintManagementScreen -->
+    <string name="mgmt_loading">Loading…</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_sync">Sync</string>
+    <string name="action_detail">Details</string>
+    <string name="mgmt_empty">No blueprints loaded yet</string>
+    <string name="mgmt_last_sync">Last sync: %1$s</string>
+    <string name="mgmt_file_size">File size: %1$s</string>
+    <string name="action_refresh">Refresh</string>
+
+    <!-- PreviewScreen -->
+    <string name="preview_loading">Loading…</string>
+    <string name="preview_failed">Failed to generate preview</string>
+
+    <!-- NamespaceCard -->
+    <string name="ns_installed">Installed</string>
+    <string name="ns_not_installed">Not installed</string>
+    <string name="ns_no_resources">No resources</string>
+    <string name="ns_install">Install</string>
+
+    <!-- CmsBypassOverlay -->
+    <string name="cms_verify_in_progress">CMS verification in progress…</string>
+    <string name="cms_verify_hint">Close this page after verification completes</string>
+
+    <!-- PcActionSheet -->
+    <string name="pc_action_download">Download to device</string>
+    <string name="pc_action_view">View online</string>
+
+    <!-- Bridge connection page — SessionCardBody -->
+    <string name="bridge_disconnected_title">Not Connected to PC</string>
+    <string name="bridge_disconnected_hint">Make sure the PC mod is running, scan for devices or use QR code</string>
+    <string name="bridge_action_qr_connect">QR Connect</string>
+    <string name="bridge_scanning_title">Scanning…</string>
+    <string name="bridge_scanning_hint_zero">Searching for devices on the network</string>
+    <string name="bridge_scanning_hint_count">%1$d device(s) found, connect from the list below</string>
+    <string name="bridge_connecting_title">Connecting…</string>
+    <string name="bridge_error_title">Connection Failed</string>
+    <string name="bridge_error_rescan">Scan Again</string>
+    <string name="bridge_error_dismiss">Dismiss</string>
+
+    <!-- Bridge connection page — ManualConnectPanel -->
+    <string name="bridge_port_hint">Default port 51234</string>
+    <string name="bridge_token_placeholder">Copy from PC mod interface</string>
+    <string name="bridge_disabled_hint">Please disconnect first</string>
+
+    <!-- Bridge connection page — PairedRow -->
+    <string name="bridge_edit_token">Edit Token</string>
+    <string name="bridge_edit_token_title">Edit Token</string>
+    <string name="bridge_edit_token_label">Enter new Token</string>
+    <string name="bridge_action_save">Save</string>
+    <string name="bridge_status_error">Error</string>
+
+    <!-- Bridge connection page — ErrorSheet -->
+    <string name="bridge_error_sheet_title">Connection Error</string>
+
+    <!-- Bridge connection page — ViewModel error messages -->
+    <string name="bridge_error_timeout">Connection timed out. Check Token and PC status.</string>
+    <string name="bridge_error_token">Invalid Token</string>
+    <string name="bridge_error_unknown">Unknown error</string>
+    <string name="bridge_error_import_failed">Import failed</string>
+
+    <!-- Bridge connection page — PC blueprint card -->
+    <string name="pc_card_blocks_label">Blocks: %1$s</string>
+
+    <!-- MainActivity snackbar messages -->
+    <string name="snackbar_downloading">Downloading: %1$s</string>
+    <string name="snackbar_downloaded">Downloaded: %1$s</string>
+    <string name="snackbar_download_failed">Download failed: %1$s</string>
+    <string name="snackbar_uploaded">Uploaded: %1$s</string>
+    <string name="snackbar_upload_failed">Upload failed: %1$s (%2$s)</string>
+    <string name="snackbar_disconnected">Disconnected</string>
+    <string name="snackbar_community_downloaded">Downloaded: %1$s</string>
+    <string name="nav_title_qr_scanner">Scan QR Code</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_sort_time">Sort by time</string>
+    <string name="cd_sort_hot">Sort by popularity</string>
+    <string name="cd_refresh">Refresh</string>
+    <string name="cd_logout">Logout</string>
+
+    <!-- HomeScreen -->
+    <string name="home_upload_progress">Uploading: %1$s</string>
+    <string name="home_read_file_failed">Read file failed: %1$s</string>
+    <string name="home_cd_import">Import blueprint</string>
+
+    <!-- BlueprintDetailScreen -->
+    <string name="detail_title_fallback">Blueprint detail</string>
+    <string name="detail_load_failed">Load failed</string>
+    <string name="detail_no_materials">No material data</string>
+
+    <!-- NamespaceCard -->
+    <string name="ns_cd_installed">Installed</string>
+    <string name="ns_cd_not_installed">Not installed</string>
+    <string name="ns_goto_install">Install</string>
+
+    <!-- DetailViewModel error messages -->
+    <string name="detail_error_bp_missing">This blueprint no longer exists, it may have been removed</string>
+    <string name="detail_error_bp_removed">This blueprint has been removed</string>
+
+    <!-- CommunityScreen -->
+    <string name="community_disclaimer_consent_text">I understand (%1$d s)</string>
+    <string name="community_cd_clear_input">Clear input</string>
+    <string name="community_cd_apply">Apply</string>
+    <string name="community_filter_value">Filter: %1$s</string>
+    <string name="community_cd_clear_filter">Clear filter</string>
+    <string name="community_total_count">%1$d blueprints total</string>
+    <string name="community_loaded_count">%1$d loaded</string>
+
+    <!-- CommunityDetailScreen -->
+    <string name="cdl_cd_cover">Cover</string>
+    <string name="cdl_cd_preview">Preview image</string>
+    <string name="cdl_loading_fallback">(loading…)</string>
+
+    <!-- CmsBypassOverlay -->
+    <string name="cms_done_back">Verification complete, go back</string>
+    <string name="cms_skip">Skip verification</string>
+
+    <!-- RenderManagerScreen -->
+    <string name="render_not_installed_hint">Not installed — download vanilla Minecraft textures, models and language files</string>
+    <string name="render_fetching_versions">Fetching version info…</string>
+    <string name="render_downloading_pct">Downloading client.jar %1$d%%</string>
+    <string name="render_extracting">Extracting assets (%1$d files)</string>
+    <string name="render_error">Error: %1$s</string>
+    <string name="render_description">Vanilla resources are extracted from client.jar (models/blockstates/textures/lang), Mod resources are downloaded from Modrinth and extracted.</string>
+    <string name="render_mod_label">%1$s Mod resources</string>
+    <string name="render_mod_no_resource_pack">Installed · no resource pack</string>
+    <string name="render_mod_installed_stats">Installed · v%1$s · %2$d files · %3$s</string>
+    <string name="render_add_mod">+ Add Mod resources</string>
+    <string name="render_section_version">Select version</string>
+    <string name="render_section_search_results">Search results</string>
+    <string name="render_search_mod">Search mods</string>
+    <string name="render_version_count">%1$d versions</string>
+    <string name="render_result_count">%1$d results</string>
+    <string name="render_cd_back">Back</string>
+    <string name="render_cd_back_short">Back</string>
+    <string name="render_cd_search_mod">Search mods</string>
+
+    <!-- PreviewScreen -->
+    <string name="mode_orbit">Orbit</string>
+    <string name="mode_drag">Drag</string>
+    <string name="mode_walk">Walk</string>
+    <string name="light_day">Day</string>
+    <string name="light_dusk">Dusk</string>
+    <string name="light_night">Night</string>
+    <string name="light_studio">Studio</string>
+    <string name="preview_error_unknown">Unknown error</string>
+    <string name="preview_render_failed">Render failed</string>
+    <string name="preview_resource_missing">Render failed: resource pack may be missing.\nGo to Settings → Blueprint Rendering to download resource packs.</string>
+    <string name="preview_render_failed_with_msg">Render failed: %1$s</string>
+    <string name="cd_reset">Reset</string>
+    <string name="cd_grid">Grid</string>
+    <string name="cd_layer">Layer</string>
+    <string name="cd_fullscreen">Fullscreen</string>
+    <string name="layer_panel_title">Layer</string>
+    <string name="layer_all">All</string>
+    <string name="layer_show_all">Show All</string>
+
+    <!-- BlueprintManagementScreen -->
+    <string name="mgmt_cd_back">Back</string>
+    <string name="mgmt_cd_load">Load blueprint</string>
+    <string name="mgmt_rename_will_save">Will save as: %1$s</string>
+    <string name="mgmt_empty_hint">Click the + button at bottom right to load the first blueprint</string>
+    <string name="mgmt_meta_line">Author: %1$s  |  Regions: %2$d  |  Blocks: %3$s</string>
+    <string name="mgmt_cd_detail">Detail</string>
+    <string name="mgmt_cd_rename">Rename</string>
+    <string name="mgmt_cd_delete">Delete</string>
+    <string name="mgmt_load_failed">Load failed</string>
+    <string name="mgmt_rename_failed">Rename failed</string>
+
+    <!-- SettingsScreen -->
+    <string name="settings_community_card_title">Community Configuration</string>
+    <string name="settings_community_subtitle_on">Enabled</string>
+    <string name="settings_community_subtitle_off">Disabled</string>
+    <string name="nav_title_community_settings">Community Configuration</string>
+    <string name="community_config_enable_title">Enable community feature</string>
+    <string name="community_config_enable_subtitle">When off, the Community tab is hidden in the bottom bar. Downloaded community blueprints are not affected.</string>
+    <string name="community_section_mcs">MCS community</string>
+    <string name="community_section_cms">CMS community</string>
+    <string name="community_section_cms_status_none">No cookies saved</string>
+    <string name="community_section_cms_status_count">%1$d cookie(s) saved</string>
+    <string name="community_section_cms_hint">Complete Cloudflare verification on the CMS Community page first; cookies will be saved here automatically.</string>
+    <string name="community_section_cms_clear">Clear CMS cookies</string>
+    <string name="settings_community_no_nick">Signed in (no nickname)</string>
+    <string name="settings_community_nick">Signed in: %1$s</string>
+    <string name="settings_community_not_logged_in">Not signed in</string>
+    <string name="backup_file_count_x">Files: %1$d</string>
+    <string name="backup_size_x">Bundle size: %1$s</string>
+    <string name="backup_location_x">Saved to: Downloads root</string>
+
+    <!-- CommunitySettingsScreen -->
+    <string name="cs_status_title">MCS Login Status</string>
+    <string name="cs_signed_in_nick">Signed in to mcschematic.top: %1$s</string>
+    <string name="cs_signed_in">Signed in to mcschematic.top</string>
+    <string name="cs_not_signed_in">Not signed in to mcschematic.top</string>
+    <string name="cs_logout">Sign out</string>
+    <string name="cs_manual_cookie">Set cookies manually</string>
+    <string name="cs_cancel_edit">Cancel</string>
+    <string name="cs_user_auth_label">user_auth (required)</string>
+    <string name="cs_cf_clearance_label">cf_clearance (optional)</string>
+    <string name="cs_save_cookie">Save cookies</string>
+    <string name="cs_how_to_get">How to get cookies</string>
+    <string name="cs_how_to_get_1">Sign in to mcschematic.top via QQ in the Community page; cookies will be saved automatically.</string>
+    <string name="cs_how_to_get_2">Open mcschematic.top in your PC browser, sign in, then press F12 → Application → Cookies → mcschematic.top, and paste the uuid, user_auth, cf_clearance values into "Set cookies manually" above.</string>
+
+    <!-- AboutScreen link titles -->
+    <string name="about_link_mcs">MCS Schematics</string>
+    <string name="about_link_cms">CMS Schematics</string>
+    <string name="about_link_bmcl">BMCLAPI Mirror</string>
+    <string name="about_link_modrinth">Modrinth</string>
+    <string name="about_link_github">GitHub Repository</string>
+
+    <!-- TermsGate -->
+    <string name="terms_gate_title">Terms of use</string>
+
+    <!-- QrScannerScreen -->
+    <string name="qr_torch">Torch</string>
+    <string name="qr_hint">Point your PC\'s QR code at the scan frame</string>
+    <string name="qr_recognized">Recognized</string>
+    <string name="qr_unrecognized">Unrecognized QR code</string>
+    <string name="qr_camera_title">Camera permission required</string>
+    <string name="qr_camera_denied">Camera permission denied</string>
+    <string name="qr_camera_request">Scanning QR codes requires the camera.\nOnly enabled when you actively scan.</string>
+    <string name="qr_grant_permission">Grant permission</string>
+    <string name="qr_open_settings">Open system settings</string>
+
+    <!-- TermsGate -->
+    <string name="terms_at_bottom">—— Bottom reached ——</string>
+    <string name="terms_scroll_to_bottom">Scroll to the bottom to continue</string>
+    <string name="terms_accept">I have read and agree</string>
+    <string name="terms_decline_exit">Disagree and quit</string>
+
+    <!-- Theme dialog (Dynamic App Icon) -->
+    <string name="theme_dialog_title">Theme &amp; appearance</string>
+    <string name="theme_section_display">Display mode</string>
+    <string name="theme_section_color">Color scheme</string>
+    <string name="theme_section_icon">App icon</string>
+    <string name="theme_section_custom">Custom colors</string>
+    <string name="theme_icon_hint">The launcher icon may take 1-2 seconds to update; some launchers require an app restart.</string>
+    <string name="icon_variant_v1">v1</string>
+    <string name="icon_variant_v2">v2</string>
+    <string name="icon_variant_v3">v3</string>
+    <string name="icon_variant_v4">v4</string>
+    <string name="cd_icon_selected">Selected</string>
+</resources>

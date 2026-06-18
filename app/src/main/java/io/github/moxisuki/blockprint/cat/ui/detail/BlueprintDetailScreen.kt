@@ -1,0 +1,619 @@
+package io.github.moxisuki.blockprint.cat.ui.detail
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.res.stringResource
+import io.github.moxisuki.blockprint.cat.R
+import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
+import io.github.moxisuki.blockprint.cat.data.blueprint.FullBlueprint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager
+import io.github.moxisuki.blockprint.core.MinecraftVersions
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import io.github.moxisuki.blockprint.cat.data.IconIndexResolver
+import io.github.moxisuki.blockprint.cat.glb.GlbGenerator
+import io.github.moxisuki.blockprint.cat.data.vanilla.LangManager
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+
+@Composable
+fun BlueprintDetailScreen(
+    uuid: String,
+    navController: NavController,
+    onTitleChange: (String) -> Unit,
+    viewModel: DetailViewModel = hiltViewModel(),
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uuid) {
+        viewModel.load(uuid)
+    }
+
+    // 同步标题到外层 TopAppBar
+    LaunchedEffect(uiState.fullBlueprint?.meta?.displayName) {
+        onTitleChange(uiState.fullBlueprint?.meta?.displayName ?: "蓝图详情")
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
+
+    when {
+        uiState.isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        uiState.fullBlueprint == null -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = uiState.error ?: "加载失败",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        else -> {
+            val bp = uiState.fullBlueprint!!
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // 预览按钮 — 含资源检查 + 进度对话框，详见 PreviewButton
+                item { PreviewButton(bp = bp, navController = navController) }
+
+                // 基本信息 Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(stringResource(R.string.detail_meta_title), style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
+                            DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
+                            DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
+                            DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
+                            DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
+                            DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
+                        }
+                    }
+                }
+
+                // 资源包状态
+                item { NamespaceCard(bp = bp, onNavigate = { ns -> navController.navigate(NavRoutes.renderWithMod(ns)) }) }
+
+                // 区域列表
+                if (bp.raw.regions.isNotEmpty()) {
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(stringResource(R.string.detail_region_list), style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                    }
+                    items(bp.raw.regions, key = { it.name }, contentType = { "region" }) { region ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            ListItem(
+                                headlineContent = { Text(region.name.ifEmpty { stringResource(R.string.detail_region_unnamed) }) },
+                                supportingContent = {
+                                    Text("${region.width} × ${region.height} × ${region.depth}")
+                                },
+                                trailingContent = {
+                                    Text(formatNumber(region.width * region.height * region.depth))
+                                },
+                                leadingContent = {
+                                    Icon(Icons.Default.ViewInAr, contentDescription = null)
+                                },
+                            )
+                        }
+                    }
+                }
+
+                // 材料统计 Card 标题
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(stringResource(R.string.detail_material_top10), style = MaterialTheme.typography.titleMedium)
+                            if (bp.materials.isEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "无材料数据",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (bp.materials.isNotEmpty()) {
+                    items(bp.materials) { (name, count) ->
+                        MaterialRow(name = name, count = count)
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
+        }
+    }
+}
+
+/** 预览按钮 — 含资源检查 + 大蓝图确认 + 进度对话框。手机/Pad 共用。 */
+@Composable
+private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
+    val ctx = LocalContext.current
+    val generator = remember { RenderResourceManager.generator }
+    val assetsDir = remember { java.io.File(ctx.filesDir, "blockprintcat/render_assets") }
+
+    val requiredNs = remember(bp.raw) {
+        val ns = mutableSetOf<String>()
+        for (reg in bp.raw.regions) for (blk in reg.palette.entries) ns.add(blk.name.substringBefore(':'))
+        ns.toList()
+    }
+    val missing = remember(requiredNs) {
+        requiredNs.filter { ns -> val d = java.io.File(assetsDir, ns); !d.isDirectory || (d.listFiles()?.isEmpty() == true) }
+    }
+    val missingMinecraft = "minecraft" in missing
+    val missingMods = missing - "minecraft"
+
+    var showConfirm by remember { mutableStateOf(false) }
+    var showBlockDialog by remember { mutableStateOf(false) }
+    var showWarnDialog by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    var genProgress by remember { mutableStateOf(0f) }
+    var genElapsed by remember { mutableStateOf(0L) }
+
+    // 缓存状态：订阅 RenderResourceManager.cachedKeys（持久化、跨进程），UI 自动响应
+    val cachedKeys by RenderResourceManager.cachedKeys.collectAsState()
+    val hasCache = bp.meta.uuid in cachedKeys
+
+    val startGenerate = {
+        RenderResourceManager.clearGlb(bp.meta.uuid)
+        generator?.clearCache(bp.meta.uuid)
+        if (bp.meta.blockCount > 70000) showConfirm = true
+        else if (missingMinecraft) showBlockDialog = true
+        else if (missingMods.isNotEmpty()) showWarnDialog = true
+        else showDialog = true
+    }
+
+    val viewExisting = {
+        navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
+    }
+
+    if (hasCache) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = viewExisting,
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(Icons.Default.ViewInAr, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.detail_view_cached))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            FilledIconButton(
+                onClick = startGenerate,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.detail_regenerate), modifier = Modifier.size(20.dp))
+            }
+        }
+    } else {
+        Button(
+            onClick = startGenerate,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.ViewInAr, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.detail_generate))
+        }
+    }
+
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text(stringResource(R.string.detail_perf_title)) },
+            text = { Text(stringResource(R.string.detail_perf_msg, bp.meta.blockCount)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirm = false
+                    if (missingMinecraft) showBlockDialog = true
+                    else if (missingMods.isNotEmpty()) showWarnDialog = true
+                    else showDialog = true
+                }) { Text(stringResource(R.string.action_continue)) }
+            },
+            dismissButton = { TextButton(onClick = { showConfirm = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+
+    if (showBlockDialog) {
+        AlertDialog(
+            onDismissRequest = { showBlockDialog = false },
+            title = { Text(stringResource(R.string.detail_no_vanilla_title)) },
+            text = { Text(stringResource(R.string.detail_no_vanilla_msg)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBlockDialog = false
+                    navController.navigate(NavRoutes.RENDER)
+                }) { Text(stringResource(R.string.action_goto_download)) }
+            },
+            dismissButton = { TextButton(onClick = { showBlockDialog = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+
+    if (showWarnDialog) {
+        AlertDialog(
+            onDismissRequest = { showWarnDialog = false },
+            title = { Text(stringResource(R.string.detail_no_mod_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.detail_no_mod_msg_lead))
+                    Spacer(Modifier.height(8.dp))
+                    missingMods.forEach { ns -> Text(stringResource(R.string.detail_no_mod_bullet, ns), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.detail_no_mod_msg_trail), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showWarnDialog = false; showDialog = true }) { Text(stringResource(R.string.detail_continue_anyway)) } },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { showWarnDialog = false; navController.navigate(NavRoutes.RENDER) }) { Text(stringResource(R.string.action_goto_download)) }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = { showWarnDialog = false }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            },
+        )
+    }
+
+    if (showDialog) {
+        BackHandler { }
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.detail_generating_title)) },
+            text = {
+                Column(Modifier.fillMaxWidth()) {
+                    LinearProgressIndicator(
+                        progress = { genProgress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "${(genProgress * 100).toInt()}% — ${genElapsed / 1000}s",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {},
+        )
+        LaunchedEffect(Unit) {
+            val t0 = System.currentTimeMillis()
+            try {
+                val region = bp.raw.regions.getOrNull(0)
+                val modelMinY = region?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f
+                val modelCX = region?.position?.x?.toFloat() ?: 0f
+                val modelCZ = region?.position?.z?.toFloat() ?: 0f
+                val glb = withContext(Dispatchers.IO) {
+                    generator?.generate(bp.raw, cacheKey = bp.meta.uuid, floorHeight = GlbGenerator.LAYER_FLOOR_HEIGHT) { p ->
+                        genProgress = p
+                        genElapsed = System.currentTimeMillis() - t0
+                    } ?: ByteArray(0)
+                }
+                RenderResourceManager.putGlb(bp.meta.uuid, glb, modelMinY, modelCX, modelCZ)
+                showDialog = false
+                navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
+            } catch (_: Exception) {
+                showDialog = false
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** 根据材质名生成稳定颜色 */
+private fun materialColor(name: String): Color {
+    val hue = (name.hashCode() and 0x7FFFFFFF) % 360
+    return Color.hsl(hue.toFloat(), 0.45f, 0.55f)
+}
+
+@Composable
+private fun MaterialRow(name: String, count: Int) {
+    val context = LocalContext.current
+    val entryPoint = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            DetailScreenEntryPoint::class.java
+        )
+    }
+    val iconIndexResolver = entryPoint.iconIndexResolver()
+    LaunchedEffect(Unit) {
+        iconIndexResolver.ensureLoaded()
+    }
+    val langName = remember(name) { LangManager.displayName(context, name) }
+
+    ListItem(
+        headlineContent = {
+            Text(
+                langName,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        supportingContent = {
+            Text(
+                name,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        trailingContent = { Text("× ${formatNumber(count)}") },
+        leadingContent = { MaterialIcon(name = name) },
+    )
+}
+
+@Composable
+private fun MaterialIcon(name: String) {
+    val context = LocalContext.current
+    val entryPoint = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            DetailScreenEntryPoint::class.java
+        )
+    }
+    val iconIndexResolver = entryPoint.iconIndexResolver()
+    val indexReady by iconIndexResolver.ready.collectAsState()
+    val variants = remember(name, indexReady) {
+        listOfNotNull(
+            iconIndexResolver.getIconUrl(name),
+            iconIndexResolver.getIconUrl(name, "_block"),
+            iconIndexResolver.getIconUrl(name, "_item"),
+        )
+    }
+    var attempt by remember { mutableIntStateOf(0) }
+    val currentUrl = variants.getOrNull(attempt)
+
+    if (currentUrl != null) {
+        SubcomposeAsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(currentUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = name,
+            modifier = Modifier.size(40.dp),
+            error = {
+                if (attempt < variants.lastIndex) {
+                    LaunchedEffect(currentUrl) { attempt++ }
+                } else {
+                    UnknownIcon()
+                }
+            },
+        )
+    } else {
+        val displayName = name.removePrefix("minecraft:")
+        if (name.startsWith("minecraft:")) {
+            val bg = materialColor(name)
+            val label = displayName.replace("_", " ").take(2).uppercase()
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(bg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                )
+            }
+        } else {
+            UnknownIcon()
+        }
+    }
+}
+
+@Composable
+private fun UnknownIcon() {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "?",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        )
+    }
+}
+
+@Composable
+fun BlueprintDetailContent(
+    uuid: String,
+    navController: NavController? = null,
+    viewModel: DetailViewModel = hiltViewModel(),
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uuid) { viewModel.load(uuid) }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
+
+    when {
+        uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        uiState.fullBlueprint == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(uiState.error ?: "加载失败", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
+        }
+        else -> {
+            val bp = uiState.fullBlueprint!!
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (navController != null) {
+                    val nc = navController
+                    item { PreviewButton(bp = bp, navController = nc) }
+                }
+                item {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(stringResource(R.string.detail_meta_title), style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
+                            DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
+                            DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
+                            DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
+                            DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
+                            DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
+                        }
+                    }
+                }
+                // 资源包状态（与手机端复用 NamespaceCard）
+                item { NamespaceCard(bp = bp, onNavigate = { ns -> navController?.navigate(NavRoutes.renderWithMod(ns)) }) }
+                if (bp.raw.regions.isNotEmpty()) {
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp)) { Text(stringResource(R.string.detail_region_list), style = MaterialTheme.typography.titleMedium) }
+                        }
+                    }
+                    items(bp.raw.regions, key = { it.name }, contentType = { "region" }) { region ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            ListItem(
+                                headlineContent = { Text(region.name.ifEmpty { stringResource(R.string.detail_region_unnamed) }) },
+                                supportingContent = { Text("${region.width} × ${region.height} × ${region.depth}") },
+                                trailingContent = { Text(formatNumber(region.width * region.height * region.depth)) },
+                                leadingContent = { Icon(Icons.Default.ViewInAr, contentDescription = null) },
+                            )
+                        }
+                    }
+                }
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(stringResource(R.string.detail_material_top10), style = MaterialTheme.typography.titleMedium)
+                            if (bp.materials.isEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(stringResource(R.string.detail_material_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+                if (bp.materials.isNotEmpty()) {
+                    items(bp.materials, key = { (it as Pair).first }, contentType = { "material" }) { (name, count) -> MaterialRow(name = name, count = count) }
+                }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
+        }
+    }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface DetailScreenEntryPoint {
+    fun iconIndexResolver(): IconIndexResolver
+}
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface RenderPreviewEntryPoint {
+    fun vanillaAssetDownloader(): io.github.moxisuki.blockprint.cat.data.vanilla.VanillaAssetDownloader
+    fun modAssetManager(): io.github.moxisuki.blockprint.cat.data.vanilla.ModAssetManager
+}

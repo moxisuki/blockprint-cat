@@ -22,4 +22,7 @@ interface ModAssetStatusDao {
 
     @Query("DELETE FROM mod_asset_status WHERE projectSlug = :slug")
     suspend fun delete(slug: String)
+
+    @Query("DELETE FROM mod_asset_status")
+    suspend fun clearAll()
 }

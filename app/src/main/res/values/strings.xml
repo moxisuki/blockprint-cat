@@ -171,6 +171,9 @@
     <string name="cache_glb_title">GLB model cache</string>
     <string name="cache_glb_stats">%1$d files · %2$s</string>
     <string name="cache_glb_confirm_msg">Delete all generated 3D preview cache? They will be regenerated on next view.</string>
+    <string name="cache_render_title">Render resources</string>
+    <string name="cache_render_stats">%1$s</string>
+    <string name="cache_render_confirm_msg">Delete all downloaded render resources (vanilla textures, mod assets)? Re-download required for 3D preview.</string>
     <string name="cache_note">Clearing cache does not affect blueprints in your SAF directory.</string>
     <string name="community_dialog_title">MCS community account / Cookie management</string>
     <string name="community_logged_in_with">Signed in (%1$s)</string>

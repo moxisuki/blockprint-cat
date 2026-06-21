@@ -82,6 +82,7 @@ import io.github.moxisuki.blockprint.cat.ui.bridge.BridgeViewModel
 import io.github.moxisuki.blockprint.cat.ui.bridge.ConnectionState
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcActionSheet
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcBlueprintCard
+import io.github.moxisuki.blockprint.cat.ui.bridge.TransferProgressBar
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.ui.management.BlueprintViewModel
 import io.github.moxisuki.blockprint.cat.ui.management.ManagementEvent
@@ -179,6 +180,14 @@ fun HomeScreen(
                     Icon(Icons.Default.Refresh, contentDescription = "刷新", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+
+        val transfers by bridgeVm.transfers.collectAsState()
+        if (transfers.isNotEmpty()) {
+            TransferProgressBar(
+                transfers = transfers,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
 
         AnimatedContent(

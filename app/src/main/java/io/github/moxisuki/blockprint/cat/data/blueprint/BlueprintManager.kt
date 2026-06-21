@@ -77,13 +77,13 @@ class BlueprintManager @Inject constructor(
 
     // ── 数据入口 ──
 
-    suspend fun ingest(name: String, bytes: ByteArray): BlueprintMeta = withContext(Dispatchers.IO) {
+    suspend fun ingest(name: String, bytes: ByteArray, onProgress: ((Long, Long) -> Unit)? = null): BlueprintMeta = withContext(Dispatchers.IO) {
+        // Write first so progress callback fires immediately (no blocking SAF query before it)
+        val docId = storage.write(name, bytes, onProgress)
         val lit = LitematicReader.readLenient(bytes)
-        val uniqueName = resolveUniqueName(name)
-        val docId = storage.write(uniqueName, bytes)
-        val meta = metaFromLit(lit, docId, uniqueName)
+        val meta = metaFromLit(lit, docId, name)
         metaDao.upsert(meta.toEntity())
-        Log.d(TAG, "ingest: $uniqueName → ${meta.uuid}")
+        Log.d(TAG, "ingest: $name → ${meta.uuid}")
         meta.toMeta()
     }
 

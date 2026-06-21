@@ -183,7 +183,13 @@ fun HomeScreen(
         }
 
         val transfers by bridgeVm.transfers.collectAsState()
-        if (transfers.isNotEmpty()) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = transfers.isNotEmpty(),
+            enter = androidx.compose.animation.expandVertically(animationSpec = androidx.compose.animation.core.tween(300))
+                + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(220)),
+            exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(350))
+                + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(280)),
+        ) {
             TransferProgressBar(
                 transfers = transfers,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -218,7 +224,6 @@ fun HomeScreen(
                                     val bytes = managementViewModel.readBytes(bp.uuid)
                                     if (bytes != null) {
                                         bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
-                                        scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.action_sync_started, bp.fileName)) }
                                     } else {
                                         scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.action_sync_failed, bp.fileName)) }
                                     }

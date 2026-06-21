@@ -55,14 +55,24 @@ class SafFileStorage @Inject constructor(
             ?: throw IllegalStateException("Cannot read document: $docId")
     }
 
-    override suspend fun write(name: String, bytes: ByteArray): String = withContext(Dispatchers.IO) {
+    override suspend fun write(name: String, bytes: ByteArray, onProgress: ((Long, Long) -> Unit)?): String = withContext(Dispatchers.IO) {
         val treeUri = permissionManager.treeUri() ?: throw IllegalStateException("SAF not configured")
         val folderDocId = permissionManager.folderDocId() ?: throw IllegalStateException("SAF not configured")
         val folderUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderDocId)
         val docUri = DocumentsContract.createDocument(context.contentResolver, folderUri, MIME_OCTET, name)
             ?: throw IllegalStateException("SAF createDocument failed: $name")
-        context.contentResolver.openOutputStream(docUri)?.use { it.write(bytes) }
-            ?: throw IllegalStateException("SAF write failed: $name")
+        val total = bytes.size.toLong()
+        onProgress?.invoke(0L, total)
+        context.contentResolver.openOutputStream(docUri)?.use { out ->
+            val chunkSize = 64 * 1024
+            var written = 0
+            while (written < bytes.size) {
+                val end = minOf(written + chunkSize, bytes.size)
+                out.write(bytes, written, end - written)
+                written = end
+                onProgress?.invoke(written.toLong(), total)
+            }
+        } ?: throw IllegalStateException("SAF write failed: $name")
         DocumentsContract.getDocumentId(docUri)
     }
 

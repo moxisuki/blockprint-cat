@@ -332,6 +332,14 @@
     <string name="bridge_error_token">Invalid Token</string>
     <string name="bridge_error_unknown">Unknown error</string>
     <string name="bridge_error_import_failed">Import failed</string>
+    <string name="bridge_error_saf_not_configured">Storage not configured. Go to Settings → Local Storage to select a folder first.</string>
+
+    <!-- Transfer progress bar status labels -->
+    <string name="transfer_status_downloading">Downloading…</string>
+    <string name="transfer_status_uploading">Uploading…</string>
+    <string name="transfer_status_downloaded">Downloaded</string>
+    <string name="transfer_status_uploaded">Uploaded</string>
+    <string name="transfer_status_failed">Failed</string>
 
     <!-- Bridge connection page — PC blueprint card -->
     <string name="pc_card_blocks_label">Blocks: %1$s</string>

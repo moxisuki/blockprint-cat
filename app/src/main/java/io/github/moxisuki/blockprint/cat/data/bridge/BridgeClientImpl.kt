@@ -137,8 +137,34 @@ class BridgeClientImpl @Inject constructor(
             put("overwrite", overwrite.toString())
         }
         ws.send(msg.toString())
-        // 紧接着发 binary frame
-        ws.send(ByteString.of(*data))
+        // 分块发送以提供进度反馈（OkHttp WebSocket send 是非阻塞写入底层 socket，
+        // 真正发送字节数不可见；按字节切片并让出线程，使其他协程能观察到中间状态）
+        val total = data.size.toLong()
+        val chunkSize = 32 * 1024
+        events.tryEmit(BridgeEvent.UploadProgress(fileName, 0L))
+        Thread {
+            try {
+                var offset = 0
+                while (offset < data.size) {
+                    val end = minOf(offset + chunkSize, data.size)
+                    val chunk = ByteString.of(*data.copyOfRange(offset, end))
+                    val ok = ws.send(chunk)
+                    if (!ok) {
+                        Log.w(TAG, "ws.send returned false at $offset/$total")
+                        break
+                    }
+                    offset = end
+                    events.tryEmit(BridgeEvent.UploadProgress(fileName, offset.toLong()))
+                    // 节流：每块之间 sleep 让 UI 有时间显示进度
+                    Thread.sleep(40)
+                }
+                if (offset >= data.size) {
+                    events.tryEmit(BridgeEvent.UploadProgress(fileName, total))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "upload send failed: ${e.message}", e)
+            }
+        }.start()
     }
 
     private fun send(text: String) {

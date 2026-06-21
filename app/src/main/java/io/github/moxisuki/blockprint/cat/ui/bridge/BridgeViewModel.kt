@@ -102,7 +102,11 @@ class BridgeViewModel @Inject constructor(
     }
 
     private fun updateTransfer(id: Long, receivedBytes: Long) {
-        _transfers.update { list -> list.map { if (it.id == id) it.copy(receivedBytes = receivedBytes) else it } }
+        _transfers.update { list -> list.map { if (it.id == id && it.phase == TransferPhase.RUNNING) it.copy(receivedBytes = receivedBytes) else it } }
+    }
+
+    private fun setPhase(id: Long, phase: TransferPhase) {
+        _transfers.update { list -> list.map { if (it.id == id) it.copy(phase = phase, receivedBytes = if (phase != TransferPhase.RUNNING) it.totalBytes else it.receivedBytes) else it } }
     }
 
     private fun removeTransfer(id: Long) {
@@ -202,6 +206,8 @@ class BridgeViewModel @Inject constructor(
     fun requestDownload(fileName: String) {
         Log.d(TAG, "requestDownload($fileName)")
         if (_connectionState.value !is ConnectionState.Connected) return
+        addTransfer(TransferType.DOWNLOAD, fileName, 0L)
+        currentDownloadId = transferSeq
         bridgeClient.requestDownload(fileName)
     }
 
@@ -234,13 +240,21 @@ class BridgeViewModel @Inject constructor(
             }
             is BridgeEvent.UploadResult -> {
                 Log.d(TAG, "onUploadResult: $event")
-                val list = _transfers.value
-                list.find { it.type == TransferType.UPLOAD && it.fileName == event.fileName }?.let { removeTransfer(it.id) }
+                val item = _transfers.value.find { it.type == TransferType.UPLOAD && it.fileName == event.fileName }
+                if (item != null) {
+                    setPhase(item.id, if (event.ok) TransferPhase.DONE else TransferPhase.FAILED)
+                    kotlinx.coroutines.delay(2000)
+                    removeTransfer(item.id)
+                }
                 if (event.ok) {
                     _events.trySend(BridgeUiEvent.UploadSucceeded(event.fileName))
                 } else {
                     _events.trySend(BridgeUiEvent.UploadFailed(event.fileName, event.errorCode ?: getApplication<android.app.Application>().getString(R.string.bridge_error_unknown)))
                 }
+            }
+            is BridgeEvent.UploadProgress -> {
+                val item = _transfers.value.find { it.type == TransferType.UPLOAD && it.fileName == event.fileName }
+                if (item != null) updateTransfer(item.id, event.bytes)
             }
             is BridgeEvent.Error -> onError(event.code, event.message)
             is BridgeEvent.Disconnected -> onDisconnected()
@@ -298,21 +312,47 @@ class BridgeViewModel @Inject constructor(
     private var currentDownloadId: Long = 0
 
     private fun onDownloadStart(fileName: String, size: Long, sha256: String) {
-        addTransfer(TransferType.DOWNLOAD, fileName, size)
-        currentDownloadId = transferSeq
+        _transfers.update { list ->
+            list.map { if (it.type == TransferType.DOWNLOAD && it.fileName == fileName) it.copy(totalBytes = size) else it }
+        }
+        currentDownloadId = _transfers.value.find { it.type == TransferType.DOWNLOAD && it.fileName == fileName }?.id ?: 0
         _events.trySend(BridgeUiEvent.DownloadStart(fileName))
     }
 
     private suspend fun onDownloadComplete(fileName: String, bytes: ByteArray) {
-        if (currentDownloadId > 0) removeTransfer(currentDownloadId)
         Log.d(TAG, "onDownloadComplete($fileName, ${bytes.size} bytes)")
+        // Find transfer by fileName — robust even if download/start is never sent
+        val downloadId = _transfers.value.find {
+            it.type == TransferType.DOWNLOAD && it.fileName == fileName
+        }?.id ?: currentDownloadId
+        // Update totalBytes from actual data size so progress bar is determinate
+        if (downloadId > 0) {
+            _transfers.update { list ->
+                list.map { if (it.id == downloadId) it.copy(totalBytes = bytes.size.toLong(), receivedBytes = 0L) else it }
+            }
+        }
+        var downloadedOk = false
         try {
-            val meta = blueprintManager.ingest(fileName, bytes)
+            val meta = blueprintManager.ingest(fileName, bytes) { written, total ->
+                if (downloadId > 0) updateTransfer(downloadId, written)
+            }
             Log.i(TAG, "PC download OK: $fileName → ${meta.uuid}")
             _events.trySend(BridgeUiEvent.DownloadComplete(fileName, meta.uuid))
+            downloadedOk = true
         } catch (e: Exception) {
             Log.e(TAG, "PC download ingest FAILED: $fileName (${bytes.size}B) — ${e.message}", e)
-            _events.trySend(BridgeUiEvent.DownloadFailed(fileName, e.message ?: getApplication<android.app.Application>().getString(R.string.bridge_error_import_failed)))
+            val app = getApplication<android.app.Application>()
+            val msg = when {
+                e.message?.contains("SAF", ignoreCase = true) == true -> app.getString(R.string.bridge_error_saf_not_configured)
+                else -> e.message ?: app.getString(R.string.bridge_error_import_failed)
+            }
+            _events.trySend(BridgeUiEvent.DownloadFailed(fileName, msg))
+        } finally {
+            if (downloadId > 0) {
+                setPhase(downloadId, if (downloadedOk) TransferPhase.DONE else TransferPhase.FAILED)
+                kotlinx.coroutines.delay(2000)
+                removeTransfer(downloadId)
+            }
         }
     }
 
@@ -380,12 +420,15 @@ private fun PairedDeviceEntity.sessionInfoOrNull(): SessionInfo? {
 
 enum class TransferType { DOWNLOAD, UPLOAD }
 
+enum class TransferPhase { RUNNING, DONE, FAILED }
+
 data class TransferItem(
     val id: Long,
     val type: TransferType,
     val fileName: String,
     val totalBytes: Long,
     val receivedBytes: Long = 0L,
+    val phase: TransferPhase = TransferPhase.RUNNING,
 ) {
     val fraction: Float?
         get() = if (totalBytes > 0) (receivedBytes.toFloat() / totalBytes).coerceIn(0f, 1f) else null

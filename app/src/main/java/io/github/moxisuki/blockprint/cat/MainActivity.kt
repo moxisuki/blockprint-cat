@@ -279,16 +279,15 @@ fun BlockPrintCatAppContent(
     LaunchedEffect(Unit) {
         bridgeVm.events.collect { ev ->
             when (ev) {
-                is BridgeUiEvent.DownloadStart -> snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_downloading, ev.fileName))
+                is BridgeUiEvent.DownloadStart -> Unit // Status shown in progress bar
                 is BridgeUiEvent.DownloadComplete -> {
-                    snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_downloaded, ev.fileName))
                     if (currentDestination?.route == NavRoutes.HOME) {
                         navController.navigate(NavRoutes.detailRoute(ev.targetUuid))
                     }
                 }
-                is BridgeUiEvent.DownloadFailed -> snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_download_failed, ev.message))
-                is BridgeUiEvent.UploadSucceeded -> snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_uploaded, ev.fileName))
-                is BridgeUiEvent.UploadFailed -> snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_upload_failed, ev.fileName, ev.errorCode))
+                is BridgeUiEvent.DownloadFailed -> Unit // Status shown in progress bar
+                is BridgeUiEvent.UploadSucceeded -> Unit
+                is BridgeUiEvent.UploadFailed -> Unit
                 is BridgeUiEvent.AuthFailed -> snackbarHostState.showSnackbar(ev.message)
                 is BridgeUiEvent.Disconnected -> {
                     if (ev.unexpected) snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_disconnected))

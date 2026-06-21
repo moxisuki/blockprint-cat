@@ -391,6 +391,14 @@
     <string name="bridge_error_token">Token 错误</string>
     <string name="bridge_error_unknown">未知错误</string>
     <string name="bridge_error_import_failed">导入失败</string>
+    <string name="bridge_error_saf_not_configured">未配置存储目录，请先在设置 → 本地存储中选择蓝图文件夹。</string>
+
+    <!-- Transfer progress bar status labels -->
+    <string name="transfer_status_downloading">下载中…</string>
+    <string name="transfer_status_uploading">上传中…</string>
+    <string name="transfer_status_downloaded">下载完成</string>
+    <string name="transfer_status_uploaded">上传完成</string>
+    <string name="transfer_status_failed">操作失败</string>
 
     <!-- Bridge connection page — PC blueprint card -->
     <string name="pc_card_blocks_label">方块: %1$s</string>

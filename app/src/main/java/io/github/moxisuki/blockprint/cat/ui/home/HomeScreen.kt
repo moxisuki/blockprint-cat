@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
@@ -38,6 +39,8 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,7 +49,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -129,6 +136,9 @@ fun HomeScreen(
     var renameText by remember { mutableStateOf("") }
     var sheetTarget by remember { mutableStateOf<RemoteBlueprint?>(null) }
     var selectedTab by remember { mutableStateOf(0) }
+    var localFilterVisible by rememberSaveable { mutableStateOf(false) }
+    var localFilterQuery by rememberSaveable { mutableStateOf("") }
+    var localFilterFormat by rememberSaveable { mutableStateOf(FormatFilter.All) }
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -178,6 +188,19 @@ fun HomeScreen(
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = { onRefresh(); visibleCount = PAGE_SIZE }, modifier = Modifier.size(32.dp)) {
                     Icon(Icons.Default.Refresh, contentDescription = "刷新", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (selectedTab == 0) {
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = { localFilterVisible = !localFilterVisible }, modifier = Modifier.size(32.dp)) {
+                        val filterActive = localFilterQuery.isNotEmpty() || localFilterFormat != FormatFilter.All
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = "筛选",
+                            modifier = Modifier.size(18.dp),
+                            tint = if (localFilterVisible || filterActive) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -231,6 +254,11 @@ fun HomeScreen(
                             },
                             bridgeConnected = isBridgeConnected,
                             snackbarHostState = snackbarHostState,
+                            filterVisible = localFilterVisible,
+                            filterQuery = localFilterQuery,
+                            onFilterQueryChange = { localFilterQuery = it; visibleCount = PAGE_SIZE },
+                            filterFormat = localFilterFormat,
+                            onFilterFormatChange = { localFilterFormat = it; visibleCount = PAGE_SIZE },
                         )
                         if (showFab) {
                         FloatingActionButton(
@@ -251,7 +279,7 @@ fun HomeScreen(
                             }
                         } else {
                             Column(modifier = Modifier.fillMaxSize()) {
-                                PcHeader(state = connectionState, onRefresh = { bridgeVm.requestList() })
+                                PcHeader(state = connectionState)
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     if (pcEntries.isEmpty() && isBridgeConnected) {
                                         EmptyPcState(modifier = Modifier.align(Alignment.Center))
@@ -434,12 +462,42 @@ private fun LocalBlueprintList(
     onUpload: (BlueprintMeta) -> Unit,
     bridgeConnected: Boolean,
     snackbarHostState: SnackbarHostState,
+    filterVisible: Boolean,
+    filterQuery: String,
+    onFilterQueryChange: (String) -> Unit,
+    filterFormat: FormatFilter,
+    onFilterFormatChange: (FormatFilter) -> Unit,
 ) {
-    val visibleBlueprints by remember(allBlueprints, visibleCount) {
-        derivedStateOf { allBlueprints.take(visibleCount) }
+    // Debounce search query (avoid re-filtering on every keystroke)
+    var debouncedQuery by remember { mutableStateOf("") }
+    LaunchedEffect(filterQuery) {
+        kotlinx.coroutines.delay(120)
+        debouncedQuery = filterQuery
     }
-    val hasMore by remember(allBlueprints, visibleCount) {
-        derivedStateOf { visibleCount < allBlueprints.size }
+
+    val filtered = remember(allBlueprints, debouncedQuery, filterFormat) {
+        val q = debouncedQuery.trim().lowercase()
+        allBlueprints.filter { bp ->
+            val matchesQuery = q.isEmpty() ||
+                bp.displayName.lowercase().contains(q) ||
+                bp.fileName.lowercase().contains(q)
+            val matchesFormat = when (filterFormat) {
+                FormatFilter.All -> true
+                FormatFilter.Litematica -> bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Litematica
+                FormatFilter.Schematic -> bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Sponge
+                FormatFilter.Nbt -> bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Structure ||
+                                     bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt ||
+                                     bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Unknown
+                FormatFilter.Json -> bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper
+            }
+            matchesQuery && matchesFormat
+        }
+    }
+    val visibleBlueprints by remember(filtered, visibleCount) {
+        derivedStateOf { filtered.take(visibleCount) }
+    }
+    val hasMore by remember(filtered, visibleCount) {
+        derivedStateOf { visibleCount < filtered.size }
     }
 
     if (scanning) {
@@ -454,50 +512,154 @@ private fun LocalBlueprintList(
             safFolderName = safFolderName,
         )
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(visibleBlueprints, key = { it.uuid }, contentType = { "bp" }) { bp ->
-                HomeBlueprintCard(
-                    blueprint = bp,
-                    onDetail = {
-                        if (onBlueprintSelected != null) {
-                            onBlueprintSelected(bp)
-                        } else {
-                            navController.navigate(NavRoutes.detailRoute(bp.uuid))
-                        }
-                    },
-                    onDelete = { onDeleteTarget(bp) },
-                    onRename = { onRenameTarget(bp) },
-                    onUpload = { onUpload(bp) },
-                    connected = bridgeConnected,
+        Column(modifier = Modifier.fillMaxSize()) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = filterVisible,
+                enter = androidx.compose.animation.expandVertically(animationSpec = androidx.compose.animation.core.tween(220))
+                    + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(180)),
+                exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(280))
+                    + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(220)),
+            ) {
+                BlueprintFilterBar(
+                    query = filterQuery,
+                    onQueryChange = onFilterQueryChange,
+                    selected = filterFormat,
+                    onSelectedChange = onFilterFormatChange,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-            if (hasMore) {
-                item(key = "load_more") {
-                    LaunchedEffect(Unit) { onVisibleCountChange(visibleCount + PAGE_SIZE) }
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+            if (visibleBlueprints.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(R.string.home_filter_no_results),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(visibleBlueprints, key = { it.uuid }, contentType = { "bp" }) { bp ->
+                        HomeBlueprintCard(
+                            blueprint = bp,
+                            onDetail = {
+                                if (onBlueprintSelected != null) {
+                                    onBlueprintSelected(bp)
+                                } else {
+                                    navController.navigate(NavRoutes.detailRoute(bp.uuid))
+                                }
+                            },
+                            onDelete = { onDeleteTarget(bp) },
+                            onRename = { onRenameTarget(bp) },
+                            onUpload = { onUpload(bp) },
+                            connected = bridgeConnected,
+                        )
                     }
+                    if (hasMore) {
+                        item(key = "load_more") {
+                            LaunchedEffect(Unit) { onVisibleCountChange(visibleCount + PAGE_SIZE) }
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    }
+                    item(key = "bottom_spacer") { Spacer(Modifier.height(88.dp)) }
                 }
             }
-            item(key = "bottom_spacer") { Spacer(Modifier.height(88.dp)) }
+        }
+    }
+}
+
+private enum class FormatFilter { All, Litematica, Schematic, Nbt, Json }
+
+@Composable
+private fun BlueprintFilterBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    selected: FormatFilter,
+    onSelectedChange: (FormatFilter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text(stringResource(R.string.home_filter_search_hint), style = MaterialTheme.typography.bodyMedium) },
+            singleLine = true,
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingIcon = if (query.isNotEmpty()) {{
+                androidx.compose.material3.IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }} else null,
+            shape = RoundedCornerShape(24.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            FormatChipFilter(label = stringResource(R.string.home_filter_format_all), selected = selected == FormatFilter.All) { onSelectedChange(FormatFilter.All) }
+            FormatChipFilter(label = "Litematica", selected = selected == FormatFilter.Litematica) { onSelectedChange(FormatFilter.Litematica) }
+            FormatChipFilter(label = "Schematic", selected = selected == FormatFilter.Schematic) { onSelectedChange(FormatFilter.Schematic) }
+            FormatChipFilter(label = "JSON", selected = selected == FormatFilter.Json) { onSelectedChange(FormatFilter.Json) }
+            FormatChipFilter(label = "NBT", selected = selected == FormatFilter.Nbt) { onSelectedChange(FormatFilter.Nbt) }
         }
     }
 }
 
 @Composable
+private fun FormatChipFilter(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.height(28.dp),
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        ),
+    )
+}
+
+@Composable
 private fun FormatChip(format: io.github.moxisuki.blockprint.core.SchematicFormat) {
-    val bg = when (format) {
-        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
-        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
-    }
-    val label = when (format) {
-        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> "Litematica"
-        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> "Sponge"
-        else -> "NBT"
+    val (bg, label) = when (format) {
+        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica ->
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) to "Litematica"
+        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge ->
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f) to "Schematic"
+        io.github.moxisuki.blockprint.core.SchematicFormat.Structure ->
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f) to "Structure"
+        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt ->
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "PartialNbt"
+        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper ->
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "JSON"
+        io.github.moxisuki.blockprint.core.SchematicFormat.Unknown ->
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "NBT"
     }
     Box(Modifier.background(bg, RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall,
@@ -506,7 +668,7 @@ private fun FormatChip(format: io.github.moxisuki.blockprint.core.SchematicForma
 }
 
 @Composable
-private fun PcHeader(state: ConnectionState, onRefresh: () -> Unit) {
+private fun PcHeader(state: ConnectionState) {
     val isConnected = state is ConnectionState.Connected
     val isConnecting = state is ConnectionState.Connecting
     val session = (state as? ConnectionState.Connected)?.session
@@ -521,7 +683,6 @@ private fun PcHeader(state: ConnectionState, onRefresh: () -> Unit) {
                 Text("${state.host}:${state.port}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
-        IconButton(onClick = onRefresh, enabled = isConnected) { Icon(Icons.Default.Refresh, "刷新", tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)) }
     }
 }
 

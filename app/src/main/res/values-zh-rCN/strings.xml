@@ -107,6 +107,9 @@
     <string name="home_scanning">正在扫描蓝图…</string>
     <string name="home_tab_local">本地</string>
     <string name="home_tab_pc">PC</string>
+    <string name="home_filter_search_hint">搜索文件名...</string>
+    <string name="home_filter_format_all">全部</string>
+    <string name="home_filter_no_results">未找到匹配的蓝图</string>
     <string name="home_connect_pc_hint">请先在顶部状态栏连接 PC 设备</string>
     <string name="home_pc_empty_title">这台 PC 上还没有蓝图</string>
     <string name="home_pc_empty_hint">在游戏中放置或保存一个新的 .litematic 即可在此显示</string>

@@ -81,6 +81,9 @@
     <string name="home_pick_hint">Pick a parent directory that contains a blockprintCat subfolder</string>
     <string name="home_subdir_hint">The app reads the blockprintCat/ subfolder under the chosen directory (created if absent)</string>
     <string name="home_scanning">Scanning blueprints…</string>
+    <string name="home_filter_search_hint">Search filenames…</string>
+    <string name="home_filter_format_all">All</string>
+    <string name="home_filter_no_results">No matching blueprints</string>
     <string name="home_connect_pc_hint">Connect a PC device via the top status bar first</string>
     <string name="home_pc_empty_title">No blueprints on this PC yet</string>
     <string name="home_pc_empty_hint">Place or save a new .litematic in-game to see it here</string>

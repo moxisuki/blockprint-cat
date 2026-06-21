@@ -1,5 +1,6 @@
 package io.github.moxisuki.blockprint.cat.ui.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
@@ -34,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -50,8 +54,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.data.NetworkConstants
+import io.github.moxisuki.blockprint.cat.data.settings.AppIconManager
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.core.BLOCKPRINT_CORE_VERSION
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +71,12 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
+    val entryPoint = remember {
+        EntryPointAccessors.fromApplication(context.applicationContext, AboutScreenEntryPoint::class.java)
+    }
+    val appIconManager = entryPoint.appIconManager()
+    val appIconCurrent by appIconManager.current.collectAsState()
+    val appIconVariant = appIconManager.variants.firstOrNull { it.id == appIconCurrent } ?: appIconManager.variants.first()
     val appVersion = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
@@ -84,7 +99,7 @@ fun AboutScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                painter = painterResource(R.mipmap.ic_launcher_v4),
+                painter = painterResource(appIconVariant.iconRes),
                 contentDescription = null,
                 tint = androidx.compose.ui.graphics.Color.Unspecified,
                 modifier = Modifier.size(96.dp),
@@ -112,6 +127,8 @@ fun AboutScreen(navController: NavController) {
             InfoRow(label = stringResource(R.string.about_label_version), value = stringResource(R.string.about_version, appVersion))
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             InfoRow(label = engineLabel, value = engineVersion)
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            InfoLinkRow(label = "GitHub", url = "https://github.com/moxisuki/blockprint-cat")
         }
 
         Spacer(Modifier.height(12.dp))
@@ -212,6 +229,24 @@ fun AboutScreen(navController: NavController) {
 
         Spacer(Modifier.height(12.dp))
 
+        // 贡献者
+        InfoCard(title = stringResource(R.string.about_section_contributors)) {
+            ContributorItem(
+                name = "moxisuki",
+                role = stringResource(R.string.about_contributor_role_developer),
+                url = "https://github.com/moxisuki",
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ContributorItem(
+                name = "酸不过橘子皮",
+                role = stringResource(R.string.about_contributor_role_core_tester),
+                url = null,
+                avatarRes = R.drawable.contributor_orange_peel,
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         // 外部链接
         InfoCard(title = stringResource(R.string.about_section_links)) {
             ExternalLinkItem(
@@ -236,12 +271,6 @@ fun AboutScreen(navController: NavController) {
                 icon = Icons.Filled.Code,
                 title = "Modrinth 资源站",
                 url = "https://modrinth.com",
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            ExternalLinkItem(
-                icon = Icons.Filled.Code,
-                title = "GitHub 仓库",
-                url = "https://github.com/",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             ExternalLinkItem(
@@ -417,6 +446,36 @@ private fun InfoRow(label: String, value: String) {
 }
 
 @Composable
+private fun InfoLinkRow(label: String, url: String) {
+    val uriHandler = LocalUriHandler.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { uriHandler.openUri(url) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                url.removePrefix("https://").removePrefix("http://"),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
+}
+
+@Composable
 private fun FeatureItem(icon: ImageVector, title: String, desc: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
         Icon(
@@ -430,6 +489,73 @@ private fun FeatureItem(icon: ImageVector, title: String, desc: String) {
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(2.dp))
             Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ContributorItem(
+    name: String,
+    role: String,
+    url: String? = null,
+    avatarRes: Int? = null,
+) {
+    val uriHandler = LocalUriHandler.current
+    val hasLink = !url.isNullOrEmpty()
+    val clickModifier = if (hasLink) {
+        Modifier.clickable { uriHandler.openUri(url!!) }
+    } else {
+        Modifier
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(clickModifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (avatarRes != null) {
+            Image(
+                painter = painterResource(avatarRes),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                role,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (hasLink) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }
@@ -518,4 +644,10 @@ private fun ExternalLinkItem(
             modifier = Modifier.size(16.dp),
         )
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface AboutScreenEntryPoint {
+    fun appIconManager(): AppIconManager
 }

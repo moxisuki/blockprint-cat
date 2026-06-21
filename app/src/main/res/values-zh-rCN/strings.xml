@@ -226,6 +226,9 @@
     <string name="about_footer">© BlockPrint Cat · 仅供学习交流</string>
     <string name="about_engine_label">蓝图引擎</string>
     <string name="about_engine_version">BlockPrint Core v%1$s</string>
+    <string name="about_section_contributors">贡献者</string>
+    <string name="about_contributor_role_developer">开发者</string>
+    <string name="about_contributor_role_core_tester">核心测试人员</string>
 
     <!-- CommunityScreen -->
     <string name="community_search_hint">搜索标签…</string>
@@ -248,6 +251,12 @@
     <string name="disclaimer_consent">使用社区功能即表示您已阅读并同意以上声明。</string>
     <string name="disclaimer_accept">我知道了</string>
     <string name="disclaimer_countdown">请阅读 (%1$d s)</string>
+    <string name="disclaimer_close_community">关闭社区</string>
+    <string name="disclaimer_close_confirm_title">关闭社区功能？</string>
+    <string name="disclaimer_close_confirm_hint">可在设置 → 社区配置中重新打开。</string>
+    <string name="disclaimer_close_confirm_yes">确定关闭</string>
+    <string name="disclaimer_close_confirm_no">取消</string>
+    <string name="disclaimer_closed_toast">社区功能已关闭，可在设置 → 社区配置中重新启用。</string>
     <string name="community_login_title">登录 mcschematic.top</string>
     <string name="community_login_desc">通过 QQ 一键登录后可浏览、下载社区蓝图</string>
     <string name="community_login_qq">QQ 登录</string>

@@ -195,6 +195,12 @@
     <string name="disclaimer_consent">Using the community feature means you have read and agree.</string>
     <string name="disclaimer_accept">I understand</string>
     <string name="disclaimer_countdown">Please read (%1$d s)</string>
+    <string name="disclaimer_close_community">Close Community</string>
+    <string name="disclaimer_close_confirm_title">Close Community Feature?</string>
+    <string name="disclaimer_close_confirm_hint">You can re-enable it in Settings → Community Settings.</string>
+    <string name="disclaimer_close_confirm_yes">Close</string>
+    <string name="disclaimer_close_confirm_no">Cancel</string>
+    <string name="disclaimer_closed_toast">Community feature disabled. You can re-enable it in Settings → Community Settings.</string>
     <string name="community_login_title">Sign in to mcschematic.top</string>
     <string name="community_login_desc">Sign in via QQ to browse and download community blueprints</string>
     <string name="community_login_qq">Sign in with QQ</string>
@@ -476,6 +482,9 @@
     <string name="about_link_bmcl">BMCLAPI Mirror</string>
     <string name="about_link_modrinth">Modrinth</string>
     <string name="about_link_github">GitHub Repository</string>
+    <string name="about_section_contributors">Contributors</string>
+    <string name="about_contributor_role_developer">Developer</string>
+    <string name="about_contributor_role_core_tester">Core Tester</string>
 
     <!-- TermsGate -->
     <string name="terms_gate_title">Terms of use</string>

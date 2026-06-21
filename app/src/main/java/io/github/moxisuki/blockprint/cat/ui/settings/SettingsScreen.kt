@@ -69,6 +69,7 @@ fun SettingsScreen(navController: NavController) {
     val communityConfig = entryPoint.communityConfig()
     val appIconManager = entryPoint.appIconManager()
     val appIconCurrent by appIconManager.current.collectAsState()
+    val appIconVariant = appIconManager.variants.firstOrNull { it.id == appIconCurrent } ?: appIconManager.variants.first()
 
     val themeState by themeManager.themeState.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -88,7 +89,7 @@ fun SettingsScreen(navController: NavController) {
     ) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                painter = painterResource(R.mipmap.ic_launcher_v4),
+                painter = painterResource(appIconVariant.iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(48.dp).scale(headerAnim.value).alpha(headerAnim.value),
                 tint = androidx.compose.ui.graphics.Color.Unspecified,

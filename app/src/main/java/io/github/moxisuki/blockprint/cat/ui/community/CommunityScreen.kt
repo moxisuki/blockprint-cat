@@ -72,8 +72,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import io.github.moxisuki.blockprint.cat.data.community.CommunityConfigManager
 import kotlinx.coroutines.launch
 import androidx.navigation.NavController
 import io.github.moxisuki.blockprint.cat.R
@@ -92,11 +94,13 @@ fun CommunityScreen(
 
     // 免责声明 — Room 持久化，首次接受后不再显示
     val ctx = LocalContext.current
-    val disclaimerDao = remember {
+    val disclaimerEntryPoint = remember {
         dagger.hilt.android.EntryPointAccessors.fromApplication(
             ctx.applicationContext, DisclaimerEntryPoint::class.java
-        ).disclaimerStatusDao()
+        )
     }
+    val disclaimerDao = disclaimerEntryPoint.disclaimerStatusDao()
+    val communityConfig = disclaimerEntryPoint.communityConfig()
     var disclaimerLoaded by remember { mutableStateOf(false) }
     var disclaimerAccepted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -109,6 +113,7 @@ fun CommunityScreen(
     var showDisclaimer by remember { mutableStateOf(true) }
     var canDismiss by remember { mutableStateOf(false) }
     var countdown by remember { mutableIntStateOf(10) }
+    var showCloseConfirmDialog by remember { mutableStateOf(false) }
     if (showDisclaimer && disclaimerLoaded && !disclaimerAccepted) {
         LaunchedEffect(Unit) {
             while (countdown > 0) { kotlinx.coroutines.delay(1000); countdown-- }
@@ -136,7 +141,36 @@ fun CommunityScreen(
                         disclaimerDao.upsert(io.github.moxisuki.blockprint.cat.data.community.DisclaimerStatusEntity(accepted = true, acceptedAt = System.currentTimeMillis()))
                     }
                 }, enabled = canDismiss) {
-                    Text(if (canDismiss) "我知道了" else "请阅读 ($countdown s)")
+                    Text(if (canDismiss) stringResource(R.string.disclaimer_accept) else stringResource(R.string.disclaimer_countdown, countdown))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCloseConfirmDialog = true }) {
+                    Text(stringResource(R.string.disclaimer_close_community), color = MaterialTheme.colorScheme.error)
+                }
+            },
+        )
+    }
+
+    // 二次确认：关闭社区功能
+    if (showCloseConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showCloseConfirmDialog = false },
+            title = { Text(stringResource(R.string.disclaimer_close_confirm_title)) },
+            text = { Text(stringResource(R.string.disclaimer_close_confirm_hint)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCloseConfirmDialog = false
+                    showDisclaimer = false
+                    communityConfig.setEnabled(false)
+                    Toast.makeText(ctx, ctx.getString(R.string.disclaimer_closed_toast), Toast.LENGTH_LONG).show()
+                }) {
+                    Text(stringResource(R.string.disclaimer_close_confirm_yes), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCloseConfirmDialog = false }) {
+                    Text(stringResource(R.string.disclaimer_close_confirm_no))
                 }
             },
         )
@@ -535,4 +569,5 @@ private fun SchematicCard(
 @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
 interface DisclaimerEntryPoint {
     fun disclaimerStatusDao(): io.github.moxisuki.blockprint.cat.data.community.DisclaimerStatusDao
+    fun communityConfig(): CommunityConfigManager
 }

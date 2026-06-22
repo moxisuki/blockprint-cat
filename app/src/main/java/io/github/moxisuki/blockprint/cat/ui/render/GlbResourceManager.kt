@@ -22,7 +22,7 @@ import io.github.moxisuki.blockprint.cat.glb.GlbGenerator
  * TODO: Render refactor — network/download/rendering code was removed from litematic-lib.
  * All methods now return mock values. Re-implement rendering in the app layer.
  */
-object RenderResourceManager {
+object GlbResourceManager {
 
     data class ResourceState(
         val vanillaInstalled: Boolean = false,
@@ -82,6 +82,7 @@ object RenderResourceManager {
     private var cachedGlbMinY: Float = 0f
     private var cachedGlbCenterX: Float = 0f
     private var cachedGlbCenterZ: Float = 0f
+    private var cachedGlbFile: java.io.File? = null
 
     // 持久化的 GLB 缓存键集合（跨进程保留，Room 持久化）
     private var glbCacheDao: io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao? = null
@@ -90,12 +91,13 @@ object RenderResourceManager {
     /** 已生成 GLB 的蓝图 uuid 集合，持久化 + 跨进程，UI 可订阅 */
     val cachedKeys: StateFlow<Set<String>> = _cachedKeys.asStateFlow()
 
-    fun putGlb(key: String, bytes: ByteArray, minY: Float = 0f, centerX: Float = 0f, centerZ: Float = 0f) {
+    fun putGlb(key: String, bytes: ByteArray, minY: Float = 0f, centerX: Float = 0f, centerZ: Float = 0f, cacheFile: java.io.File? = null) {
         cachedGlb = bytes
         cachedGlbKey = key
         cachedGlbMinY = minY
         cachedGlbCenterX = centerX
         cachedGlbCenterZ = centerZ
+        cachedGlbFile = cacheFile
         val dao = glbCacheDao ?: return
         glbScope.launch {
             dao.upsert(
@@ -112,8 +114,8 @@ object RenderResourceManager {
     fun hasGlb(key: String): Boolean = key in _cachedKeys.value
 
     fun peekGlb(key: String): GlbCacheEntry? {
-        if (cachedGlbKey == key && cachedGlb != null) {
-            return GlbCacheEntry(cachedGlb!!, cachedGlbMinY, cachedGlbCenterX, cachedGlbCenterZ)
+        if (cachedGlbKey == key) {
+            return GlbCacheEntry(cachedGlb ?: byteArrayOf(), cachedGlbMinY, cachedGlbCenterX, cachedGlbCenterZ, cacheFile = cachedGlbFile)
         }
         return null
     }
@@ -152,7 +154,7 @@ object RenderResourceManager {
         return null
     }
 
-    data class GlbCacheEntry(val bytes: ByteArray, val minY: Float, val centerX: Float, val centerZ: Float)
+    data class GlbCacheEntry(val bytes: ByteArray, val minY: Float, val centerX: Float, val centerZ: Float, val cacheFile: java.io.File? = null)
 
     fun init(context: Context, dao: io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao) {
         Log.d(TAG, "初始化渲染资源管线...")
@@ -190,7 +192,7 @@ object RenderResourceManager {
         Log.d(TAG, "渲染资源管线初始化完成, generator=${_generator != null}, accessor=${accessor.javaClass.simpleName}")
     }
 
-    private const val TAG = "RenderResourceMgr"
+    private const val TAG = "GlbResourceMgr"
 
     // TODO: Re-implement vanilla asset download + install
     suspend fun installVanilla(

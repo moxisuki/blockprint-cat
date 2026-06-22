@@ -92,8 +92,8 @@ fun CacheManagementDialog(onDismiss: () -> Unit) {
             runCatching {
                 val dir = java.io.File(context.filesDir, "glb_cache")
                 dir.listFiles()?.forEach { it.delete() }
-                io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager.generator?.clearAllCache()
-                io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager.clearAllGlb()
+                io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager.generator?.clearAllCache()
+                io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager.clearAllGlb()
                 glbSize = 0L; glbCount = 0
             }
             clearingGlb = false; confirmGlb = false

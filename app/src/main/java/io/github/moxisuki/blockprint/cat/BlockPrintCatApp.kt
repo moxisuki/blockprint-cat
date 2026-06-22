@@ -13,7 +13,7 @@ import io.github.moxisuki.blockprint.cat.data.McschematicCookieStore
 import io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao
 import io.github.moxisuki.blockprint.cat.data.settings.AppIconManager
 import io.github.moxisuki.blockprint.cat.data.settings.TermsAcceptance
-import io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager
+import io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +39,7 @@ class BlockPrintCatApp : Application(), ImageLoaderFactory {
         super.onCreate()
 
         iconIndexResolver.init(this)
-        RenderResourceManager.init(this, glbCacheDao)
+        GlbResourceManager.init(this, glbCacheDao)
         appIconManager.reconcile()
 
         // Bugly 合规要求：仅在用户已同意隐私条款后才初始化 SDK。

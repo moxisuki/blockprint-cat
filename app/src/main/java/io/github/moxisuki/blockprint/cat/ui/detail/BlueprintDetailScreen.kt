@@ -58,7 +58,7 @@ import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.data.blueprint.FullBlueprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager
+import io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager
 import io.github.moxisuki.blockprint.core.MinecraftVersions
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
@@ -213,7 +213,7 @@ fun BlueprintDetailScreen(
 @Composable
 private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
     val ctx = LocalContext.current
-    val generator = remember { RenderResourceManager.generator }
+    val generator = remember { GlbResourceManager.generator }
     val assetsDir = remember { java.io.File(ctx.filesDir, "blockprintcat/render_assets") }
 
     val requiredNs = remember(bp.raw) {
@@ -243,12 +243,12 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
         else -> ctx.getString(R.string.preview_stage_finalize)
     }
 
-    // 缓存状态：订阅 RenderResourceManager.cachedKeys（持久化、跨进程），UI 自动响应
-    val cachedKeys by RenderResourceManager.cachedKeys.collectAsState()
+    // 缓存状态：订阅 GlbResourceManager.cachedKeys（持久化、跨进程），UI 自动响应
+    val cachedKeys by GlbResourceManager.cachedKeys.collectAsState()
     val hasCache = bp.meta.uuid in cachedKeys
 
     val startGenerate = {
-        RenderResourceManager.clearGlb(bp.meta.uuid)
+        GlbResourceManager.clearGlb(bp.meta.uuid)
         generator?.clearCache(bp.meta.uuid)
         if (bp.meta.blockCount > 70000) showConfirm = true
         else if (missingMinecraft) showBlockDialog = true
@@ -392,7 +392,7 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
                         genStage = stageName(p)
                     }
                 } ?: throw IllegalStateException("渲染引擎未初始化")
-                RenderResourceManager.putGlb(bp.meta.uuid, ByteArray(0), modelMinY, modelCX, modelCZ, cacheFile = cacheFile)
+                GlbResourceManager.putGlb(bp.meta.uuid, ByteArray(0), modelMinY, modelCX, modelCZ, cacheFile = cacheFile)
                 showDialog = false
                 navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
             } catch (_: Exception) {

@@ -426,19 +426,8 @@ private fun PreviewSceneContent(
         } // key(glbFile)
         } // Box fade-in alpha
 
-        // Filament 加载中 — 覆盖层(一直显示到 SceneView 渲染出首帧 + 250ms)
-        if (loadingVisible && !modelError) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(12.dp))
-                    Text(stringResource(R.string.preview_loading), style = MaterialTheme.typography.bodyMedium, color = androidx.compose.ui.graphics.Color.White)
-                }
-            }
-        }
+        // HUD 风格启动屏 — 一直显示到 SceneView 渲染出首帧 + 250ms
+        HudStartupOverlay(visible = loadingVisible && !modelError)
 
         // 旋转手势层
         Box(

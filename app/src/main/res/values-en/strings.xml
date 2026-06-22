@@ -287,6 +287,15 @@
 
     <!-- PreviewScreen -->
     <string name="preview_loading">Loading…</string>
+    <string name="preview_hud_status">SCENE INIT</string>
+    <string name="preview_hud_subtitle">PREPARING 3D ENVIRONMENT</string>
+    <string name="preview_hud_engine">FILAMENT • 3D ENGINE</string>
+    <string name="preview_stage_region">Reading blueprint regions…</string>
+    <string name="preview_stage_texture">Resolving models &amp; textures…</string>
+    <string name="preview_stage_atlas">Packing texture atlas…</string>
+    <string name="preview_stage_pass1">Counting mesh data…</string>
+    <string name="preview_stage_pass2">Writing mesh data…</string>
+    <string name="preview_stage_finalize">Finalizing…</string>
     <string name="preview_failed">Failed to generate preview</string>
 
     <!-- NamespaceCard -->

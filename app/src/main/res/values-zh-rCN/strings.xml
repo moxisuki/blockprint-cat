@@ -362,6 +362,15 @@
 
     <!-- PreviewScreen -->
     <string name="preview_loading">加载中…</string>
+    <string name="preview_hud_status">场景初始化</string>
+    <string name="preview_hud_subtitle">3D 环境准备中</string>
+    <string name="preview_hud_engine">FILAMENT • 3D 引擎</string>
+    <string name="preview_stage_region">解析蓝图区域…</string>
+    <string name="preview_stage_texture">解析模型与纹理…</string>
+    <string name="preview_stage_atlas">打包纹理图集…</string>
+    <string name="preview_stage_pass1">统计网格数据…</string>
+    <string name="preview_stage_pass2">写入网格数据…</string>
+    <string name="preview_stage_finalize">写入收尾…</string>
     <string name="preview_failed">预览加载失败</string>
     <string name="layer_all">全部</string>
     <string name="layer_show_all">显示全部</string>

@@ -447,6 +447,12 @@ private fun PreviewButton(
                 // Drop the Litematic from ViewModel state — frees memory before
                 // Preview opens, avoiding post-generation lag.
                 viewModel.releaseLitematic()
+                // Workaround for blockprint-core Pass 2 not releasing its
+                // OffHeapBuf ByteArray segments promptly: force GC BEFORE
+                // navigating to Preview so Filament init + texture upload
+                // don't compete with collection of tens of MB of stale
+                // generation buffers.
+                System.gc()
                 showDialog = false
                 navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
             } catch (_: Exception) {

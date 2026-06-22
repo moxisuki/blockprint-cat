@@ -152,6 +152,8 @@
     <string name="detail_region_unnamed">未命名区域</string>
     <string name="detail_material_top10">材料统计(前 10 项)</string>
     <string name="detail_material_empty">无材料数据</string>
+    <string name="detail_generated_message">已生成 GLB</string>
+    <string name="detail_regenerate_hint">点击重新生成可加载完整详情</string>
 
     <!-- SettingsScreen - extended -->
     <string name="theme_color_scheme">配色方案</string>

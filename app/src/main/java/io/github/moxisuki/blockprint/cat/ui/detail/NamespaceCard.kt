@@ -51,7 +51,7 @@ fun NamespaceCard(bp: FullBlueprint, onNavigate: (String) -> Unit) {
     )
     val hasVanilla = renderEntry.vanillaAssetDownloader().isAssetsAvailable()
     val modManager = renderEntry.modAssetManager()
-    val namespaces = AssetNamespaceResolver.resolve(bp.raw).sorted()
+    val namespaces = bp.raw?.let { AssetNamespaceResolver.resolve(it).sorted() } ?: emptyList()
     var showInfoDialog by remember { mutableStateOf(false) }
 
     // 命名空间/资源包说明弹窗

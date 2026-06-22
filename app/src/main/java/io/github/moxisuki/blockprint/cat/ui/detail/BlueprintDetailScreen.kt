@@ -127,7 +127,7 @@ fun BlueprintDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // 预览按钮 — 含资源检查 + 进度对话框，详见 PreviewButton
-                item { PreviewButton(bp = bp, navController = navController) }
+                item { PreviewButton(bp = bp, navController = navController, viewModel = viewModel, uiState = uiState) }
 
                 // 基本信息 Card
                 item {
@@ -142,10 +142,36 @@ fun BlueprintDetailScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
                             DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
-                            DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
-                            DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
+                            DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw?.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
+                            DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw?.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
                             DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
                             DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
+                        }
+                    }
+                }
+
+                // 已生成 Card — 当 raw 被释放后展示，提示用户预览可用
+                if (bp.raw == null) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.detail_generated_message),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.detail_regenerate_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
                         }
                     }
                 }
@@ -154,7 +180,7 @@ fun BlueprintDetailScreen(
                 item { NamespaceCard(bp = bp, onNavigate = { ns -> navController.navigate(NavRoutes.renderWithMod(ns)) }) }
 
                 // 区域列表
-                if (bp.raw.regions.isNotEmpty()) {
+                bp.raw?.regions?.takeIf { it.isNotEmpty() }?.let { regions ->
                     item {
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -162,7 +188,7 @@ fun BlueprintDetailScreen(
                             }
                         }
                     }
-                    items(bp.raw.regions, key = { it.name }, contentType = { "region" }) { region ->
+                    items(regions, key = { it.name }, contentType = { "region" }) { region ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             ListItem(
                                 headlineContent = { Text(region.name.ifEmpty { stringResource(R.string.detail_region_unnamed) }) },
@@ -211,14 +237,21 @@ fun BlueprintDetailScreen(
 
 /** 预览按钮 — 含资源检查 + 大蓝图确认 + 进度对话框。手机/Pad 共用。 */
 @Composable
-private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
+private fun PreviewButton(
+    bp: FullBlueprint,
+    navController: NavController,
+    viewModel: DetailViewModel,
+    uiState: DetailUiState,
+) {
     val ctx = LocalContext.current
     val generator = remember { GlbResourceManager.generator }
     val assetsDir = remember { java.io.File(ctx.filesDir, "blockprintcat/render_assets") }
 
     val requiredNs = remember(bp.raw) {
         val ns = mutableSetOf<String>()
-        for (reg in bp.raw.regions) for (blk in reg.palette.entries) ns.add(blk.name.substringBefore(':'))
+        bp.raw?.regions?.forEach { reg ->
+            reg.palette.entries.forEach { blk -> ns.add(blk.name.substringBefore(':')) }
+        }
         ns.toList()
     }
     val missing = remember(requiredNs) {
@@ -378,13 +411,24 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
         LaunchedEffect(Unit) {
             val t0 = System.currentTimeMillis()
             try {
-                val region = bp.raw.regions.getOrNull(0)
+                // If raw was released after a previous generation, reload it before regenerating.
+                val lit = bp.raw ?: run {
+                    viewModel.load(bp.meta.uuid)
+                    var attempts = 0
+                    while (viewModel.uiState.value.fullBlueprint?.raw == null && attempts < 50) {
+                        kotlinx.coroutines.delay(40)
+                        attempts++
+                    }
+                    viewModel.uiState.value.fullBlueprint?.raw
+                        ?: throw IllegalStateException("蓝图已不存在，可能已被移除")
+                }
+                val region = lit.regions.getOrNull(0)
                 val modelMinY = region?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f
                 val modelCX = region?.position?.x?.toFloat() ?: 0f
                 val modelCZ = region?.position?.z?.toFloat() ?: 0f
                 val cacheFile = withContext(Dispatchers.IO) {
                     generator?.getOrGenerateFile(
-                        bp.raw,
+                        lit,
                         GlbGenerator.Key(blueprintUuid = bp.meta.uuid),
                     ) { p ->
                         genProgress = p
@@ -393,6 +437,9 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
                     }
                 } ?: throw IllegalStateException("渲染引擎未初始化")
                 GlbResourceManager.putGlb(bp.meta.uuid, cacheFile, modelMinY, modelCX, modelCZ)
+                // Drop the Litematic from ViewModel state — frees memory before
+                // Preview opens, avoiding post-generation lag.
+                viewModel.releaseLitematic()
                 showDialog = false
                 navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
             } catch (_: Exception) {
@@ -662,24 +709,49 @@ fun BlueprintDetailContent(
             ) {
                 if (navController != null) {
                     val nc = navController
-                    item { PreviewButton(bp = bp, navController = nc) }
+                    item { PreviewButton(bp = bp, navController = nc, viewModel = viewModel, uiState = uiState) }
                 }
                 item {
                     SectionCard(title = stringResource(R.string.detail_meta_title)) {
                         DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
                         DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
-                        DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
-                        DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
+                        DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw?.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
+                        DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw?.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
                         DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
                         DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
                     }
                 }
+                // 已生成 Card — 当 raw 被释放后展示
+                if (bp.raw == null) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.detail_generated_message),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.detail_regenerate_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                        }
+                    }
+                }
                 // 资源包状态（与手机端复用 NamespaceCard）
                 item { NamespaceCard(bp = bp, onNavigate = { ns -> navController?.navigate(NavRoutes.renderWithMod(ns)) }) }
-                if (bp.raw.regions.isNotEmpty()) {
+                bp.raw?.regions?.takeIf { it.isNotEmpty() }?.let { regions ->
                     item {
                         SectionCard(title = stringResource(R.string.detail_region_list)) {
-                            bp.raw.regions.forEachIndexed { index, region ->
+                            regions.forEachIndexed { index, region ->
                                 if (index > 0) androidx.compose.material3.HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 12.dp),
                                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),

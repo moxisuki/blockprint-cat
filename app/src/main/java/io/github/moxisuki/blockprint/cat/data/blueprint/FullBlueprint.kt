@@ -5,5 +5,7 @@ import io.github.moxisuki.blockprint.core.Litematic
 data class FullBlueprint(
     val meta: BlueprintMeta,
     val materials: List<Pair<String, Int>>,
-    val raw: Litematic,
+    /** The parsed litematic. Null after GLB generation to free memory;
+     *  reloaded from disk on Regenerate. */
+    val raw: Litematic? = null,
 )

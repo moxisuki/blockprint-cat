@@ -120,6 +120,8 @@
     <string name="detail_region_unnamed">Unnamed region</string>
     <string name="detail_material_top10">Materials (top 10)</string>
     <string name="detail_material_empty">No material data</string>
+    <string name="detail_generated_message">GLB generated</string>
+    <string name="detail_regenerate_hint">Tap regenerate to load full details again</string>
 
     <!-- SettingsScreen - extended -->
     <string name="theme_color_scheme">Color scheme</string>

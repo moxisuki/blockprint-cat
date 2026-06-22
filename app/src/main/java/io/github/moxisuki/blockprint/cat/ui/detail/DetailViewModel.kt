@@ -63,4 +63,15 @@ class DetailViewModel @Inject constructor(
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+
+    /**
+     * Drop the parsed Litematic from state after successful GLB generation.
+     * Frees significant memory (Litematic can be tens of MB for big builds).
+     * Re-fetched on next Regenerate via [load].
+     */
+    fun releaseLitematic() {
+        val current = _uiState.value.fullBlueprint ?: return
+        if (current.raw == null) return
+        _uiState.value = _uiState.value.copy(fullBlueprint = current.copy(raw = null))
+    }
 }

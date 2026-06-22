@@ -186,13 +186,7 @@ fun PreviewScreen(
             Text(error!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         glbEntry != null -> PreviewSceneContent(entry = glbEntry!!, onFullscreenChange = onFullscreenChange, fromCache = glbEntry!!.fromCache)
-        else -> {
-            if (glbProgress >= 0f) {
-                HudStartupOverlay(visible = true)
-            } else {
-                HudStartupOverlay(visible = true)
-            }
-        }
+        else -> HudStartupOverlay(visible = true)
     }
 }
 

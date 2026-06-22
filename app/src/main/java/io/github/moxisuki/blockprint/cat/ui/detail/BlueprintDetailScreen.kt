@@ -58,6 +58,10 @@ import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.data.blueprint.FullBlueprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withTimeoutOrNull
 import io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager
 import io.github.moxisuki.blockprint.core.MinecraftVersions
 import coil.compose.SubcomposeAsyncImage
@@ -414,13 +418,16 @@ private fun PreviewButton(
                 // If raw was released after a previous generation, reload it before regenerating.
                 val lit = bp.raw ?: run {
                     viewModel.load(bp.meta.uuid)
-                    var attempts = 0
-                    while (viewModel.uiState.value.fullBlueprint?.raw == null && attempts < 50) {
-                        kotlinx.coroutines.delay(40)
-                        attempts++
-                    }
-                    viewModel.uiState.value.fullBlueprint?.raw
-                        ?: throw IllegalStateException("蓝图已不存在，可能已被移除")
+                    // Await load completion via the StateFlow — no polling.
+                    // .map().filterNotNull().first() suspends until the StateFlow
+                    // emits a non-null raw value, then returns it. 5 s safety timeout
+                    // so a missing/disk-failure doesn't hang the LaunchedEffect forever.
+                    kotlinx.coroutines.withTimeoutOrNull(5_000) {
+                        viewModel.uiState
+                            .map { it.fullBlueprint?.raw }
+                            .filterNotNull()
+                            .first()
+                    } ?: throw IllegalStateException("加载超时，litematic 文件可能已损坏或被删除")
                 }
                 val region = lit.regions.getOrNull(0)
                 val modelMinY = region?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f

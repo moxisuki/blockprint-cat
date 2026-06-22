@@ -33,7 +33,7 @@ This spec unifies the flow, removes dead code, fixes the UX race, and avoids red
 - `cachedGlb\b` (the field)
 - `GlbCache\.get\(` / `GlbCache\.put\(`
 - `GlbCacheEntry\b` (the old data class)
-- `cachedKeys\b` (the old StateFlow)
+- `cachedGlbKey\b` / `cachedGlbMinY\b` / `cachedGlbCenterX\b` / `cachedGlbCenterZ\b` / `cachedGlbFile\b` (the 5 separate fields)
 
 ## Non-Goals
 
@@ -59,7 +59,7 @@ Three-layer responsibility split, with UI explicitly orchestrating the three-seg
                           ▼
 ┌─────────────────────────────────────────────────────────┐
 │  GlbResourceManager  (in-memory cache coordinator)      │
-│  CachedGlb data class, cachedGlbs StateFlow,           │
+│  CachedGlb data class, cachedKeys StateFlow (UUID set), │
 │  peek / hasGlb / putGlb / clearGlb,                    │
 │  transferLitematic / receiveLitematic                   │
 └─────────────────────────────────────────────────────────┘
@@ -105,13 +105,8 @@ Three-layer responsibility split, with UI explicitly orchestrating the three-seg
 
 ### `GlbResourceManager.kt` (renamed from `RenderResourceManager.kt`)
 
-**New fields:**
-```kotlin
-private val _cachedGlbs = MutableStateFlow<Map<String, CachedGlb>>(emptyMap())
-val cachedGlbs: StateFlow<Map<String, CachedGlb>> = _cachedGlbs.asStateFlow()
-```
+**Two-tier state design** (rationale: Room doesn't store `minY/centerX/centerZ`, so the in-memory Map can't be populated from Room alone; splitting UI subscription from session hot-path keeps `init()` fast and avoids per-entry I/O on startup).
 
-**New data class:**
 ```kotlin
 data class CachedGlb(
     val blueprintUuid: String,
@@ -120,22 +115,41 @@ data class CachedGlb(
     val centerX: Float,
     val centerZ: Float,
 )
+
+// Tier 1: UUID set mirrored from Room — used by DetailScreen "View Cached" button.
+private val _cachedKeys = MutableStateFlow<Set<String>>(emptySet())
+val cachedKeys: StateFlow<Set<String>> = _cachedKeys.asStateFlow()
+
+// Tier 2: per-session metadata — used by PreviewScreen Segment 1 (in-memory hot path).
+private val sessionCache = mutableMapOf<String, CachedGlb>()
 ```
 
-**Method changes:**
-- `peek(uuid): CachedGlb?` — single-arg, returns from `_cachedGlbs.value[uuid]`
-- `hasGlb(uuid): Boolean` — unchanged signature
-- `putGlb(uuid, cacheFile, minY, centerX, centerZ)` — `bytes` parameter removed
-- `clearGlb(uuid)` / `clearAllGlb()` — unchanged signatures
+**Public API:**
+- `peek(uuid): CachedGlb? = sessionCache[uuid]` — PreviewScreen Segment 1
+- `hasGlb(uuid): Boolean = uuid in _cachedKeys.value` — DetailScreen check
+- `putGlb(uuid, cacheFile, minY, centerX, centerZ)` — writes to both tiers + Room
+- `clearGlb(uuid)` / `clearAllGlb()` — clears both tiers + Room
 - `transferLitematic(uuid, lit)` — renamed from `putLitematic`
 - `receiveLitematic(uuid): Litematic?` — renamed from `takeLitematic`
 
+**`init()` populates Tier 1 from Room, leaves Tier 2 empty:**
+```kotlin
+fun init(context: Context, dao: GlbCacheDao) {
+    ...
+    runBlocking {
+        _cachedKeys.value = dao.getAll().map { it.uuid }.toSet()
+    }
+    // sessionCache intentionally empty — populated by putGlb within current session.
+    // PreviewScreen Segment 1 only fires within same session; cold-start always
+    // falls through to Segment 2 (stat + small litematic region header parse).
+}
+```
+
 **Deleted:**
 - `takeGlb(uuid): GlbCacheEntry?` (zero callers)
-- `cachedGlb: ByteArray?` field (only self-referenced by `peekGlb`/`takeGlb`/`clearGlb` after refactor)
+- `cachedGlb: ByteArray?` field (only self-referenced by `peekGlb`/`takeGlb`/`clearGlb`)
 - 5 separate fields: `cachedGlbKey` / `cachedGlbMinY` / `cachedGlbCenterX` / `cachedGlbCenterZ` / `cachedGlbFile` (folded into `CachedGlb`)
 - Old `GlbCacheEntry` data class
-- Old `cachedKeys: StateFlow<Set<String>>` (replaced by `cachedGlbs: StateFlow<Map<String, CachedGlb>>`)
 
 **Room write change:** `GlbCacheEntity.sizeBytes = cacheFile.length()` instead of `bytes.size` (was always 0).
 
@@ -291,8 +305,8 @@ val cachedKeys by RenderResourceManager.cachedKeys.collectAsState()
 val hasCache = bp.meta.uuid in cachedKeys
 
 // After
-val cachedGlbs by GlbResourceManager.cachedGlbs.collectAsState()
-val hasCache = bp.meta.uuid in cachedGlbs
+val cachedKeys by GlbResourceManager.cachedKeys.collectAsState()
+val hasCache = bp.meta.uuid in cachedKeys
 ```
 
 **Other DetailScreen code unchanged:** import statements adjusted (renamed types), dialog UI unchanged, `startGenerate` / `viewExisting` lambdas unchanged in shape (only type names swap).
@@ -507,7 +521,7 @@ GlbCache:
 
 GlbResourceManager (renamed from RenderResourceManager):
 - New CachedGlb data class replaces 5 separate fields
-- cachedGlbs: StateFlow<Map<String, CachedGlb>> replaces cachedKeys: StateFlow<Set<String>>
+- cachedKeys StateFlow retained (Room-mirrored UUID set); private sessionCache map added for per-session metadata
 - takeGlb / cachedGlb field removed (zero callers)
 - takeLitematic/putLitematic renamed to receiveLitematic/transferLitematic
 - Room sizeBytes now writes cacheFile.length() instead of bytes.size (was 0)
@@ -523,7 +537,7 @@ PreviewScreen:
 
 BlueprintDetailScreen:
 - Generation path now single getOrGenerateFile call (was generate + getOrGenerateFile)
-- cachedGlbs subscription replaces cachedKeys
+- cachedKeys subscription unchanged in shape (still `bp.meta.uuid in cachedKeys`)
 
 Bugfixes:
 - Loading overlay now shows for cache hits too (no more "nothing then black")

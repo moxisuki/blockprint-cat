@@ -385,8 +385,7 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
                 val cacheFile = withContext(Dispatchers.IO) {
                     generator?.getOrGenerateFile(
                         bp.raw,
-                        cacheKey = bp.meta.uuid,
-                        floorHeight = GlbGenerator.LAYER_FLOOR_HEIGHT,
+                        GlbGenerator.Key(blueprintUuid = bp.meta.uuid),
                     ) { p ->
                         genProgress = p
                         genElapsed = System.currentTimeMillis() - t0

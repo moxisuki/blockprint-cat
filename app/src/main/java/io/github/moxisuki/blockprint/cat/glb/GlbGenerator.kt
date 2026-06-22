@@ -70,22 +70,20 @@ class GlbGenerator(
 
     fun getOrGenerateFile(
         litematic: Litematic,
-        cacheKey: String,
-        regionIndex: Int = 0,
-        floorHeight: Int = 0,
+        key: Key,
         onProgress: ((Float) -> Unit)? = null,
     ): File {
-        val file = cache.getFile(Key(cacheKey, regionIndex, floorHeight))
+        val file = cache.getFile(key)
         if (file.isFile) {
             log("缓存文件命中: ${file.absolutePath}, ${file.length()} bytes")
         } else {
-            log("缓存文件未命中, 生成中: $cacheKey")
+            log("缓存文件未命中, 生成中: ${key.blueprintUuid} r${key.regionIndex} fh${key.floorHeight}")
             val t0 = System.currentTimeMillis()
             val tmp = File(file.parentFile, "${file.name}.tmp")
             tmp.parentFile?.mkdirs()
-            val opts = if (floorHeight > 0) GlbExportOptions(floorHeight = floorHeight) else GlbExportOptions()
+            val opts = if (key.floorHeight > 0) GlbExportOptions(floorHeight = key.floorHeight) else GlbExportOptions()
             tmp.outputStream().use { out ->
-                LitematicToGlb.convert(litematic, assetsDirs, out, regionIndex, opts, onProgress)
+                LitematicToGlb.convert(litematic, assetsDirs, out, key.regionIndex, opts, onProgress)
             }
             tmp.renameTo(file)
             val elapsed = System.currentTimeMillis() - t0
@@ -94,8 +92,7 @@ class GlbGenerator(
         return file
     }
 
-    fun hasCache(cacheKey: String, regionIndex: Int = 0, floorHeight: Int = 0): Boolean =
-        cache.getFile(Key(cacheKey, regionIndex, floorHeight)).isFile
+    fun hasCache(key: Key): Boolean = cache.getFile(key).isFile
 
     fun clearCache(key: String) = cache.clear(Key(key))
 

@@ -139,10 +139,21 @@ fun PreviewScreen(
     navController: androidx.navigation.NavController,
     onFullscreenChange: ((Boolean) -> Unit)? = null,
 ) {
+    val context = LocalView.current.context
     var glbEntry by remember { mutableStateOf<GlbEntry?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var glbProgress by remember { mutableFloatStateOf(-1f) }
+    var glbStageText by remember { mutableStateOf("") }
+    // 进度阶段 → 提示文字
+    fun stageFor(frac: Float): String = when {
+        frac < 0.07f -> context.getString(R.string.preview_stage_region)
+        frac < 0.22f -> context.getString(R.string.preview_stage_texture)
+        frac < 0.32f -> context.getString(R.string.preview_stage_atlas)
+        frac < 0.67f -> context.getString(R.string.preview_stage_pass1)
+        frac < 0.95f -> context.getString(R.string.preview_stage_pass2)
+        else -> context.getString(R.string.preview_stage_finalize)
+    }
     val generator = remember { io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager.generator }
-    val context = LocalView.current.context
     val blueprintManager = remember { PreviewEntryPoint.resolve(context) }
     val view = LocalView.current
 
@@ -158,18 +169,39 @@ fun PreviewScreen(
 
     LaunchedEffect(uuid) {
         val cached = io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager.peekGlb(uuid)
-        if (cached != null) { glbEntry = GlbEntry(cached.bytes, cached.minY, cached.centerX, cached.centerZ); return@LaunchedEffect }
+        if (cached != null) {
+            // 大模型直接用缓存文件，不把 bytes 带进内存
+            glbEntry = GlbEntry(byteArrayOf(), cached.minY, cached.centerX, cached.centerZ, cacheFile = cached.cacheFile, fromCache = true)
+            return@LaunchedEffect
+        }
+        // 磁盘缓存命中（进程重启后内存缓存丢失）→ 跳过生成流程，直接显示
+        val diskFile = generator?.getOrGenerateFile(
+            blueprintManager.loadDetail(uuid)?.raw ?: return@LaunchedEffect,
+            GlbGenerator.Key(blueprintUuid = uuid))
+        if (diskFile != null && diskFile.length() > 0) {
+            val reg = (blueprintManager.loadDetail(uuid)?.raw?.regions?.getOrNull(0))
+            glbEntry = GlbEntry(byteArrayOf(), minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
+                centerX = reg?.position?.x?.toFloat() ?: 0f, centerZ = reg?.position?.z?.toFloat() ?: 0f,
+                cacheFile = diskFile, fromCache = true)
+            return@LaunchedEffect
+        }
+        // 立即显示进度条（0%），避免生成前有一段空白等待
+            glbProgress = 0f
+            glbStageText = context.getString(R.string.preview_stage_region)
         try {
             val entry = withContext(Dispatchers.IO) {
                 val lit = io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager.takeLitematic(uuid)
                     ?: blueprintManager.loadDetail(uuid)?.raw
                     ?: throw IllegalStateException("蓝图不存在或已被删除")
                 if (lit.blockCount() == 0) throw IllegalStateException("该蓝图不包含任何方块")
-                val bytes = generator?.generate(lit, cacheKey = uuid, floorHeight = GlbGenerator.LAYER_FLOOR_HEIGHT)
+                val bytes = generator?.generate(lit, cacheKey = uuid, floorHeight = GlbGenerator.LAYER_FLOOR_HEIGHT,
+                    onProgress = { f -> glbProgress = f; glbStageText = stageFor(f) })
                     ?: throw IllegalStateException("渲染引擎未初始化")
+                val cacheFile = generator?.getOrGenerateFile(lit, GlbGenerator.Key(blueprintUuid = uuid))
                 val reg = lit.regions.getOrNull(0)
                 GlbEntry(bytes, minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
-                    centerX = reg?.position?.x?.toFloat() ?: 0f, centerZ = reg?.position?.z?.toFloat() ?: 0f)
+                    centerX = reg?.position?.x?.toFloat() ?: 0f, centerZ = reg?.position?.z?.toFloat() ?: 0f,
+                    cacheFile = cacheFile)
             }
             glbEntry = entry
         } catch (e: Exception) {
@@ -186,16 +218,30 @@ fun PreviewScreen(
             Spacer(Modifier.height(4.dp))
             Text(error!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        glbEntry != null -> PreviewSceneContent(entry = glbEntry!!, onFullscreenChange = onFullscreenChange)
+        glbEntry != null -> PreviewSceneContent(entry = glbEntry!!, onFullscreenChange = onFullscreenChange, fromCache = glbEntry!!.fromCache)
         else -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            CircularProgressIndicator()
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.preview_loading), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (glbProgress >= 0f) {
+                CircularProgressIndicator(progress = { glbProgress }, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "${(glbProgress * 100).toInt()}%",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                if (glbStageText.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(glbStageText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                CircularProgressIndicator()
+                Spacer(Modifier.height(16.dp))
+                Text(stringResource(R.string.preview_loading), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
 
-private data class GlbEntry(val bytes: ByteArray, val minY: Float, val centerX: Float, val centerZ: Float)
+private data class GlbEntry(val bytes: ByteArray, val minY: Float, val centerX: Float, val centerZ: Float, val cacheFile: java.io.File? = null, val fromCache: Boolean = false)
 
 /**
  * 一次完成预设的完整光状态更新：
@@ -223,6 +269,7 @@ private fun applyPreviewLightPreset(
 private fun PreviewSceneContent(
     entry: GlbEntry,
     onFullscreenChange: ((Boolean) -> Unit)? = null,
+    fromCache: Boolean = false,
 ) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine = engine)
@@ -239,6 +286,7 @@ private fun PreviewSceneContent(
         eyeX = entry.centerX + 30f, eyeY = groundY + 20f, eyeZ = entry.centerZ + 40f,
         targetX = entry.centerX, targetY = groundY + 4f, targetZ = entry.centerZ,
     ).also { it.gridY = groundY } }
+    val glbFile = entry.cacheFile
     val glbBytes = entry.bytes
 
     var fullscreen by remember { mutableStateOf(false) }
@@ -251,6 +299,12 @@ private fun PreviewSceneContent(
     var layerY by remember { mutableIntStateOf(Int.MAX_VALUE) } // Int.MAX_VALUE = 显示全部层
     var layerPanelOpen by remember { mutableStateOf(false) }
     var centered by remember { mutableStateOf(false) }
+    // 加载遮罩：centered 变为 true 后再保持至少 400ms，避免闪一下就消失
+    var loadingVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(centered, glbBytes) {
+        if (!centered) loadingVisible = true
+        else { kotlinx.coroutines.delay(400); loadingVisible = false }
+    }
     var floorCount by remember { mutableIntStateOf(0) }
     var modelRoot by remember { mutableStateOf<Node?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -329,12 +383,22 @@ private fun PreviewSceneContent(
         val context = LocalView.current.context
         var modelError by remember { mutableStateOf(false) }
         var modelErrorMessage by remember { mutableStateOf<String>(context.getString(R.string.preview_render_failed)) }
-        val modelInst = remember(glbBytes) {
+        // 用 LaunchedEffect 而非 remember，确保加载 overlay 先渲染，不阻塞首帧
+        var modelInst by remember { mutableStateOf<io.github.sceneview.model.ModelInstance?>(null) }
+        LaunchedEffect(glbFile ?: glbBytes) {
             modelError = false
             try {
-                if (glbBytes.size < 2000) { modelErrorMessage = context.getString(R.string.preview_resource_missing); modelError = true; return@remember null }
-                val buffer = java.nio.ByteBuffer.allocateDirect(glbBytes.size).apply { put(glbBytes); flip() }
-                modelLoader.createModelInstance(buffer)
+                modelInst = if (glbFile != null && glbFile.isFile) {
+                    // 内存映射文件 — 不占用堆/直接内存，避免大模型 OOM
+                    java.io.RandomAccessFile(glbFile, "r").use { raf ->
+                        val mapped = raf.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, glbFile.length())
+                        modelLoader.createModelInstance(mapped)
+                    }
+                } else {
+                    if (glbBytes.size < 2000) { modelErrorMessage = context.getString(R.string.preview_resource_missing); modelError = true; return@LaunchedEffect }
+                    val buffer = java.nio.ByteBuffer.allocateDirect(glbBytes.size).apply { put(glbBytes); flip() }
+                    modelLoader.createModelInstance(buffer)
+                }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "模型加载失败: ${e.message}", e)
                 modelErrorMessage = if (e.message?.contains("Empty vertex") == true) context.getString(R.string.preview_resource_missing)
@@ -353,7 +417,7 @@ private fun PreviewSceneContent(
             modelLoader = modelLoader,
             environmentLoader = environmentLoader,
             environment = environment,
-            surfaceType = io.github.sceneview.SurfaceType.Surface,
+            surfaceType = io.github.sceneview.SurfaceType.TextureSurface,
             isOpaque = true,
             cameraNode = cameraNode,
             view = filamentView,
@@ -413,6 +477,20 @@ private fun PreviewSceneContent(
             }
         }
         } // key(glbBytes)
+
+        // Filament 加载中 — 覆盖层（缓存命中跳过，避免重复显示两个加载指示器）
+        if (!fromCache && loadingVisible && !modelError) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(12.dp))
+                    Text(stringResource(R.string.preview_loading), style = MaterialTheme.typography.bodyMedium, color = androidx.compose.ui.graphics.Color.White)
+                }
+            }
+        }
 
         // 旋转手势层
         Box(

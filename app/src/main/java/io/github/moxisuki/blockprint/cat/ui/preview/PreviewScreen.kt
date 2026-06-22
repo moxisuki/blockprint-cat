@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.OpenWith
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -187,23 +186,16 @@ fun PreviewScreen(
             Text(error!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         glbEntry != null -> PreviewSceneContent(entry = glbEntry!!, onFullscreenChange = onFullscreenChange, fromCache = glbEntry!!.fromCache)
-        else -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        else -> {
             if (glbProgress >= 0f) {
-                CircularProgressIndicator(progress = { glbProgress }, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "${(glbProgress * 100).toInt()}%",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                HudGeneratingOverlay(
+                    visible = true,
+                    progress = glbProgress,
+                    elapsedMs = 0L,
+                    stageText = glbStageText,
                 )
-                if (glbStageText.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(glbStageText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             } else {
-                CircularProgressIndicator()
-                Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.preview_loading), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HudStartupOverlay(visible = true)
             }
         }
     }

@@ -308,11 +308,13 @@ private fun PreviewSceneContent(
     var layerY by remember { mutableIntStateOf(Int.MAX_VALUE) } // Int.MAX_VALUE = 显示全部层
     var layerPanelOpen by remember { mutableStateOf(false) }
     var centered by remember { mutableStateOf(false) }
-    // 加载遮罩：centered 变为 true 后再保持至少 400ms，避免闪一下就消失
+    // `centered` = ModelNode 已挂到 SceneView 树（用于相机定位/网格/分层）
+    // `modelOnScreen` = SceneView 实际渲染出首帧（用于 loading 收尾）
+    var modelOnScreen by remember { mutableStateOf(false) }
     var loadingVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(centered, glbFile) {
-        if (!centered) loadingVisible = true
-        else { kotlinx.coroutines.delay(400); loadingVisible = false }
+    LaunchedEffect(modelOnScreen, entry) {
+        loadingVisible = !modelOnScreen
+        if (modelOnScreen) kotlinx.coroutines.delay(250)
     }
     var floorCount by remember { mutableIntStateOf(0) }
     var modelRoot by remember { mutableStateOf<Node?>(null) }
@@ -397,6 +399,7 @@ private fun PreviewSceneContent(
         LaunchedEffect(glbFile) {
             modelError = false
             modelInst = null
+            modelOnScreen = false
             try {
                 modelInst = if (glbFile.isFile) {
                     modelLoader.createModelInstance(glbFile)
@@ -431,6 +434,7 @@ private fun PreviewSceneContent(
             fillLightNode = fillLight,
             autoCenterContent = false,
             onFrame = { frameTimeNanos ->
+                if (modelInst != null && !modelOnScreen) modelOnScreen = true
                 val delta = if (lastFrameNanos > 0) ((frameTimeNanos - lastFrameNanos) / 1e9f).coerceIn(0f, 0.1f) else 0f
                 lastFrameNanos = frameTimeNanos
                 if (cam.isWalk) cam.applyWalkMove(delta)
@@ -483,8 +487,8 @@ private fun PreviewSceneContent(
         }
         } // key(glbFile)
 
-        // Filament 加载中 — 覆盖层（缓存命中跳过，避免重复显示两个加载指示器）
-        if (!fromCache && loadingVisible && !modelError) {
+        // Filament 加载中 — 覆盖层（一直显示到 SceneView 渲染出首帧 + 250ms）
+        if (loadingVisible && !modelError) {
             Box(
                 modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)),
                 contentAlignment = Alignment.Center,

@@ -42,7 +42,7 @@ class GlbGenerator(
         floorHeight: Int = 0,
         onProgress: ((Float) -> Unit)? = null,
     ): ByteArray {
-        val cacheFile = cache.getFile(cacheKey, regionIndex, floorHeight)
+        val cacheFile = cache.getFile(Key(cacheKey, regionIndex, floorHeight))
         if (cacheFile.isFile) {
             log("缓存命中: $cacheKey r$regionIndex fh$floorHeight, ${cacheFile.length()} bytes")
             return byteArrayOf()
@@ -64,7 +64,7 @@ class GlbGenerator(
 
     /** Check if a cached GLB file exists and looks valid (non-empty, ≥ MIN_VALID_GLB_BYTES). */
     fun peekCacheFile(key: Key): File? {
-        val file = cache.getFile(key.blueprintUuid, key.regionIndex, key.floorHeight)
+        val file = cache.getFile(key)
         return file.takeIf { it.isFile && it.length() >= MIN_VALID_GLB_BYTES }
     }
 
@@ -75,7 +75,7 @@ class GlbGenerator(
         floorHeight: Int = 0,
         onProgress: ((Float) -> Unit)? = null,
     ): File {
-        val file = cache.getFile(cacheKey, regionIndex, floorHeight)
+        val file = cache.getFile(Key(cacheKey, regionIndex, floorHeight))
         if (file.isFile) {
             log("缓存文件命中: ${file.absolutePath}, ${file.length()} bytes")
         } else {
@@ -95,9 +95,9 @@ class GlbGenerator(
     }
 
     fun hasCache(cacheKey: String, regionIndex: Int = 0, floorHeight: Int = 0): Boolean =
-        cache.getFile(cacheKey, regionIndex, floorHeight).isFile
+        cache.getFile(Key(cacheKey, regionIndex, floorHeight)).isFile
 
-    fun clearCache(key: String) = cache.clear(key)
+    fun clearCache(key: String) = cache.clear(Key(key))
 
     fun clearAllCache() = cache.clear()
 }

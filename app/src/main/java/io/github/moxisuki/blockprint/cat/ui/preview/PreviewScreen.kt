@@ -36,6 +36,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,11 +45,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
@@ -58,6 +62,7 @@ import androidx.core.view.WindowInsetsCompat
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.glb.GlbGenerator
 import io.github.sceneview.SceneView
+import io.github.sceneview.environment.Environment
 import io.github.sceneview.math.Position
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LineNode
@@ -241,29 +246,56 @@ private fun PreviewSceneContent(
     // `modelOnScreen` = SceneView 实际渲染出首帧(用于 loading 收尾)
     var modelOnScreen by remember { mutableStateOf(false) }
     var loadingVisible by remember { mutableStateOf(true) }
+    val modelAlpha by animateFloatAsState(
+        targetValue = if (modelOnScreen) 1f else 0f,
+        animationSpec = tween(durationMillis = 250),
+        label = "modelAlpha",
+    )
     LaunchedEffect(modelOnScreen, entry) {
-        loadingVisible = !modelOnScreen
-        if (modelOnScreen) kotlinx.coroutines.delay(250)
+        if (!modelOnScreen) {
+            loadingVisible = true
+        } else {
+            // Wait 250ms after model is on screen before hiding the overlay
+            // (gives GPU upload + first frame a moment to stabilize)
+            kotlinx.coroutines.delay(250)
+            loadingVisible = false
+        }
     }
     var floorCount by remember { mutableIntStateOf(0) }
     var modelRoot by remember { mutableStateOf<Node?>(null) }
     val snackbar = remember { SnackbarHostState() }
 
-    // 预加载 4 套环境并在预览页面生命周期内复用,避免切换预设时重复创建 KTX 环境。
-    val cachedEnvironments = remember(environmentLoader) {
-        loadCachedEnvironments(environmentLoader)
+    // 仅同步加载初始 light preset 那 1 套环境,避免 4 套全加载的 ~300-800ms 阻塞。
+    // 用户切换预设时,由下面的 LaunchedEffect 异步加载并加到 loadedEnvs 里。
+    val initialEnv = remember(environmentLoader) {
+        loadEnvironmentByName(environmentLoader, LIGHT_PRESETS[0].envName)
+    }
+    val loadedEnvs = remember {
+        mutableStateMapOf<String, Environment>(LIGHT_PRESETS[0].envName to initialEnv)
     }
 
-    DisposableEffect(environmentLoader, cachedEnvironments) {
+    // 切换预设时按需加载(已在 loadedEnvs 里就直接用,否则异步加载并写入)
+    LaunchedEffect(environmentLoader, lightPreset) {
+        val target = LIGHT_PRESETS[lightPreset].envName
+        if (loadedEnvs[target] == null) {
+            val loaded = withContext(Dispatchers.IO) {
+                loadEnvironmentByName(environmentLoader, target)
+            }
+            loadedEnvs[target] = loaded
+        }
+    }
+
+    DisposableEffect(environmentLoader) {
         onDispose {
-            cachedEnvironments.values.distinct().forEach { env ->
+            loadedEnvs.values.distinct().forEach { env ->
                 runCatching { environmentLoader.destroyEnvironment(env) }
             }
         }
     }
 
     val targetEnv = LIGHT_PRESETS[lightPreset].envName
-    val environment = cachedEnvironments[targetEnv] ?: cachedEnvironments.getValue("noon")
+    // 切换瞬间如果新 env 还没加载完,fallback 到上一帧可见的 env(不是强制用 noon,避免视觉跳变)
+    val environment = loadedEnvs[targetEnv] ?: initialEnv
 
     LaunchedEffect(cameraMode) {
         if (cameraMode == CameraMode.WALK) cam.syncWalkOrientation()
@@ -323,7 +355,8 @@ private fun PreviewSceneContent(
 
         var lastFrameNanos by remember { mutableStateOf(0L) }
 
-        key(glbFile) {
+        Box(modifier = Modifier.fillMaxSize().alpha(modelAlpha)) {
+            key(glbFile) {
         SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
@@ -391,6 +424,7 @@ private fun PreviewSceneContent(
             }
         }
         } // key(glbFile)
+        } // Box fade-in alpha
 
         // Filament 加载中 — 覆盖层(一直显示到 SceneView 渲染出首帧 + 250ms)
         if (loadingVisible && !modelError) {

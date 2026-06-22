@@ -127,28 +127,19 @@ private fun updateMCNoDiscSunLight(
     lightNode.intensity = if (timeOfDay < 6f || timeOfDay >= 18f) sunIntensity else sunIntensity * elevation.coerceAtLeast(0f)
 }
 
-internal fun loadCachedEnvironments(environmentLoader: EnvironmentLoader): Map<String, Environment> {
-    fun loadEnv(name: String): Environment {
-        return try {
-            environmentLoader.createKTX1Environment(
-                iblAssetFile = "environments/$name/${name}_ibl.ktx",
-                skyboxAssetFile = "environments/$name/${name}_skybox.ktx",
-            )
-        } catch (e: Exception) {
-            Log.w(LIGHTING_TAG, "env=$name KTX 缺失,使用 fallback neutral: ${e.message}")
-            environmentLoader.createKTX1Environment(
-                iblAssetFile = "environments/neutral/neutral_ibl.ktx",
-                skyboxAssetFile = "environments/neutral/neutral_skybox.ktx",
-            )
-        }.also { env ->
-            Log.i(LIGHTING_TAG, "env=$name loaded: skybox=${env.skybox != null}, ibl=${env.indirectLight != null}")
-        }
+internal fun loadEnvironmentByName(environmentLoader: EnvironmentLoader, name: String): Environment {
+    return try {
+        environmentLoader.createKTX1Environment(
+            iblAssetFile = "environments/$name/${name}_ibl.ktx",
+            skyboxAssetFile = "environments/$name/${name}_skybox.ktx",
+        )
+    } catch (e: Exception) {
+        Log.w(LIGHTING_TAG, "env=$name KTX 缺失,使用 fallback neutral: ${e.message}")
+        environmentLoader.createKTX1Environment(
+            iblAssetFile = "environments/neutral/neutral_ibl.ktx",
+            skyboxAssetFile = "environments/neutral/neutral_skybox.ktx",
+        )
+    }.also { env ->
+        Log.i(LIGHTING_TAG, "env=$name loaded: skybox=${env.skybox != null}, ibl=${env.indirectLight != null}")
     }
-
-    return mapOf(
-        "noon" to loadEnv("noon"),
-        "sunset" to loadEnv("sunset"),
-        "night" to loadEnv("night"),
-        "studio" to loadEnv("studio"),
-    )
 }

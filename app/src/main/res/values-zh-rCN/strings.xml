@@ -139,6 +139,8 @@
     <string name="detail_continue_anyway">继续预览</string>
     <string name="detail_generating_title">生成 3D 预览</string>
     <string name="detail_generating_progress">%1$d%% — %2$ds</string>
+    <string name="detail_hud_status">正在构建 GLB</string>
+    <string name="detail_hud_engine">方块转换器</string>
     <string name="detail_meta_title">基本信息</string>
     <string name="detail_meta_name">蓝图名称</string>
     <string name="detail_meta_author">作者</string>

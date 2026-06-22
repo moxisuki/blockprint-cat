@@ -2,7 +2,6 @@ package io.github.moxisuki.blockprint.cat.ui.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.res.stringResource
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
@@ -55,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
+import io.github.moxisuki.blockprint.cat.ui.preview.HudGeneratingOverlay
 import io.github.moxisuki.blockprint.cat.data.blueprint.FullBlueprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -347,33 +347,11 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
 
     if (showDialog) {
         BackHandler { }
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.detail_generating_title)) },
-            text = {
-                Column(Modifier.fillMaxWidth()) {
-                    LinearProgressIndicator(
-                        progress = { genProgress },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "${(genProgress * 100).toInt()}% — ${genElapsed / 1000}s",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    if (genStage.isNotEmpty()) {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            genStage,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {},
+        HudGeneratingOverlay(
+            visible = true,
+            progress = genProgress,
+            elapsedMs = genElapsed,
+            stageText = genStage,
         )
         LaunchedEffect(Unit) {
             val t0 = System.currentTimeMillis()

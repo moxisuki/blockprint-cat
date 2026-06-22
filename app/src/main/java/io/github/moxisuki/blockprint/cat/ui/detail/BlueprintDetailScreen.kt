@@ -44,9 +44,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -382,14 +384,93 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 12.dp),
+        )
+    }
+}
+
+@Composable
+private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            )
+            androidx.compose.material3.HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+            content()
+        }
+    }
+}
+
+@Composable
+private fun RegionRow(region: io.github.moxisuki.blockprint.core.LitematicRegion) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Default.ViewInAr,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                region.name.ifEmpty { stringResource(R.string.detail_region_unnamed) },
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                "${region.width} × ${region.height} × ${region.depth}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            formatNumber(region.width * region.height * region.depth),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium,
         )
     }
 }
@@ -415,16 +496,20 @@ private fun MaterialRow(name: String, count: Int) {
     }
     val langName = remember(name) { LangManager.displayName(context, name) }
 
-    ListItem(
-        headlineContent = {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MaterialIcon(name = name)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
             Text(
                 langName,
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-        },
-        supportingContent = {
             Text(
                 name,
                 style = MaterialTheme.typography.labelSmall,
@@ -432,10 +517,15 @@ private fun MaterialRow(name: String, count: Int) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-        },
-        trailingContent = { Text("× ${formatNumber(count)}") },
-        leadingContent = { MaterialIcon(name = name) },
-    )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "× ${formatNumber(count)}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium,
+        )
+    }
 }
 
 @Composable
@@ -466,7 +556,7 @@ private fun MaterialIcon(name: String) {
                 .crossfade(true)
                 .build(),
             contentDescription = name,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)),
             error = {
                 if (attempt < variants.lastIndex) {
                     LaunchedEffect(currentUrl) { attempt++ }
@@ -503,8 +593,8 @@ private fun MaterialIcon(name: String) {
 private fun UnknownIcon() {
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .size(32.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
             ),
@@ -546,54 +636,47 @@ fun BlueprintDetailContent(
         else -> {
             val bp = uiState.fullBlueprint!!
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (navController != null) {
                     val nc = navController
                     item { PreviewButton(bp = bp, navController = nc) }
                 }
                 item {
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.detail_meta_title), style = MaterialTheme.typography.titleMedium)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
-                            DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
-                            DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
-                            DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
-                            DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
-                            DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
-                        }
+                    SectionCard(title = stringResource(R.string.detail_meta_title)) {
+                        DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
+                        DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
+                        DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
+                        DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
+                        DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
+                        DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
                     }
                 }
                 // 资源包状态（与手机端复用 NamespaceCard）
                 item { NamespaceCard(bp = bp, onNavigate = { ns -> navController?.navigate(NavRoutes.renderWithMod(ns)) }) }
                 if (bp.raw.regions.isNotEmpty()) {
                     item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(16.dp)) { Text(stringResource(R.string.detail_region_list), style = MaterialTheme.typography.titleMedium) }
-                        }
-                    }
-                    items(bp.raw.regions, key = { it.name }, contentType = { "region" }) { region ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            ListItem(
-                                headlineContent = { Text(region.name.ifEmpty { stringResource(R.string.detail_region_unnamed) }) },
-                                supportingContent = { Text("${region.width} × ${region.height} × ${region.depth}") },
-                                trailingContent = { Text(formatNumber(region.width * region.height * region.depth)) },
-                                leadingContent = { Icon(Icons.Default.ViewInAr, contentDescription = null) },
-                            )
+                        SectionCard(title = stringResource(R.string.detail_region_list)) {
+                            bp.raw.regions.forEachIndexed { index, region ->
+                                if (index > 0) androidx.compose.material3.HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                )
+                                RegionRow(region)
+                            }
                         }
                     }
                 }
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.detail_material_top10), style = MaterialTheme.typography.titleMedium)
-                            if (bp.materials.isEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(stringResource(R.string.detail_material_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                    SectionCard(title = stringResource(R.string.detail_material_top10)) {
+                        if (bp.materials.isEmpty()) {
+                            Text(
+                                stringResource(R.string.detail_material_empty),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            )
                         }
                     }
                 }

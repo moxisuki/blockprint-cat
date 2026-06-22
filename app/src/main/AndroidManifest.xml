@@ -26,6 +26,7 @@
             android:enabled="false"
             android:exported="true"
             android:label="@string/app_name"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|fontScale"
             android:theme="@style/Theme.BlockPrintCat" />
         <activity-alias
             android:name=".MainActivityV1"

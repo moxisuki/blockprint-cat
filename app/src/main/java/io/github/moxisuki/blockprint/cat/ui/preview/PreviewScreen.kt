@@ -14,9 +14,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.OpenWith
@@ -39,7 +44,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -237,6 +242,9 @@ private fun PreviewSceneContent(
     val glbBytes = entry.bytes
 
     var fullscreen by remember { mutableStateOf(false) }
+    // System-bar visibility is handled in MainActivity via a
+    // DisposableEffect(isPreviewFullscreen) so it survives rotation.
+    // We only flip the hoisted state here via the onFullscreenChange callback.
     var cameraMode by remember { mutableStateOf(CameraMode.ORBIT) }
     var lightPreset by remember { mutableStateOf(0) }
     var showGrid by remember { mutableStateOf(true) }
@@ -246,7 +254,6 @@ private fun PreviewSceneContent(
     var floorCount by remember { mutableIntStateOf(0) }
     var modelRoot by remember { mutableStateOf<Node?>(null) }
     val snackbar = remember { SnackbarHostState() }
-    val view = LocalView.current
 
     // 预加载 4 套环境并在预览页面生命周期内复用，避免切换预设时重复创建 KTX 环境。
     val cachedEnvironments = remember(environmentLoader) {
@@ -292,16 +299,8 @@ private fun PreviewSceneContent(
     }
 
     LaunchedEffect(centered) { if (centered) cam.applyToCamera(cameraNode) }
+    // 首次 + lightPreset 变化时同步光照
     LaunchedEffect(lightPreset) {
-        Log.d(TAG, "apply preset=${LIGHT_PRESETS[lightPreset].label} env=${LIGHT_PRESETS[lightPreset].envName}")
-        applyPreviewLightPreset(
-            mainLight = sunLight,
-            fillLight = fillLight,
-            preset = LIGHT_PRESETS[lightPreset],
-        )
-    }
-    // 首帧同步光状态:在第一次组合时同步光照,之后不随每次重组重新应用。
-    LaunchedEffect(Unit) {
         applyPreviewLightPreset(
             mainLight = sunLight,
             fillLight = fillLight,
@@ -320,8 +319,13 @@ private fun PreviewSceneContent(
 
     val iconOn = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
     val iconOff = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+    val toolbarIconOn = androidx.compose.ui.graphics.Color.White
+    val toolbarIconOff = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(androidx.compose.ui.graphics.Color.Black)  // 全屏时覆盖 window 白底
+    ) {
         val context = LocalView.current.context
         var modelError by remember { mutableStateOf(false) }
         var modelErrorMessage by remember { mutableStateOf<String>(context.getString(R.string.preview_render_failed)) }
@@ -349,7 +353,7 @@ private fun PreviewSceneContent(
             modelLoader = modelLoader,
             environmentLoader = environmentLoader,
             environment = environment,
-            surfaceType = io.github.sceneview.SurfaceType.TextureSurface,
+            surfaceType = io.github.sceneview.SurfaceType.Surface,
             isOpaque = true,
             cameraNode = cameraNode,
             view = filamentView,
@@ -485,87 +489,94 @@ private fun PreviewSceneContent(
             )
         }
 
-        // 工具栏
+        // 工具栏 — 加半透明深色背景保证在全屏时可见
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+        ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).align(Alignment.TopEnd),
             horizontalArrangement = Arrangement.End,
         ) {
-            ToolIcon(Icons.Default.Refresh, stringResource(R.string.cd_reset), iconOn) { cam.reset(); cam.applyToCamera(cameraNode) }
+            ToolIcon(Icons.Default.Refresh, stringResource(R.string.cd_reset), toolbarIconOn) { cam.reset(); cam.applyToCamera(cameraNode) }
             Box(Modifier.clickable { lightPreset = (lightPreset + 1) % LIGHT_PRESETS.size }.padding(4.dp), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LightMode, LIGHT_PRESETS[lightPreset].label, Modifier.size(22.dp), tint = if (lightPreset != 2) iconOn else iconOff)
+                    Icon(Icons.Default.LightMode, LIGHT_PRESETS[lightPreset].label, Modifier.size(22.dp), tint = if (lightPreset != 2) toolbarIconOn else toolbarIconOff)
                     Spacer(Modifier.width(4.dp))
-                    Text(LIGHT_PRESETS[lightPreset].label, style = MaterialTheme.typography.labelSmall, color = iconOn, maxLines = 1)
+                    Text(LIGHT_PRESETS[lightPreset].label, style = MaterialTheme.typography.labelSmall, color = toolbarIconOn, maxLines = 1)
                 }
             }
-            ToolIcon(Icons.Default.GridOn, stringResource(R.string.cd_grid), if (showGrid) iconOn else iconOff) { showGrid = !showGrid }
-            ToolIcon(Icons.Default.Layers, stringResource(R.string.cd_layer), if (layerPanelOpen) iconOn else iconOff) { layerPanelOpen = !layerPanelOpen }
+            ToolIcon(Icons.Default.GridOn, stringResource(R.string.cd_grid), if (showGrid) toolbarIconOn else toolbarIconOff) { showGrid = !showGrid }
+            ToolIcon(Icons.Default.Layers, stringResource(R.string.cd_layer), if (layerPanelOpen) toolbarIconOn else toolbarIconOff) { layerPanelOpen = !layerPanelOpen }
             Box(Modifier.clickable { cameraMode = CameraMode.entries[(cameraMode.ordinal + 1) % CameraMode.entries.size] }.padding(4.dp), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(when (cameraMode) {
                         CameraMode.ORBIT -> Icons.Default.ViewInAr; CameraMode.DRAG -> Icons.Default.OpenWith; CameraMode.WALK -> Icons.AutoMirrored.Filled.DirectionsWalk
-                    }, cameraMode.label, Modifier.size(22.dp), tint = iconOn)
+                    }, cameraMode.label, Modifier.size(22.dp), tint = toolbarIconOn)
                     Spacer(Modifier.width(4.dp))
-                    Text(cameraMode.label, style = MaterialTheme.typography.labelSmall, color = iconOn, maxLines = 1)
+                    Text(cameraMode.label, style = MaterialTheme.typography.labelSmall, color = toolbarIconOn, maxLines = 1)
                 }
             }
-            ToolIcon(if (fullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, stringResource(R.string.cd_fullscreen), iconOn) {
-                fullscreen = !fullscreen; onFullscreenChange?.invoke(fullscreen)
-                (view.context as? Activity)?.window?.let { w ->
-                    if (fullscreen) {
-                        WindowCompat.getInsetsController(w, view).hide(WindowInsetsCompat.Type.systemBars())
-                        WindowCompat.getInsetsController(w, view).systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    } else WindowCompat.getInsetsController(w, view).show(WindowInsetsCompat.Type.systemBars())
-                }
+            ToolIcon(if (fullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, stringResource(R.string.cd_fullscreen), toolbarIconOn) {
+                fullscreen = !fullscreen
+                onFullscreenChange?.invoke(fullscreen)
             }
         }
-        // 右侧分层控制面板
+        } // Box toolbar wrapper
+        // 右侧分层控制面板 — 紧凑工具栏风格
         if (layerPanelOpen) {
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(8.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 6.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(R.string.layer_panel_title), style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(8.dp))
-                // + 按钮
-                TextButton(
-                    onClick = {
-                        if (layerY == Int.MAX_VALUE) layerY = 0
-                        else if (layerY < floorCount - 1) layerY++
-                    },
-                    enabled = layerY == Int.MAX_VALUE || layerY < floorCount - 1,
-                    modifier = Modifier.size(48.dp),
-                    contentPadding = PaddingValues(0.dp),
-                ) {
-                    Text("+", style = MaterialTheme.typography.titleLarge)
-                }
-                // 当前层
+                // 标题
+                Text(
+                    stringResource(R.string.layer_panel_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.ui.graphics.Color.White,
+                )
+                Spacer(Modifier.height(6.dp))
+                // 当前层显示
                 Text(
                     if (layerY == Int.MAX_VALUE) stringResource(R.string.layer_all)
                     else "${layerY + 1} / $floorCount",
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.ui.graphics.Color.White,
                 )
-                // - 按钮
-                TextButton(
-                    onClick = { if (layerY > 0) layerY-- else layerY = Int.MAX_VALUE },
-                    enabled = layerY != Int.MAX_VALUE,
-                    modifier = Modifier.size(48.dp),
-                    contentPadding = PaddingValues(0.dp),
-                ) {
-                    Text("−", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(6.dp))
+                // + / - 紧凑按钮
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LayerIconBtn(
+                        icon = Icons.Default.KeyboardArrowUp,
+                        contentDescription = "+1",
+                        enabled = layerY == Int.MAX_VALUE || layerY < floorCount - 1,
+                        onClick = {
+                            if (layerY == Int.MAX_VALUE) layerY = 0
+                            else if (layerY < floorCount - 1) layerY++
+                        },
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    LayerIconBtn(
+                        icon = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "-1",
+                        enabled = layerY != Int.MAX_VALUE,
+                        onClick = { if (layerY > 0) layerY-- else layerY = Int.MAX_VALUE },
+                    )
                 }
-                Spacer(Modifier.height(4.dp))
-                // 显示全部
-                TextButton(
+                Spacer(Modifier.height(6.dp))
+                // 显示全部 toggle
+                LayerIconBtn(
+                    icon = Icons.Default.Layers,
+                    contentDescription = stringResource(R.string.layer_show_all),
+                    enabled = layerY != Int.MAX_VALUE,
                     onClick = { layerY = Int.MAX_VALUE },
-                    enabled = layerY != Int.MAX_VALUE,
-                ) {
-                    Text(stringResource(R.string.layer_show_all), style = MaterialTheme.typography.labelSmall)
-                }
+                )
             }
         }
 
@@ -617,6 +628,26 @@ private fun WalkJoystick(
 @Composable
 private fun ToolIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     Box(Modifier.clickable(onClick = onClick).padding(4.dp)) { Icon(icon, desc, Modifier.size(22.dp), tint = tint) }
+}
+
+@Composable
+private fun LayerIconBtn(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val tint = if (enabled) androidx.compose.ui.graphics.Color.White
+               else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f)
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription, Modifier.size(20.dp), tint = tint)
+    }
 }
 
 // ── 相机控制器 ──

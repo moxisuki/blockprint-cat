@@ -14,13 +14,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +52,40 @@ fun NamespaceCard(bp: FullBlueprint, onNavigate: (String) -> Unit) {
     val hasVanilla = renderEntry.vanillaAssetDownloader().isAssetsAvailable()
     val modManager = renderEntry.modAssetManager()
     val namespaces = AssetNamespaceResolver.resolve(bp.raw).sorted()
+    var showInfoDialog by remember { mutableStateOf(false) }
+
+    // 命名空间/资源包说明弹窗
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text(stringResource(R.string.ns_info_dialog_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.ns_info_dialog_body))
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        stringResource(R.string.ns_info_dialog_example),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(stringResource(R.string.ns_info_dialog_action))
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        stringResource(R.string.ns_info_dialog_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text(stringResource(R.string.action_ok))
+                }
+            },
+        )
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -57,8 +98,10 @@ fun NamespaceCard(bp: FullBlueprint, onNavigate: (String) -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Info, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Info, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.detail_resource_status), style = MaterialTheme.typography.titleSmall)
             }
             Spacer(Modifier.height(10.dp))

@@ -58,6 +58,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import io.github.moxisuki.blockprint.cat.BuildConfig
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.data.NetworkConstants
 import io.github.moxisuki.blockprint.cat.data.settings.AppIconManager
@@ -243,6 +244,12 @@ fun AboutScreen(navController: NavController) {
                 url = null,
                 avatarRes = R.drawable.contributor_orange_peel,
             )
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ContributorItem(
+                name = "Fan Oblivion",
+                role = stringResource(R.string.about_contributor_role_core_tester),
+                url = null,
+            )
         }
 
         Spacer(Modifier.height(12.dp))
@@ -286,28 +293,28 @@ fun AboutScreen(navController: NavController) {
         InfoCard(title = stringResource(R.string.about_section_opensource)) {
             OpenSourceItem(
                 name = "AndroidX Core KTX",
-                version = "1.19.0",
+                version = BuildConfig.ANDROIDX_CORE_KTX_VERSION,
                 license = "Apache-2.0",
                 url = "https://github.com/androidx/androidx",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "Jetpack Compose",
-                version = "BOM 2026.02.01",
+                version = "BOM " + BuildConfig.COMPOSE_BOM_VERSION,
                 license = "Apache-2.0",
                 url = "https://developer.android.com/jetpack/compose",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "Navigation Compose",
-                version = "2.8.5",
+                version = BuildConfig.NAVIGATION_COMPOSE_VERSION,
                 license = "Apache-2.0",
                 url = "https://developer.android.com/jetpack/compose/navigation",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "Lifecycle (ViewModel / Runtime)",
-                version = "2.10.0",
+                version = BuildConfig.LIFECYCLE_VERSION,
                 license = "Apache-2.0",
                 url = "https://developer.android.com/jetpack/androidx/releases/lifecycle",
             )
@@ -321,42 +328,49 @@ fun AboutScreen(navController: NavController) {
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "Coil",
-                version = "2.7.0",
+                version = BuildConfig.COIL_VERSION,
                 license = "Apache-2.0",
                 url = "https://coil-kt.github.io/coil/",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
+                name = "CameraX",
+                version = BuildConfig.CAMERAX_VERSION,
+                license = "Apache-2.0",
+                url = "https://developer.android.com/jetpack/androidx/releases/camera",
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            OpenSourceItem(
                 name = "OkHttp",
-                version = "4.12.0",
+                version = BuildConfig.OKHTTP_VERSION,
                 license = "Apache-2.0",
                 url = "https://square.github.io/okhttp/",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "Room",
-                version = "2.7.1",
+                version = BuildConfig.ROOM_VERSION,
                 license = "Apache-2.0",
                 url = "https://developer.android.com/jetpack/androidx/releases/room",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "Hilt",
-                version = "2.57.1",
+                version = BuildConfig.HILT_VERSION,
                 license = "Apache-2.0",
                 url = "https://dagger.dev/hilt/",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "Hilt Navigation Compose",
-                version = "1.2.0",
+                version = BuildConfig.HILT_NAVIGATION_COMPOSE_VERSION,
                 license = "Apache-2.0",
                 url = "https://dagger.dev/hilt/jetpack-integration",
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             OpenSourceItem(
                 name = "SceneView",
-                version = "4.18.0",
+                version = BuildConfig.SCENEVIEW_VERSION,
                 license = "Apache-2.0",
                 url = "https://github.com/SceneView/sceneview-android",
             )

@@ -36,6 +36,22 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    defaultConfig {
+        // AboutScreen 开源信息版本号 — 自动从 libs.versions.toml 读取
+        buildConfigField("String", "ANDROIDX_CORE_KTX_VERSION", "\"${libs.versions.coreKtx.get()}\"")
+        buildConfigField("String", "COMPOSE_BOM_VERSION", "\"${libs.versions.composeBom.get()}\"")
+        buildConfigField("String", "NAVIGATION_COMPOSE_VERSION", "\"${libs.versions.navigationCompose.get()}\"")
+        buildConfigField("String", "LIFECYCLE_VERSION", "\"${libs.versions.lifecycleRuntimeKtx.get()}\"")
+        buildConfigField("String", "COIL_VERSION", "\"${libs.versions.coil.get()}\"")
+        buildConfigField("String", "CAMERAX_VERSION", "\"${libs.versions.camerax.get()}\"")
+        buildConfigField("String", "OKHTTP_VERSION", "\"${libs.versions.okhttp.get()}\"")
+        buildConfigField("String", "ROOM_VERSION", "\"${libs.versions.room.get()}\"")
+        buildConfigField("String", "HILT_VERSION", "\"${libs.versions.hilt.get()}\"")
+        buildConfigField("String", "HILT_NAVIGATION_COMPOSE_VERSION", "\"${libs.versions.hiltNavigationCompose.get()}\"")
+        buildConfigField("String", "SCENEVIEW_VERSION", "\"${libs.versions.sceneview.get()}\"")
     }
 }
 

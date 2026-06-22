@@ -247,6 +247,41 @@ fun BlockPrintCatAppContent(
     var isPreviewFullscreen by remember { mutableStateOf(false) }
     val onPreviewFullscreenChange = remember { { full: Boolean -> isPreviewFullscreen = full } }
 
+    // Preview fullscreen: hide system bars via WindowInsetsControllerCompat
+    // with BEHAVIOR_DEFAULT (no immersive swipe gestures, so touches still
+    // reach the app). Also extend the content edge-to-edge so the preview
+    // SurfaceView fills the whole screen including the bar areas.
+    val configuration = LocalConfiguration.current
+    androidx.compose.runtime.DisposableEffect(isPreviewFullscreen, configuration) {
+        val window = (view.context as? android.app.Activity)?.window
+        if (window != null) {
+            val controller = WindowCompat.getInsetsController(window, view)
+            if (isPreviewFullscreen) {
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                // Use legacy translucent flags so the bar areas become
+                // transparent overlays instead of an opaque windowBackground
+                // strip. Without these the system paints the default theme
+                // background where the bars were.
+                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            } else {
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        onDispose {
+            val w = (view.context as? android.app.Activity)?.window
+            if (w != null) {
+                w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                WindowCompat.getInsetsController(w, view).show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+
     // 预览全屏时跳过状态栏修改，避免加载事件重组导致退出沉浸模式
     SideEffect {
         if (isPreviewFullscreen) return@SideEffect

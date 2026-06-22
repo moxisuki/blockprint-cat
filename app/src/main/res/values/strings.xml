@@ -352,6 +352,12 @@
     <string name="ns_installed">Installed</string>
     <string name="ns_not_installed">Not installed</string>
     <string name="ns_no_resources">No resources</string>
+    <string name="ns_info_dialog_title">Namespaces &amp; Resource Packs</string>
+    <string name="ns_info_dialog_body">Blocks in a blueprint reference Minecraft textures and models for rendering. Resources from different sources are grouped under different namespaces:</string>
+    <string name="ns_info_dialog_example">For example, "create:mechanical_arm" belongs to the create namespace, "minecraft:stone" belongs to the minecraft namespace.</string>
+    <string name="ns_info_dialog_action">If a namespace shows "Not installed", go to the render page to install the matching resource pack — otherwise blocks in that namespace will be missing and cannot render in the preview.</string>
+    <string name="ns_info_dialog_hint">Namespaces are automatically detected from the prefix of each block\'s ID in the blueprint.</string>
+    <string name="action_ok">OK</string>
     <string name="ns_install">Install</string>
 
     <!-- CmsBypassOverlay -->

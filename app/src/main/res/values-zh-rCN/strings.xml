@@ -366,6 +366,12 @@
     <string name="ns_not_installed">未安装</string>
     <string name="ns_no_resources">无资源</string>
     <string name="ns_install">去安装</string>
+    <string name="ns_info_dialog_title">命名空间与资源包</string>
+    <string name="ns_info_dialog_body">蓝图中的方块引用了 Minecraft 的纹理和模型来渲染。不同来源的资源被归类到不同的命名空间下：</string>
+    <string name="ns_info_dialog_example">例如 "create:mechanical_arm" 属于 create 命名空间，"minecraft:stone" 属于 minecraft 命名空间。</string>
+    <string name="ns_info_dialog_action">若某命名空间显示"未安装"，请前往渲染页面安装对应资源包，否则预览时该命名空间的方块会直接缺失而无法渲染。</string>
+    <string name="ns_info_dialog_hint">命名空间由蓝图中方块的 ID 前缀自动识别。</string>
+    <string name="action_ok">确定</string>
 
     <!-- CmsBypassOverlay -->
     <string name="cms_verify_in_progress">加载 CMS 站，验证 Cloudflare…</string>

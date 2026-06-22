@@ -13,12 +13,28 @@ class GlbGenerator(
     private val imageBackend: ImageBackend? = null,
 ) {
 
+    /**
+     * 一份 GLB 缓存的唯一标识。regionIndex 与 floorHeight 是历史参数,
+     * 当前永远 (0, LAYER_FLOOR_HEIGHT),保留为数据类字段是为了日后扩展不破坏 API。
+     */
+    data class Key(
+        val blueprintUuid: String,
+        val regionIndex: Int = 0,
+        val floorHeight: Int = LAYER_FLOOR_HEIGHT,
+    )
+
     companion object {
         const val LAYER_FLOOR_HEIGHT = 1
+        /** Files smaller than this are treated as missing/corrupt. */
+        const val MIN_VALID_GLB_BYTES = 200L
         private const val TAG = "GlbGenerator"
         private fun log(msg: String) = println("[$TAG] $msg")
     }
 
+    /**
+     * 用流式 [LitematicToGlb.convert] 生成 GLB 并写入缓存文件。
+     * 不再缓冲完整字节数组，直接流式写入磁盘。
+     */
     fun generate(
         litematic: Litematic,
         cacheKey: String,
@@ -26,43 +42,60 @@ class GlbGenerator(
         floorHeight: Int = 0,
         onProgress: ((Float) -> Unit)? = null,
     ): ByteArray {
-        cache.get(cacheKey, regionIndex, floorHeight)?.let {
-            log("缓存命中: $cacheKey r$regionIndex fh$floorHeight, ${it.size} bytes")
-            return it
+        val cacheFile = cache.getFile(cacheKey, regionIndex, floorHeight)
+        if (cacheFile.isFile) {
+            log("缓存命中: $cacheKey r$regionIndex fh$floorHeight, ${cacheFile.length()} bytes")
+            return byteArrayOf()
         }
         log("缓存未命中, 开始生成: $cacheKey r$regionIndex fh$floorHeight")
         val t0 = System.currentTimeMillis()
         val options = if (floorHeight > 0) GlbExportOptions(floorHeight = floorHeight)
                       else GlbExportOptions()
-        val bytes = LitematicToGlb.convertToBytes(
-            litematic, assetsDirs, regionIndex,
-            imageBackend = imageBackend,
-            onProgress = onProgress,
-            options = options,
-        )
+        val tmp = File(cacheFile.parentFile, "${cacheFile.name}.tmp")
+        tmp.parentFile?.mkdirs()
+        tmp.outputStream().use { out ->
+            LitematicToGlb.convert(litematic, assetsDirs, out, regionIndex, options, onProgress)
+        }
+        tmp.renameTo(cacheFile)
         val elapsed = System.currentTimeMillis() - t0
-        log("GLB 生成完成: ${bytes.size} bytes, 耗时 ${elapsed}ms")
-        cache.put(cacheKey, regionIndex, bytes, floorHeight)
-        return bytes
+        log("GLB 生成完成: ${cacheFile.length()} bytes, 耗时 ${elapsed}ms")
+        return byteArrayOf()
     }
 
-    fun getOrGenerateFile(litematic: Litematic, cacheKey: String, regionIndex: Int = 0): File {
-        val file = cache.getFile(cacheKey, regionIndex)
+    /** Check if a cached GLB file exists and looks valid (non-empty, ≥ MIN_VALID_GLB_BYTES). */
+    fun peekCacheFile(key: Key): File? {
+        val file = cache.getFile(key.blueprintUuid, key.regionIndex, key.floorHeight)
+        return file.takeIf { it.isFile && it.length() >= MIN_VALID_GLB_BYTES }
+    }
+
+    fun getOrGenerateFile(
+        litematic: Litematic,
+        cacheKey: String,
+        regionIndex: Int = 0,
+        floorHeight: Int = 0,
+        onProgress: ((Float) -> Unit)? = null,
+    ): File {
+        val file = cache.getFile(cacheKey, regionIndex, floorHeight)
         if (file.isFile) {
-            log( "缓存文件命中: ${file.absolutePath}, ${file.length()} bytes")
+            log("缓存文件命中: ${file.absolutePath}, ${file.length()} bytes")
         } else {
-            log( "缓存文件未命中, 生成中: $cacheKey")
+            log("缓存文件未命中, 生成中: $cacheKey")
             val t0 = System.currentTimeMillis()
-            val bytes = LitematicToGlb.convertToBytes(litematic, assetsDirs, regionIndex, imageBackend = imageBackend)
+            val tmp = File(file.parentFile, "${file.name}.tmp")
+            tmp.parentFile?.mkdirs()
+            val opts = if (floorHeight > 0) GlbExportOptions(floorHeight = floorHeight) else GlbExportOptions()
+            tmp.outputStream().use { out ->
+                LitematicToGlb.convert(litematic, assetsDirs, out, regionIndex, opts, onProgress)
+            }
+            tmp.renameTo(file)
             val elapsed = System.currentTimeMillis() - t0
-            log( "GLB 生成完成: ${bytes.size} bytes, 耗时 ${elapsed}ms")
-            cache.put(cacheKey, regionIndex, bytes)
+            log("GLB 生成完成: ${file.length()} bytes, 耗时 ${elapsed}ms")
         }
         return file
     }
 
     fun hasCache(cacheKey: String, regionIndex: Int = 0, floorHeight: Int = 0): Boolean =
-        cache.get(cacheKey, regionIndex, floorHeight) != null
+        cache.getFile(cacheKey, regionIndex, floorHeight).isFile
 
     fun clearCache(key: String) = cache.clear(key)
 

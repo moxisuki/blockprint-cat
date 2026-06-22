@@ -233,6 +233,15 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
     var showDialog by remember { mutableStateOf(false) }
     var genProgress by remember { mutableStateOf(0f) }
     var genElapsed by remember { mutableStateOf(0L) }
+    var genStage by remember { mutableStateOf("") }
+    fun stageName(frac: Float): String = when {
+        frac < 0.07f -> ctx.getString(R.string.preview_stage_region)
+        frac < 0.22f -> ctx.getString(R.string.preview_stage_texture)
+        frac < 0.32f -> ctx.getString(R.string.preview_stage_atlas)
+        frac < 0.67f -> ctx.getString(R.string.preview_stage_pass1)
+        frac < 0.95f -> ctx.getString(R.string.preview_stage_pass2)
+        else -> ctx.getString(R.string.preview_stage_finalize)
+    }
 
     // 缓存状态：订阅 RenderResourceManager.cachedKeys（持久化、跨进程），UI 自动响应
     val cachedKeys by RenderResourceManager.cachedKeys.collectAsState()
@@ -350,9 +359,17 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "${(genProgress * 100).toInt()}% — ${genElapsed / 1000}s",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
                     )
+                    if (genStage.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            genStage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             },
             confirmButton = {},
@@ -365,13 +382,18 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
                 val modelMinY = region?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f
                 val modelCX = region?.position?.x?.toFloat() ?: 0f
                 val modelCZ = region?.position?.z?.toFloat() ?: 0f
-                val glb = withContext(Dispatchers.IO) {
-                    generator?.generate(bp.raw, cacheKey = bp.meta.uuid, floorHeight = GlbGenerator.LAYER_FLOOR_HEIGHT) { p ->
+                val cacheFile = withContext(Dispatchers.IO) {
+                    generator?.getOrGenerateFile(
+                        bp.raw,
+                        cacheKey = bp.meta.uuid,
+                        floorHeight = GlbGenerator.LAYER_FLOOR_HEIGHT,
+                    ) { p ->
                         genProgress = p
                         genElapsed = System.currentTimeMillis() - t0
-                    } ?: ByteArray(0)
-                }
-                RenderResourceManager.putGlb(bp.meta.uuid, glb, modelMinY, modelCX, modelCZ)
+                        genStage = stageName(p)
+                    }
+                } ?: throw IllegalStateException("渲染引擎未初始化")
+                RenderResourceManager.putGlb(bp.meta.uuid, ByteArray(0), modelMinY, modelCX, modelCZ, cacheFile = cacheFile)
                 showDialog = false
                 navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
             } catch (_: Exception) {

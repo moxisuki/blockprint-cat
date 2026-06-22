@@ -6,10 +6,13 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
+import com.tencent.bugly.crashreport.CrashReport
+import io.github.moxisuki.blockprint.cat.BuildConfig
 import io.github.moxisuki.blockprint.cat.data.IconIndexResolver
 import io.github.moxisuki.blockprint.cat.data.McschematicCookieStore
 import io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao
 import io.github.moxisuki.blockprint.cat.data.settings.AppIconManager
+import io.github.moxisuki.blockprint.cat.data.settings.TermsAcceptance
 import io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +31,7 @@ class BlockPrintCatApp : Application(), ImageLoaderFactory {
     @Inject lateinit var cookieStore: McschematicCookieStore
     @Inject lateinit var glbCacheDao: GlbCacheDao
     @Inject lateinit var appIconManager: AppIconManager
+    @Inject lateinit var termsAcceptance: TermsAcceptance
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -38,8 +42,25 @@ class BlockPrintCatApp : Application(), ImageLoaderFactory {
         RenderResourceManager.init(this, glbCacheDao)
         appIconManager.reconcile()
 
+        // Bugly 合规要求：仅在用户已同意隐私条款后才初始化 SDK。
+        // 首次启动 → TermsGate 展示 → 用户同意 → initBuglyIfConsented()
+        // 后续启动 → 已同意 → 这里直接初始化
+        if (termsAcceptance.isAccepted()) {
+            initBuglyIfConsented()
+        }
+
         appScope.launch(Dispatchers.IO) {
             iconIndexResolver.ensureLoaded()
+        }
+    }
+
+    /**
+     * 由 TermsGate 在用户点击"我已阅读并同意"时调用。
+     * 满足 Bugly SDK 合规要求（延迟初始化）。
+     */
+    fun initBuglyIfConsented() {
+        if (BuildConfig.BUGLY_APP_ID.isNotEmpty() && termsAcceptance.isAccepted()) {
+            CrashReport.initCrashReport(this, BuildConfig.BUGLY_APP_ID, BuildConfig.DEBUG)
         }
     }
 

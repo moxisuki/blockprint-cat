@@ -1,5 +1,6 @@
 package io.github.moxisuki.blockprint.cat.ui.settings
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,21 +34,41 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,9 +113,47 @@ fun AboutScreen(navController: NavController) {
     var updateChecking by remember { mutableStateOf(false) }
     var updateDialog by remember { mutableStateOf<UpdateInfo?>(null) }
     var showLatestDialog by remember { mutableStateOf(false) }
+    var showCrashTestDialog by remember { mutableStateOf(false) }
+    // 彩蛋：点击版本号 5 次 → 长淡出 → 秘密页面
+    var eggTaps by remember { mutableIntStateOf(0) }
+    var eggPhase by remember { mutableStateOf(EggPhase.NORMAL) }
+
+    // 内容淡出 / 淡入
+    val contentAlpha = remember { Animatable(1f) }
+    LaunchedEffect(eggPhase) {
+        when (eggPhase) {
+            EggPhase.SECRET -> {
+                contentAlpha.animateTo(0f, tween(1200, easing = FastOutSlowInEasing))
+                kotlinx.coroutines.delay(300)
+            }
+            EggPhase.NORMAL -> contentAlpha.snapTo(1f)
+        }
+    }
+    // 一言（hitokoto）
+    var hitokoto by remember { mutableStateOf<Hitokoto?>(null) }
+    var hitokotoRefresh by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit, hitokotoRefresh) {
+        // 点击刷新时先清空旧内容（触发淡出），再获取新内容（触发淡入）
+        hitokoto = null
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder().url(NetworkConstants.HITOKOTO_API_URL).build()
+                val json = client.newCall(request).execute().body?.string() ?: return@withContext
+                val obj = org.json.JSONObject(json)
+                hitokoto = Hitokoto(
+                    text = obj.getString("hitokoto"),
+                    from = obj.optString("from", ""),
+                    fromWho = obj.optString("from_who", ""),
+                )
+            } catch (_: Exception) { /* 网络不可达时静默忽略 */ }
+        }
+    }
     val uriHandler = LocalUriHandler.current
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Box(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        .graphicsLayer { alpha = contentAlpha.value }) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -107,14 +166,64 @@ fun AboutScreen(navController: NavController) {
             )
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(2.dp))
-            Text(stringResource(R.string.about_version, appVersion), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(R.string.about_tagline),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+
+        // 一言 — 固定占位，内容进出用 crossfade
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (hitokoto != null) Modifier.clickable(
+                    indication = null,
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                ) { hitokotoRefresh++ } else Modifier)
+                .padding(horizontal = 24.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(4.dp))
+            androidx.compose.animation.AnimatedContent(
+                targetState = hitokoto,
+                transitionSpec = {
+                    fadeIn(tween(300)) togetherWith fadeOut(tween(200))
+                },
+                label = "hitokoto",
+            ) { h ->
+                if (h != null) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "「${h.text}」",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        val realFromWho = h.fromWho.takeUnless { it == "null" || it.isBlank() }
+                        val realFrom = h.from.takeUnless { it.isBlank() }
+                        if (realFromWho != null || realFrom != null) {
+                            Spacer(Modifier.height(4.dp))
+                            val src = buildString {
+                                if (realFromWho != null) append(realFromWho)
+                                if (realFrom != null) {
+                                    if (isNotEmpty()) append(" · ")
+                                    append(realFrom)
+                                }
+                            }
+                            Text(
+                                "—— $src",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                        }
+                    }
+                } else {
+                    // 空占位 — 保持高度，等待新内容淡入
+                    Spacer(Modifier.height(32.dp))
+                }
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -125,11 +234,22 @@ fun AboutScreen(navController: NavController) {
         InfoCard(title = stringResource(R.string.about_section_info)) {
             InfoRow(label = stringResource(R.string.about_label_app_name), value = stringResource(R.string.app_name))
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            InfoRow(label = stringResource(R.string.about_label_version), value = stringResource(R.string.about_version, appVersion))
+            InfoRow(
+                label = stringResource(R.string.about_label_version),
+                value = stringResource(R.string.about_version, appVersion),
+                valueColor = if (eggPhase != EggPhase.NORMAL) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                onClick = {
+                    eggTaps++
+                    if (eggTaps >= 5 && eggPhase == EggPhase.NORMAL) {
+                        eggPhase = EggPhase.SECRET
+                        eggTaps = 0
+                    }
+                },
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             InfoRow(label = engineLabel, value = engineVersion)
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            InfoLinkRow(label = "GitHub", url = "https://github.com/moxisuki/blockprint-cat")
+            InfoLinkRow(label = "GitHub", url = "https://github.com/moxisuki/blockprint-cat", displayOverride = "moxisuki/blockprint-cat")
         }
 
         Spacer(Modifier.height(12.dp))
@@ -163,6 +283,35 @@ fun AboutScreen(navController: NavController) {
                 )
                 if (updateChecking) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Bugly 崩溃测试 — 仅在配置了 AppID 时显示
+        if (BuildConfig.BUGLY_APP_ID.isNotEmpty()) {
+            InfoCard(title = stringResource(R.string.about_section_bugly)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        // 二次确认
+                        showCrashTestDialog = true
+                    }.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Filled.Code,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        stringResource(R.string.about_test_crash),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
@@ -208,6 +357,29 @@ fun AboutScreen(navController: NavController) {
                 confirmButton = {
                     TextButton(onClick = { showLatestDialog = false }) {
                         Text(stringResource(R.string.action_confirm))
+                    }
+                },
+            )
+        }
+
+        // Bugly 崩溃测试确认对话框
+        if (showCrashTestDialog) {
+            AlertDialog(
+                onDismissRequest = { showCrashTestDialog = false },
+                title = { Text(stringResource(R.string.about_test_crash_title)) },
+                text = { Text(stringResource(R.string.about_test_crash_msg)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showCrashTestDialog = false
+                        // 主动抛出一个未捕获异常 — Bugly 会捕获并上报
+                        throw RuntimeException("Manual crash test from AboutScreen")
+                    }) {
+                        Text(stringResource(R.string.about_test_crash_confirm), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCrashTestDialog = false }) {
+                        Text(stringResource(R.string.action_cancel))
                     }
                 },
             )
@@ -284,6 +456,12 @@ fun AboutScreen(navController: NavController) {
                 icon = Icons.Filled.Code,
                 title = "BlockPrint Core",
                 url = "https://github.com/moxisuki/blockprint-core",
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ExternalLinkItem(
+                icon = Icons.Filled.Public,
+                title = "一言 API",
+                url = "https://hitokoto.cn/",
             )
         }
 
@@ -392,7 +570,59 @@ fun AboutScreen(navController: NavController) {
             textAlign = TextAlign.Center,
         )
     }
-}
+    } // end scrollable Column
+
+    // 彩蛋 — 秘密页面（长淡入）
+    if (eggPhase == EggPhase.SECRET) {
+        val secretAlpha = remember { Animatable(0f) }
+        LaunchedEffect(Unit) { secretAlpha.animateTo(1f, tween(800, delayMillis = 300)) }
+        Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = secretAlpha.value }) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(48.dp))
+                Text(
+                    "🐱",
+                    style = MaterialTheme.typography.displayLarge,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "/_/_\\\\\n( o.o )\n > ^ <",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "你找到了一只秘密小猫",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "它守护着 BlockPrint Cat 的源代码\n—— 喵 ~",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(32.dp))
+                OutlinedButton(onClick = {
+                    eggPhase = EggPhase.NORMAL
+                    eggTaps = 0
+                }) {
+                    Text("返回关于页面")
+                }
+                Spacer(Modifier.height(48.dp))
+            }
+        }
+        } // end secret alpha Box
+    }
+} // end Box
 
 private data class UpdateInfo(
     val latestVersion: String,
@@ -448,19 +678,22 @@ private fun InfoCard(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(label: String, value: String, valueColor: Color? = null, onClick: (() -> Unit)? = null) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = valueColor ?: MaterialTheme.colorScheme.onSurface)
     }
 }
 
 @Composable
-private fun InfoLinkRow(label: String, url: String) {
+private fun InfoLinkRow(label: String, url: String, displayOverride: String? = null) {
     val uriHandler = LocalUriHandler.current
     Row(
         modifier = Modifier
@@ -473,7 +706,7 @@ private fun InfoLinkRow(label: String, url: String) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                url.removePrefix("https://").removePrefix("http://"),
+                displayOverride ?: url.removePrefix("https://").removePrefix("http://"),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary,
@@ -659,6 +892,10 @@ private fun ExternalLinkItem(
         )
     }
 }
+
+private enum class EggPhase { NORMAL, SECRET }
+
+private data class Hitokoto(val text: String, val from: String, val fromWho: String)
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)

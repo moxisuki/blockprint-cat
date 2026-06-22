@@ -164,7 +164,11 @@ class MainActivity : AppCompatActivity() {
                 var termsAccepted by remember { mutableStateOf(termsAcceptance.isAccepted()) }
                 if (!termsAccepted) {
                     TermsGate(
-                        onAccepted = { termsAccepted = true },
+                        onAccepted = {
+                            termsAccepted = true
+                            // Bugly 合规要求：用户同意隐私条款后才初始化
+                            (application as? BlockPrintCatApp)?.initBuglyIfConsented()
+                        },
                         onExit = { finishAffinity() },
                     )
                     return@BlockPrintCatTheme

@@ -18,6 +18,10 @@ object TermsContent {
         R.string.terms_section_2_title to R.string.terms_section_2_body,
         R.string.terms_section_3_title to R.string.terms_section_3_body,
         R.string.terms_section_4_title to R.string.terms_section_4_body,
+        R.string.terms_section_5_title to R.string.terms_section_5_body,
+        R.string.terms_section_6_title to R.string.terms_section_6_body,
+        R.string.terms_section_7_title to R.string.terms_section_7_body,
+        R.string.terms_section_8_title to R.string.terms_section_8_body,
     )
 }
 

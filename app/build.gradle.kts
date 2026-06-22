@@ -1,8 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android.plugin)
+}
+
+// 读取 local.properties 中的 Bugly AppID（不入 git，避免开源泄露）
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
 }
 
 android {
@@ -52,6 +60,10 @@ android {
         buildConfigField("String", "HILT_VERSION", "\"${libs.versions.hilt.get()}\"")
         buildConfigField("String", "HILT_NAVIGATION_COMPOSE_VERSION", "\"${libs.versions.hiltNavigationCompose.get()}\"")
         buildConfigField("String", "SCENEVIEW_VERSION", "\"${libs.versions.sceneview.get()}\"")
+        // Bugly 崩溃上报 — 从 local.properties 读取（不入 git，避免开源泄露）
+        val buglyAppId = localProps.getProperty("BUGLY_APP_ID", "")
+        buildConfigField("String", "BUGLY_APP_ID", "\"$buglyAppId\"")
+        manifestPlaceholders["BUGLY_APP_ID"] = buglyAppId
     }
 }
 
@@ -83,6 +95,7 @@ dependencies {
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
+    implementation(libs.bugly.crashreport)
     implementation(libs.zxing.core)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

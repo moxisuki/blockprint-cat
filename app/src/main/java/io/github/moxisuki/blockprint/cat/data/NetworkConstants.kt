@@ -10,4 +10,5 @@ object NetworkConstants {
     const val BRIDGE_CONNECT_TIMEOUT_MS = 10_000L
     const val BRIDGE_DOWNLOAD_TIMEOUT_MS = 20_000L
     const val LOGIN_REQUEST_TIMEOUT_MS = 30_000L
+    const val HITOKOTO_API_URL = "https://v1.hitokoto.cn/"
 }

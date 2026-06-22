@@ -219,6 +219,11 @@
     <string name="about_update_download">Download</string>
     <string name="about_update_latest_title">Already up to date</string>
     <string name="about_update_latest_msg">Current version %1$s is the latest.</string>
+    <string name="about_section_bugly">Crash reporting</string>
+    <string name="about_test_crash">Test crash report</string>
+    <string name="about_test_crash_title">Trigger a test crash?</string>
+    <string name="about_test_crash_msg">This will throw an uncaught exception that Bugly will capture and upload to the dashboard within ~10 seconds. The app will crash and need to be relaunched.</string>
+    <string name="about_test_crash_confirm">Crash now</string>
     <string name="about_section_more">More</string>
     <string name="about_link_terms">Terms of use</string>
     <string name="about_footer">© BlockPrint Cat · For learning and communication only</string>
@@ -588,6 +593,21 @@
     <string name="terms_section_3_body">The resource packs integrated by this application (Minecraft vanilla, third-party mods) come from Mojang official and Modrinth communities, and follow their respective open-source licenses.\nThe application does not bundle any game resources; all rendering resources are downloaded and stored locally by the user.\nMojang trademarks, third-party mod trademarks, and their related resources are owned by their respective rights holders; this application is not officially affiliated with them.</string>
     <string name="terms_section_4_title">4. Community Data Crawling</string>
     <string name="terms_section_4_body">The \"Community\" feature of this application uses crawler technology to access third-party blueprint sharing sites (mcschematic.top, www.creativemechanicserver.com, etc.) to aggregate publicly-available information.\nThe application does not store, modify, or commercialize any content from third-party websites; all listings/details/files are fetched from their source sites in real time.\nUsers shall comply with the source sites\' terms of use and copyright requirements; downloaded blueprints are copyrighted by their original authors.\nIf the rights holder of a source site wishes to stop being accessed by this application, please contact the developer.</string>
+
+    <!-- Privacy clauses (PIPL-aligned, per Bugly SDK compliance guide) -->
+    <string name="terms_section_5_title">5. Local Data &amp; Storage</string>
+    <string name="terms_section_5_body">All blueprints, settings, and downloaded resource files managed by this application are stored locally on your device.
+We do NOT operate any cloud server for blueprint storage, account sync, or remote backup. Your data never leaves your device unless you explicitly use the optional PC-bridge feature to download a blueprint from your local PC.
+You may clear all locally stored data at any time via Settings → Storage → Clear cache / Clear data, or by uninstalling the application.</string>
+
+    <string name="terms_section_6_title">6. Third-Party SDK: Tencent Bugly (Crash Reporting)</string>
+    <string name="terms_section_6_body">To improve application stability, this application integrates the Tencent Bugly SDK.\n\nSDK Provider: Shenzhen Tencent Computer System Co., Ltd.\nPurpose: Troubleshoot quality issues and help improve app running quality.\nProcessing method: De-identification, encrypted transmission and other security measures; data is stored on servers located in China.\n\nWhen a crash occurs, the following information is automatically collected and uploaded to Tencent\'s Bugly server:\n• Phone model (手机型号)\n• Phone brand (手机品牌)\n• Android system version &amp; API level (Android系统版本、API等级)\n• Manufacturer system version (厂商系统版本)\n• CPU architecture type (cpu架构类型)\n• Device root status (设备是否root)\n• Disk / SD card / memory space usage (磁盘/sdcard/内存占用大小)\n• Network type (网络类型)\n• Currently running process name &amp; PID (应用当前正在运行的进程名和PID)\n\nThis information is used SOLELY for diagnosing and fixing crashes. It is NOT used for advertising, user profiling, or any commercial purpose.\n\nPrivacy policy: https://privacy.qq.com/document/preview/fc748b3d96224fdb825ea79e132c1a56\nSDK homepage: https://bugly.qq.com/v2/\n\nOPT-OUT: Crash reporting is initialized only after you accept these Terms. To permanently disable it, uninstall the application or clear app data to reset the Terms acceptance state.</string>
+
+    <string name="terms_section_7_title">7. Community Login Cookies</string>
+    <string name="terms_section_7_body">The optional \"Community\" feature allows you to log in to third-party blueprint sharing sites (MCS / CMS). When you log in, the application stores the authentication cookies (e.g. user_auth, uuid, cf_clearance for MCS; equivalent for CMS) locally in SharedPreferences.\nThese cookies are used only to access the corresponding source site on your behalf. They are NOT uploaded to any third-party server controlled by this application\'s developer.\nYou may clear these cookies at any time in Settings → Community Settings → Sign out, or by clearing the app\'s data.</string>
+
+    <string name="terms_section_8_title">8. Your Rights &amp; Contact</string>
+    <string name="terms_section_8_body">As the user, you have the right to:\n• Access — view all personal data stored locally via Settings\n• Erasure — clear cookies, cached resources, or all data at any time\n• Withdraw consent — uninstall the application to stop all optional data collection\n\nThis application does NOT collect personally identifiable information (PII) such as real name, phone number, email, or location. The data described in Section 6 is device-level diagnostic information that cannot reasonably identify you.\n\nFor privacy questions or to exercise your rights, contact the developer via the GitHub link in the \"About\" page.</string>
 
     <!-- Theme dialog (Dynamic App Icon) -->
     <string name="theme_dialog_title">Theme &amp; appearance</string>

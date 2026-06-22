@@ -24,6 +24,7 @@ zxing = "3.5.3"
 camerax = "1.4.2"
 accompanistPermissions = "0.34.0"
 navigationCompose = "2.8.5"
+bugly = "4.1.9.3"
 
 [libraries]
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -65,6 +66,7 @@ androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", 
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
+bugly-crashreport = { group = "com.tencent.bugly", name = "crashreport", version.ref = "bugly" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

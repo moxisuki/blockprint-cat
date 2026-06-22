@@ -232,6 +232,11 @@
     <string name="about_update_download">下载</string>
     <string name="about_update_latest_title">已是最新版本</string>
     <string name="about_update_latest_msg">当前版本 %1$s 已是最新。</string>
+    <string name="about_section_bugly">崩溃上报</string>
+    <string name="about_test_crash">测试崩溃上报</string>
+    <string name="about_test_crash_title">触发一次测试崩溃？</string>
+    <string name="about_test_crash_msg">这会抛出一个未捕获的异常，Bugly 会捕获并在约 10 秒内上报到后台。应用会崩溃，需要重新打开。</string>
+    <string name="about_test_crash_confirm">立即崩溃</string>
     <string name="about_section_more">更多</string>
     <string name="about_link_terms">使用条款</string>
     <string name="about_footer">© BlockPrint Cat · 仅供学习交流</string>
@@ -396,6 +401,23 @@
     <string name="terms_section_3_body">本应用集成的资源包（minecraft 原版、第三方 Mod）来自 Mojang 官方和 Modrinth 等社区，遵循其各自的开源协议。\n应用本身不内置任何游戏资源，所有渲染所需资源均由用户主动下载并存储在本地设备上。\nMojang 商标、第三方 Mod 商标及其相关资源的所有权归各自权利人所有，本应用与其无官方关联。</string>
     <string name="terms_section_4_title">4. 社区数据爬虫</string>
     <string name="terms_section_4_body">本应用的\"社区\"功能使用爬虫技术访问第三方蓝图分享站（mcschematic.top、www.creativemechanicserver.com 等）以聚合公开信息。\n应用不存储、不修改、不商用任何第三方网站的内容；所有列表/详情/文件均实时从源站拉取。\n使用者应遵守源站的使用条款与版权要求；下载的蓝图版权归原作者所有。\n如源站权利人希望停止被本应用访问，请联系开发者。</string>
+
+    <!-- 隐私条款（按 Bugly SDK 合规指南） -->
+    <string name="terms_section_5_title">5. 本地数据与存储</string>
+    <string name="terms_section_5_body">本应用管理的所有蓝图、设置、已下载的资源文件均存储在您的设备本地。
+我们不运营任何用于蓝图存储、账号同步或远程备份的云服务器。除非您主动使用 PC 桥接功能从本地电脑下载蓝图，否则您的数据不会离开设备。
+您可随时通过 设置 → 存储 → 清除缓存/清除数据，或卸载应用来清除所有本地存储的数据。</string>
+
+    <string name="terms_section_6_title">6. 第三方 SDK：腾讯 Bugly（崩溃上报）</string>
+    <string name="terms_section_6_body">为提升应用稳定性，本应用集成了腾讯 Bugly SDK。\n\nSDK 提供方：深圳市腾讯计算机系统有限公司\n使用目的：排查质量问题，帮助 APP 提升运行质量\n处理方式：通过去标识化、加密传输和处理的安全处理方式；数据存储于中国境内的服务器。\n\n当发生崩溃时，以下信息会被自动采集并上传至腾讯 Bugly 服务器：\n• 手机型号\n• 手机品牌\n• Android 系统版本与 API 等级\n• 厂商系统版本\n• CPU 架构类型\n• 设备是否 root\n• 磁盘 / sdcard / 内存空间占用大小\n• 网络类型\n• 应用当前正在运行的进程名和 PID\n\n上述信息仅用于诊断和修复崩溃，不会用于广告、用户画像或任何商业用途。\n\nBugly 隐私政策：https://privacy.qq.com/document/preview/fc748b3d96224fdb825ea79e132c1a56\nBugly 官网：https://bugly.qq.com/v2/\n\n退出方式：崩溃上报仅在您同意本条款后初始化。如需永久关闭，请卸载应用或清除应用数据以重置条款同意状态。</string>
+
+    <string name="terms_section_7_title">7. 社区登录 Cookie</string>
+    <string name="terms_section_7_body">可选的"社区"功能允许您登录第三方蓝图分享站（MCS / CMS）。登录时，应用会将该站点的鉴权 Cookie（如 MCS 的 user_auth、uuid、cf_clearance；CMS 同类字段）本地存储在 SharedPreferences 中。
+这些 Cookie 仅用于代替您访问对应的源站，不会被上传到任何由本应用开发者控制的第三方服务器。
+您可随时通过 设置 → 社区设置 → 退出登录，或通过清除应用数据来删除这些 Cookie。</string>
+
+    <string name="terms_section_8_title">8. 您的权利与联系方式</string>
+    <string name="terms_section_8_body">作为用户，您享有以下权利：\n• 访问 — 通过设置查看所有本地存储的个人数据\n• 删除 — 随时清除 Cookie、缓存资源或全部数据\n• 撤回同意 — 卸载应用以停止所有可选的数据采集\n\n本应用不收集真实姓名、电话号码、邮箱、地理位置等个人身份信息（PII）。第 6 节所述的数据均为设备级诊断信息，无法合理识别您的身份。\n\n如有隐私相关问题或需行使您的权利，请通过\"关于\"页面中的 GitHub 链接联系开发者。</string>
 
     <!-- Community Configuration redesign -->
     <string name="settings_community_card_title">社区配置</string>

@@ -1,0 +1,10 @@
+## Copy this file to `local.properties` and fill in your real values.
+## `local.properties` is git-ignored, so your secrets won't be committed.
+
+## Location of the Android SDK (required)
+sdk.dir=/path/to/Android/Sdk
+
+## Bugly crash reporting AppID (optional)
+## Get yours at https://bugly.qq.com after creating an Android product.
+## If left empty, crash reporting is disabled (BuildConfig.BUGLY_APP_ID == "").
+BUGLY_APP_ID=

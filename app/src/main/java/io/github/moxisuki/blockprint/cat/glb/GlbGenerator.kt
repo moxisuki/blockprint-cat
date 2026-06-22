@@ -31,37 +31,6 @@ class GlbGenerator(
         private fun log(msg: String) = println("[$TAG] $msg")
     }
 
-    /**
-     * 用流式 [LitematicToGlb.convert] 生成 GLB 并写入缓存文件。
-     * 不再缓冲完整字节数组，直接流式写入磁盘。
-     */
-    fun generate(
-        litematic: Litematic,
-        cacheKey: String,
-        regionIndex: Int = 0,
-        floorHeight: Int = 0,
-        onProgress: ((Float) -> Unit)? = null,
-    ): ByteArray {
-        val cacheFile = cache.getFile(Key(cacheKey, regionIndex, floorHeight))
-        if (cacheFile.isFile) {
-            log("缓存命中: $cacheKey r$regionIndex fh$floorHeight, ${cacheFile.length()} bytes")
-            return byteArrayOf()
-        }
-        log("缓存未命中, 开始生成: $cacheKey r$regionIndex fh$floorHeight")
-        val t0 = System.currentTimeMillis()
-        val options = if (floorHeight > 0) GlbExportOptions(floorHeight = floorHeight)
-                      else GlbExportOptions()
-        val tmp = File(cacheFile.parentFile, "${cacheFile.name}.tmp")
-        tmp.parentFile?.mkdirs()
-        tmp.outputStream().use { out ->
-            LitematicToGlb.convert(litematic, assetsDirs, out, regionIndex, options, onProgress)
-        }
-        tmp.renameTo(cacheFile)
-        val elapsed = System.currentTimeMillis() - t0
-        log("GLB 生成完成: ${cacheFile.length()} bytes, 耗时 ${elapsed}ms")
-        return byteArrayOf()
-    }
-
     /** Check if a cached GLB file exists and looks valid (non-empty, ≥ MIN_VALID_GLB_BYTES). */
     fun peekCacheFile(key: Key): File? {
         val file = cache.getFile(key)

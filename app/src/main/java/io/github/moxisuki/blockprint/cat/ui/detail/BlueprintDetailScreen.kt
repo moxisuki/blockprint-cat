@@ -392,7 +392,7 @@ private fun PreviewButton(bp: FullBlueprint, navController: NavController) {
                         genStage = stageName(p)
                     }
                 } ?: throw IllegalStateException("渲染引擎未初始化")
-                GlbResourceManager.putGlb(bp.meta.uuid, ByteArray(0), modelMinY, modelCX, modelCZ, cacheFile = cacheFile)
+                GlbResourceManager.putGlb(bp.meta.uuid, cacheFile, modelMinY, modelCX, modelCZ)
                 showDialog = false
                 navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
             } catch (_: Exception) {

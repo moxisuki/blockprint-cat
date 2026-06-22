@@ -9,7 +9,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -18,11 +20,19 @@ import io.github.moxisuki.blockprint.cat.glb.FileSystemFileAccessor
 import io.github.moxisuki.blockprint.cat.glb.GlbCache
 import io.github.moxisuki.blockprint.cat.glb.GlbGenerator
 
-/**
- * TODO: Render refactor — network/download/rendering code was removed from litematic-lib.
- * All methods now return mock values. Re-implement rendering in the app layer.
- */
 object GlbResourceManager {
+
+    /**
+     * Per-session metadata for a generated GLB. Held in memory only;
+     * for UI subscription across cold start, see [cachedKeys].
+     */
+    data class CachedGlb(
+        val blueprintUuid: String,
+        val cacheFile: File,
+        val minY: Float,
+        val centerX: Float,
+        val centerZ: Float,
+    )
 
     data class ResourceState(
         val vanillaInstalled: Boolean = false,
@@ -57,130 +67,94 @@ object GlbResourceManager {
 
     private var applicationContext: Context? = null
 
-    /** 缓存：Detail 页传 Litematic 给 PreviewScreen */
-    private var cachedLitematic: Litematic? = null
-    private var cachedLitematicKey: String = ""
+    /** Litematic handed from DetailScreen to PreviewScreen so we don't re-parse NBT. */
+    private var pendingLitematic: Litematic? = null
+    private var pendingLitematicKey: String = ""
 
-    fun putLitematic(key: String, lit: Litematic) {
-        cachedLitematic = lit
-        cachedLitematicKey = key
+    fun transferLitematic(key: String, lit: Litematic) {
+        pendingLitematic = lit
+        pendingLitematicKey = key
     }
 
-    fun takeLitematic(key: String): Litematic? {
-        if (cachedLitematicKey == key) {
-            val lit = cachedLitematic
-            cachedLitematic = null
-            cachedLitematicKey = ""
+    fun receiveLitematic(key: String): Litematic? {
+        if (pendingLitematicKey == key) {
+            val lit = pendingLitematic
+            pendingLitematic = null
+            pendingLitematicKey = ""
             return lit
         }
         return null
     }
 
-    /** GLB 缓存：Detail 页预生成 GLB + 模型包围盒，PreviewScreen 直接渲染 */
-    private var cachedGlb: ByteArray? = null
-    private var cachedGlbKey: String = ""
-    private var cachedGlbMinY: Float = 0f
-    private var cachedGlbCenterX: Float = 0f
-    private var cachedGlbCenterZ: Float = 0f
-    private var cachedGlbFile: java.io.File? = null
-
-    // 持久化的 GLB 缓存键集合（跨进程保留，Room 持久化）
-    private var glbCacheDao: io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao? = null
-    private val glbScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /**
+     * Tier 1: UUID set mirrored from Room. Used by DetailScreen's
+     * "View Cached" button to know which blueprints have a cached GLB.
+     */
     private val _cachedKeys = MutableStateFlow<Set<String>>(emptySet())
-    /** 已生成 GLB 的蓝图 uuid 集合，持久化 + 跨进程，UI 可订阅 */
     val cachedKeys: StateFlow<Set<String>> = _cachedKeys.asStateFlow()
 
-    fun putGlb(key: String, bytes: ByteArray, minY: Float = 0f, centerX: Float = 0f, centerZ: Float = 0f, cacheFile: java.io.File? = null) {
-        cachedGlb = bytes
-        cachedGlbKey = key
-        cachedGlbMinY = minY
-        cachedGlbCenterX = centerX
-        cachedGlbCenterZ = centerZ
-        cachedGlbFile = cacheFile
+    /**
+     * Tier 2: per-session metadata (current process only). Used by
+     * PreviewScreen Segment 1 to skip disk I/O when we already loaded
+     * this blueprint in the same session.
+     */
+    private val sessionCache = mutableMapOf<String, CachedGlb>()
+
+    fun peek(uuid: String): CachedGlb? = sessionCache[uuid]
+
+    fun hasGlb(uuid: String): Boolean = uuid in _cachedKeys.value
+
+    fun putGlb(uuid: String, cacheFile: File, minY: Float, centerX: Float, centerZ: Float) {
+        sessionCache[uuid] = CachedGlb(uuid, cacheFile, minY, centerX, centerZ)
+        _cachedKeys.update { it + uuid }
         val dao = glbCacheDao ?: return
         glbScope.launch {
             dao.upsert(
                 io.github.moxisuki.blockprint.cat.data.render.GlbCacheEntity(
-                    uuid = key,
-                    sizeBytes = bytes.size.toLong(),
+                    uuid = uuid,
+                    sizeBytes = cacheFile.length(),
                     createdAt = System.currentTimeMillis(),
                 )
             )
         }
-        _cachedKeys.value = _cachedKeys.value + key
     }
 
-    fun hasGlb(key: String): Boolean = key in _cachedKeys.value
-
-    fun peekGlb(key: String): GlbCacheEntry? {
-        if (cachedGlbKey == key) {
-            return GlbCacheEntry(cachedGlb ?: byteArrayOf(), cachedGlbMinY, cachedGlbCenterX, cachedGlbCenterZ, cacheFile = cachedGlbFile)
-        }
-        return null
-    }
-
-    fun clearGlb(key: String) {
-        if (cachedGlbKey == key) {
-            cachedGlb = null
-            cachedGlbKey = ""
-            cachedGlbMinY = 0f
-            cachedGlbCenterX = 0f
-            cachedGlbCenterZ = 0f
-        }
+    fun clearGlb(uuid: String) {
+        sessionCache.remove(uuid)
+        _cachedKeys.update { it - uuid }
         val dao = glbCacheDao ?: return
-        glbScope.launch { dao.delete(key) }
-        _cachedKeys.value = _cachedKeys.value - key
+        glbScope.launch { dao.delete(uuid) }
     }
 
     fun clearAllGlb() {
-        cachedGlb = null
-        cachedGlbKey = ""
-        cachedGlbMinY = 0f
-        cachedGlbCenterX = 0f
-        cachedGlbCenterZ = 0f
+        sessionCache.clear()
+        _cachedKeys.value = emptySet()
         val dao = glbCacheDao ?: return
         glbScope.launch { dao.clearAll() }
-        _cachedKeys.value = emptySet()
     }
 
-    fun takeGlb(key: String): GlbCacheEntry? {
-        if (cachedGlbKey == key) {
-            val e = GlbCacheEntry(cachedGlb!!, cachedGlbMinY, cachedGlbCenterX, cachedGlbCenterZ)
-            cachedGlb = null
-            cachedGlbKey = ""
-            return e
-        }
-        return null
-    }
-
-    data class GlbCacheEntry(val bytes: ByteArray, val minY: Float, val centerX: Float, val centerZ: Float, val cacheFile: java.io.File? = null)
+    private var glbCacheDao: io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao? = null
+    private val glbScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun init(context: Context, dao: io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao) {
-        Log.d(TAG, "初始化渲染资源管线...")
+        Log.d(TAG, "初始化 GLB 资源管线...")
         applicationContext = context.applicationContext
         glbCacheDao = dao
 
-        // 加载持久化的 GLB 缓存键（Room）
-        runCatching {
-            kotlinx.coroutines.runBlocking {
-                val all = dao.getAll()
-                _cachedKeys.value = all.map { it.uuid }.toSet()
-                Log.d(TAG, "已恢复 GLB 缓存键: ${all.size} 个")
-            }
+        runBlocking {
+            val all = dao.getAll()
+            _cachedKeys.value = all.map { it.uuid }.toSet()
+            Log.d(TAG, "已恢复 GLB 缓存键: ${all.size} 个")
         }
 
         val renderAssetsDir = File(context.filesDir, "blockprintcat/render_assets")
-        // 使用已下载的渲染资源（不再内置 APK assets）
         val accessor = FileSystemFileAccessor(renderAssetsDir)
         Log.d(TAG, "使用渲染资源目录: $renderAssetsDir (已下载=${renderAssetsDir.isDirectory})")
         fileAccessor = AndroidFileAccessor(context, baseDir = renderAssetsDir)
 
-        // Initialize GLB pipeline
         val cacheDir = File(context.filesDir, "glb_cache")
         _generator = GlbGenerator(listOf(renderAssetsDir.toPath()), GlbCache(cacheDir))
 
-        // Verify asset access works
         val testPath = "minecraft/textures/block/stone.png"
         val testBytes = accessor.readBytes(testPath)
         Log.d(TAG, "资源测试: $testPath -> ${if (testBytes != null) "${testBytes.size} bytes" else "未找到"}")
@@ -189,27 +163,19 @@ object GlbResourceManager {
             resourcesDir = renderAssetsDir,
             builtinReady = true,
         )
-        Log.d(TAG, "渲染资源管线初始化完成, generator=${_generator != null}, accessor=${accessor.javaClass.simpleName}")
+        Log.d(TAG, "GLB 资源管线初始化完成, generator=${_generator != null}, accessor=${accessor.javaClass.simpleName}")
     }
 
     private const val TAG = "GlbResourceMgr"
 
-    // TODO: Re-implement vanilla asset download + install
-    suspend fun installVanilla(
-        versionId: String = "latest",
-    ): String = withContext(Dispatchers.IO) {
+    suspend fun installVanilla(versionId: String = "latest"): String = withContext(Dispatchers.IO) {
         throw UnsupportedOperationException("TODO: render pipeline not yet rebuilt")
     }
 
-    // TODO: Re-implement uninstall
-    suspend fun uninstall(versionId: String): Boolean = false
+    suspend fun uninstallVanilla(): Boolean = false
 
-    // TODO: Re-implement mod asset merging
-    fun installModAssets(namespace: String, version: String = "") {
-        // no-op: rendering not yet rebuilt
-    }
+    fun installModAssets(namespace: String, version: String = "") {}
 
-    // TODO: Re-implement vanilla reset
     suspend fun resetVanilla(versionId: String) {
         _state.value = _state.value.copy(vanillaInstalled = false, resolverReady = false)
     }

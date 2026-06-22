@@ -171,7 +171,7 @@ fun PreviewScreen(
         val key = GlbGenerator.Key(blueprintUuid = uuid)
 
         // Segment 1: in-memory hit (zero I/O)
-        val cached = io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager.peekGlb(uuid)
+        val cached = io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager.peek(uuid)
         val cachedFile = cached?.cacheFile
         if (cached != null && cachedFile != null && cachedFile.isFile && cachedFile.length() > GlbGenerator.MIN_VALID_GLB_BYTES) {
             glbEntry = GlbEntry(cached.minY, cached.centerX, cached.centerZ, cachedFile, fromCache = true)
@@ -198,7 +198,7 @@ fun PreviewScreen(
         glbStageText = context.getString(R.string.preview_stage_region)
         try {
             val cacheFile = withContext(Dispatchers.IO) {
-                val lit = io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager.takeLitematic(uuid)
+                val lit = io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager.receiveLitematic(uuid)
                     ?: blueprintManager.loadDetail(uuid)?.raw
                     ?: throw IllegalStateException("蓝图不存在或已被删除")
                 if (lit.blockCount() == 0) throw IllegalStateException("该蓝图不包含任何方块")

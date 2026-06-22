@@ -188,12 +188,7 @@ fun PreviewScreen(
         glbEntry != null -> PreviewSceneContent(entry = glbEntry!!, onFullscreenChange = onFullscreenChange, fromCache = glbEntry!!.fromCache)
         else -> {
             if (glbProgress >= 0f) {
-                HudGeneratingOverlay(
-                    visible = true,
-                    progress = glbProgress,
-                    elapsedMs = 0L,
-                    stageText = glbStageText,
-                )
+                HudStartupOverlay(visible = true)
             } else {
                 HudStartupOverlay(visible = true)
             }

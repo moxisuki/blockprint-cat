@@ -10,9 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -130,82 +128,5 @@ private fun BoxScope.HudCornerBracket(
                 drawLine(color, Offset(l, l), Offset(l, 0f), s)            // 右边
             }
         }
-    }
-}
-
-/**
- * HUD-style overlay shown during GLB generation on the detail screen.
- *
- * Visual style: same sci-fi targeting reticle as [HudStartupOverlay] but
- * with a linear progress bar, percentage, stage text, and elapsed time.
- * Replaces the previous AlertDialog-based generation dialog.
- */
-@Composable
-internal fun HudGeneratingOverlay(
-    visible: Boolean,
-    progress: Float,           // 0f..1f
-    elapsedMs: Long,
-    stageText: String,
-) {
-    if (!visible) return
-    val primary = MaterialTheme.colorScheme.primary
-    val onSurfaceDim = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.55f)
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.82f))
-    ) {
-        HudCornerBracket(color = primary, align = Alignment.TopStart)
-        HudCornerBracket(color = primary, align = Alignment.TopEnd)
-        HudCornerBracket(color = primary, align = Alignment.BottomStart)
-        HudCornerBracket(color = primary, align = Alignment.BottomEnd)
-
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = stringResource(R.string.detail_hud_status),
-                style = MaterialTheme.typography.titleMedium,
-                color = primary,
-                fontFamily = FontFamily.Monospace,
-            )
-            Spacer(Modifier.height(20.dp))
-            // 进度条 (linear, 不像 indeterminate spinner,有具体百分比感)
-            LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.width(220.dp),
-                color = primary,
-            )
-            Spacer(Modifier.height(12.dp))
-            // 百分比 + 已用时
-            Text(
-                text = "${(progress.coerceIn(0f, 1f) * 100).toInt()}% · ${elapsedMs / 1000}s",
-                style = MaterialTheme.typography.titleMedium,
-                color = primary,
-                fontFamily = FontFamily.Monospace,
-            )
-            if (stageText.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stageText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = onSurfaceDim,
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
-        }
-
-        // 底部引擎状态
-        Text(
-            text = stringResource(R.string.detail_hud_engine),
-            style = MaterialTheme.typography.labelSmall,
-            color = primary.copy(alpha = 0.5f),
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 28.dp),
-        )
     }
 }

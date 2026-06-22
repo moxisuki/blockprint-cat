@@ -126,8 +126,6 @@
     <string name="detail_continue_anyway">Continue anyway</string>
     <string name="detail_generating_title">Generating 3D preview</string>
     <string name="detail_generating_progress">%1$d%% — %2$ds</string>
-    <string name="detail_hud_status">BUILDING GLB</string>
-    <string name="detail_hud_engine">BLOCK CONVERTER</string>
     <string name="detail_meta_title">Information</string>
     <string name="detail_meta_name">Name</string>
     <string name="detail_meta_author">Author</string>

@@ -168,42 +168,52 @@ fun PreviewScreen(
     }
 
     LaunchedEffect(uuid) {
+        val key = GlbGenerator.Key(blueprintUuid = uuid)
+
+        // Segment 1: in-memory hit (zero I/O)
         val cached = io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager.peekGlb(uuid)
-        if (cached != null) {
-            // 大模型直接用缓存文件，不把 bytes 带进内存
-            glbEntry = GlbEntry(byteArrayOf(), cached.minY, cached.centerX, cached.centerZ, cacheFile = cached.cacheFile, fromCache = true)
+        val cachedFile = cached?.cacheFile
+        if (cached != null && cachedFile != null && cachedFile.isFile && cachedFile.length() > GlbGenerator.MIN_VALID_GLB_BYTES) {
+            glbEntry = GlbEntry(cached.minY, cached.centerX, cached.centerZ, cachedFile, fromCache = true)
             return@LaunchedEffect
         }
-        // 磁盘缓存命中（进程重启后内存缓存丢失）→ 跳过生成流程，直接显示
-        val diskFile = generator?.getOrGenerateFile(
-            blueprintManager.loadDetail(uuid)?.raw ?: return@LaunchedEffect,
-            GlbGenerator.Key(blueprintUuid = uuid))
-        if (diskFile != null && diskFile.length() > 0) {
-            val reg = (blueprintManager.loadDetail(uuid)?.raw?.regions?.getOrNull(0))
-            glbEntry = GlbEntry(byteArrayOf(), minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
-                centerX = reg?.position?.x?.toFloat() ?: 0f, centerZ = reg?.position?.z?.toFloat() ?: 0f,
-                cacheFile = diskFile, fromCache = true)
+
+        // Segment 2: disk hit (peekCacheFile + litematic for region metadata only)
+        val onDisk = generator?.peekCacheFile(key)
+        if (onDisk != null) {
+            val raw = try { blueprintManager.loadDetail(uuid)?.raw } catch (_: Exception) { null }
+            val reg = raw?.regions?.getOrNull(0)
+            glbEntry = GlbEntry(
+                minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
+                centerX = reg?.position?.x?.toFloat() ?: 0f,
+                centerZ = reg?.position?.z?.toFloat() ?: 0f,
+                cacheFile = onDisk,
+                fromCache = true,
+            )
             return@LaunchedEffect
         }
-        // 立即显示进度条（0%），避免生成前有一段空白等待
-            glbProgress = 0f
-            glbStageText = context.getString(R.string.preview_stage_region)
+
+        // Segment 3: cache miss → generate
+        glbProgress = 0f
+        glbStageText = context.getString(R.string.preview_stage_region)
         try {
-            val entry = withContext(Dispatchers.IO) {
+            val cacheFile = withContext(Dispatchers.IO) {
                 val lit = io.github.moxisuki.blockprint.cat.ui.render.RenderResourceManager.takeLitematic(uuid)
                     ?: blueprintManager.loadDetail(uuid)?.raw
                     ?: throw IllegalStateException("蓝图不存在或已被删除")
                 if (lit.blockCount() == 0) throw IllegalStateException("该蓝图不包含任何方块")
-                val bytes = generator?.generate(lit, cacheKey = uuid, floorHeight = GlbGenerator.LAYER_FLOOR_HEIGHT,
-                    onProgress = { f -> glbProgress = f; glbStageText = stageFor(f) })
-                    ?: throw IllegalStateException("渲染引擎未初始化")
-                val cacheFile = generator?.getOrGenerateFile(lit, GlbGenerator.Key(blueprintUuid = uuid))
-                val reg = lit.regions.getOrNull(0)
-                GlbEntry(bytes, minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
-                    centerX = reg?.position?.x?.toFloat() ?: 0f, centerZ = reg?.position?.z?.toFloat() ?: 0f,
-                    cacheFile = cacheFile)
+                generator?.getOrGenerateFile(lit, key) { f ->
+                    glbProgress = f
+                    glbStageText = stageFor(f)
+                } ?: throw IllegalStateException("渲染引擎未初始化")
             }
-            glbEntry = entry
+            val reg = blueprintManager.loadDetail(uuid)?.raw?.regions?.getOrNull(0)
+            glbEntry = GlbEntry(
+                minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
+                centerX = reg?.position?.x?.toFloat() ?: 0f,
+                centerZ = reg?.position?.z?.toFloat() ?: 0f,
+                cacheFile = cacheFile,
+            )
         } catch (e: Exception) {
             Log.e(TAG, "预览加载失败", e)
             error = "${e.javaClass.simpleName}: ${e.message ?: context.getString(R.string.preview_error_unknown)}"
@@ -241,7 +251,7 @@ fun PreviewScreen(
     }
 }
 
-private data class GlbEntry(val bytes: ByteArray, val minY: Float, val centerX: Float, val centerZ: Float, val cacheFile: java.io.File? = null, val fromCache: Boolean = false)
+private data class GlbEntry(val minY: Float, val centerX: Float, val centerZ: Float, val cacheFile: java.io.File, val fromCache: Boolean = false)
 
 /**
  * 一次完成预设的完整光状态更新：
@@ -287,7 +297,6 @@ private fun PreviewSceneContent(
         targetX = entry.centerX, targetY = groundY + 4f, targetZ = entry.centerZ,
     ).also { it.gridY = groundY } }
     val glbFile = entry.cacheFile
-    val glbBytes = entry.bytes
 
     var fullscreen by remember { mutableStateOf(false) }
     // System-bar visibility is handled in MainActivity via a
@@ -301,7 +310,7 @@ private fun PreviewSceneContent(
     var centered by remember { mutableStateOf(false) }
     // 加载遮罩：centered 变为 true 后再保持至少 400ms，避免闪一下就消失
     var loadingVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(centered, glbBytes) {
+    LaunchedEffect(centered, glbFile) {
         if (!centered) loadingVisible = true
         else { kotlinx.coroutines.delay(400); loadingVisible = false }
     }
@@ -385,19 +394,15 @@ private fun PreviewSceneContent(
         var modelErrorMessage by remember { mutableStateOf<String>(context.getString(R.string.preview_render_failed)) }
         // 用 LaunchedEffect 而非 remember，确保加载 overlay 先渲染，不阻塞首帧
         var modelInst by remember { mutableStateOf<io.github.sceneview.model.ModelInstance?>(null) }
-        LaunchedEffect(glbFile ?: glbBytes) {
+        LaunchedEffect(glbFile) {
             modelError = false
+            modelInst = null
             try {
-                modelInst = if (glbFile != null && glbFile.isFile) {
-                    // 内存映射文件 — 不占用堆/直接内存，避免大模型 OOM
-                    java.io.RandomAccessFile(glbFile, "r").use { raf ->
-                        val mapped = raf.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, glbFile.length())
-                        modelLoader.createModelInstance(mapped)
-                    }
+                modelInst = if (glbFile.isFile) {
+                    modelLoader.createModelInstance(glbFile)
                 } else {
-                    if (glbBytes.size < 2000) { modelErrorMessage = context.getString(R.string.preview_resource_missing); modelError = true; return@LaunchedEffect }
-                    val buffer = java.nio.ByteBuffer.allocateDirect(glbBytes.size).apply { put(glbBytes); flip() }
-                    modelLoader.createModelInstance(buffer)
+                    modelErrorMessage = context.getString(R.string.preview_resource_missing)
+                    modelError = true; null
                 }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "模型加载失败: ${e.message}", e)
@@ -410,7 +415,7 @@ private fun PreviewSceneContent(
 
         var lastFrameNanos by remember { mutableStateOf(0L) }
 
-        key(glbBytes) {
+        key(glbFile) {
         SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
@@ -476,7 +481,7 @@ private fun PreviewSceneContent(
                 }
             }
         }
-        } // key(glbBytes)
+        } // key(glbFile)
 
         // Filament 加载中 — 覆盖层（缓存命中跳过，避免重复显示两个加载指示器）
         if (!fromCache && loadingVisible && !modelError) {

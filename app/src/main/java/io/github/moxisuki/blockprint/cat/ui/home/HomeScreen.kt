@@ -4,14 +4,26 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.SizeTransform
 import io.github.moxisuki.blockprint.cat.ui.animation.AnimSpec
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,13 +42,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.FilterList
@@ -45,7 +57,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,10 +80,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -105,9 +118,8 @@ fun HomeScreen(
     managementViewModel: BlueprintViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onRequestSafFolder: () -> Unit = {},
-    onRefresh: () -> Unit = {},
+    onRefresh: (tab: Int) -> Unit = {},
     onBlueprintSelected: ((BlueprintMeta) -> Unit)? = null,
-    showFab: Boolean = true,
 ) {
     val managementState by managementViewModel.uiState.collectAsState()
     val scanning by viewModel.scanning.collectAsState()
@@ -135,7 +147,37 @@ fun HomeScreen(
     var renameTarget by remember { mutableStateOf<BlueprintMeta?>(null) }
     var renameText by remember { mutableStateOf("") }
     var sheetTarget by remember { mutableStateOf<RemoteBlueprint?>(null) }
-    var selectedTab by remember { mutableStateOf(0) }
+    // rememberSaveable so the picked tab survives rotation / process death.
+    // Earlier this was plain `remember` — rotating on the PC tab would
+    // snap back to Local because the index was lost.
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    // HorizontalPager state for left/right swipe between Local and PC tabs.
+    // Seeded with selectedTab so external navigation (pill click) and swipe
+    // settle into the same page.
+    val pagerState = rememberPagerState(initialPage = selectedTab) { 2 }
+    // Pill click → animate pager to that page with a snappy spring so the
+    // tap feels like a physical "snap" rather than a linear slide.
+    LaunchedEffect(selectedTab) {
+        if (pagerState.currentPage != selectedTab) {
+            pagerState.animateScrollToPage(
+                selectedTab,
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                ),
+            )
+        }
+    }
+    // Swipe → reflect into selectedTab so the pill highlight + per-tab
+    // action-button visibility (Import / Filter) follow the swipe LIVE.
+    // currentPage (not settledPage) updates the moment the swipe crosses
+    // the snap threshold, so the pill highlight flips right at the half-way
+    // mark instead of waiting for the gesture to fully release.
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage != selectedTab) {
+            selectedTab = pagerState.currentPage
+        }
+    }
     var localFilterVisible by rememberSaveable { mutableStateOf(false) }
     var localFilterQuery by rememberSaveable { mutableStateOf("") }
     var localFilterFormat by rememberSaveable { mutableStateOf(FormatFilter.All) }
@@ -154,11 +196,24 @@ fun HomeScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Tab switcher — outer Row centers the pill + refresh button.
+        // Tab switcher on the left, action buttons clustered on the right.
+        // Same outer Row so the surfaceVariant pill + the icons share one
+        // visual baseline; spacer-weight pushes them apart. Putting the
+        // Upload/Filter inside the same Row as the pill made the capsule
+        // grow to ~75% of a 360dp screen — splitting keeps it compact.
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Pill: surfaceVariant background wrapping the two tabs. Each tab
+            // sizes to its own text + padding (NO weight(1f), which would
+            // balloon the pill to fill the remaining row width). Selected tab
+            // gets a primary-coloured background rounded to 10dp, sitting on
+            // top of the surfaceVariant capsule.
+            //
+            // Snap-style discrete indicator (not a sliding overlay). The
+            // background switches instantly when the snap lands — simpler
+            // and keeps the pill compact.
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
@@ -167,13 +222,33 @@ fun HomeScreen(
             ) {
                 listOf(R.string.home_tab_local to 0, R.string.home_tab_pc to 1).forEachIndexed { _, (labelRes, tab) ->
                     val label = stringResource(labelRes)
+                    val isSelected = selectedTab == tab
+                    // Animate the per-tab background and text colour so the
+                    // pill highlight cross-fades instead of snapping when the
+                    // swipe commits (or the user taps the other pill). The
+                    // two adjacent rounded backgrounds blend across the
+                    // gap into one smooth colour sweep at ~150 ms.
+                    val tabBg by animateColorAsState(
+                        targetValue = if (isSelected)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            androidx.compose.ui.graphics.Color.Transparent,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "tabBg_$tab",
+                    )
+                    val tabFg by animateColorAsState(
+                        targetValue = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "tabFg_$tab",
+                    )
                     Box(
                         modifier = Modifier
-                            .then(
-                                if (selectedTab == tab)
-                                    Modifier.padding(3.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary)
-                                else Modifier.padding(3.dp)
-                            )
+                            .padding(3.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(tabBg)
                             .clickable { selectedTab = tab }
                             .padding(horizontal = 20.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center,
@@ -181,16 +256,83 @@ fun HomeScreen(
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (selectedTab == tab) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = tabFg,
                         )
                     }
                 }
-                Spacer(Modifier.width(8.dp))
-                IconButton(onClick = { onRefresh(); visibleCount = PAGE_SIZE }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (selectedTab == 0) {
-                    Spacer(Modifier.width(4.dp))
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            // Refresh button has TWO rotation triggers:
+            //  - manual click → continuous spin for ~1 s (the `refreshing`
+            //    state from rememberInfiniteTransition).
+            //  - tab change  → one-shot 360° spin via Animatable, so the
+            //    user gets visible feedback that switching tabs is loading
+            //    fresh data (whether from disk or from the bridge).
+            val refreshRotation by rememberInfiniteTransition(label = "refresh")
+                .animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 800, easing = LinearEasing),
+                    ),
+                    label = "refreshRotation",
+                )
+            // One-shot spin animation, retriggered by `selectedTab` change
+            // (either pill click or swipe commit). Uses Animatable so the
+            // value snaps to 0 on each new key, then animates back to 360°.
+            val tabSwitchSpin = remember { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(selectedTab) {
+                tabSwitchSpin.snapTo(0f)
+                tabSwitchSpin.animateTo(
+                    targetValue = 360f,
+                    animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+                )
+            }
+            val scope = rememberCoroutineScope()
+            var refreshing by remember { mutableStateOf(false) }
+            val totalRotation = if (refreshing) refreshRotation else tabSwitchSpin.value
+            IconButton(
+                onClick = {
+                    if (refreshing) return@IconButton
+                    visibleCount = PAGE_SIZE
+                    refreshing = true
+                    onRefresh(selectedTab)
+                    scope.launch {
+                        delay(1_000)
+                        refreshing = false
+                    }
+                },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = "刷新",
+                    modifier = Modifier
+                        .size(18.dp)
+                        .rotate(totalRotation),
+                    tint = if (refreshing)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // Upload + Filter are local-tab-only. Wrap them in AnimatedVisibility
+            // so they fade + slide in/out instead of popping when the user
+            // swipes between Local and PC.
+            AnimatedVisibility(
+                visible = selectedTab == 0,
+                enter = expandVertically(animationSpec = tween(180)) + fadeIn(animationSpec = tween(180)),
+                exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(140)),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { filePicker.launch(arrayOf("application/octet-stream", "*/*")) }, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.FileUpload,
+                            contentDescription = "导入蓝图",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     IconButton(onClick = { localFilterVisible = !localFilterVisible }, modifier = Modifier.size(32.dp)) {
                         val filterActive = localFilterQuery.isNotEmpty() || localFilterFormat != FormatFilter.All
                         Icon(
@@ -219,17 +361,18 @@ fun HomeScreen(
             )
         }
 
-        AnimatedContent(
-            targetState = selectedTab,
-            transitionSpec = {
-                val dir = if (targetState > initialState) 1 else -1
-                (slideInHorizontally(AnimSpec.slide) { it * dir } + fadeIn(AnimSpec.content)) togetherWith (slideOutHorizontally(AnimSpec.slideExit) { -it * dir } + fadeOut(AnimSpec.fadeExit)) using SizeTransform(clip = false)
-            },
-            label = "tab",
+        // HorizontalPager gives swipe-to-switch-tab between Local (page 0) and
+        // PC (page 1). Pill click scrolls the pager; swipe settle updates the
+        // pill highlight. See the two LaunchedEffects above for the sync.
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-        ) { tab ->
+            key = { it }, // page 0 → LocalBlueprintList, page 1 → PC content
+            pageSpacing = 0.dp,
+            userScrollEnabled = true,
+        ) { page ->
             Box(modifier = Modifier.fillMaxSize()) {
-                when (tab) {
+                when (page) {
                     0 -> {
                         LocalBlueprintList(
                             allBlueprints = allBlueprints,
@@ -260,13 +403,6 @@ fun HomeScreen(
                             filterFormat = localFilterFormat,
                             onFilterFormatChange = { localFilterFormat = it; visibleCount = PAGE_SIZE },
                         )
-                        if (showFab) {
-                        FloatingActionButton(
-                            onClick = { filePicker.launch(arrayOf("application/octet-stream", "*/*")) },
-                            containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                        ) { Icon(Icons.Default.Add, contentDescription = "导入蓝图") }
-                        }
                     }
                     1 -> {
                         if (pcSession == null && !isBridgeConnecting) {

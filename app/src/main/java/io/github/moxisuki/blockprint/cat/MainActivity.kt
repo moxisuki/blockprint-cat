@@ -160,6 +160,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContent {
+            // Resolve the same ViewModel instances BlockPrintCatAppContent
+            // uses, so the onRefresh lambda can call bridgeVm.requestList()
+            // for the PC tab refresh without re-resolving hilt here.
+            val outerBridgeVm: BridgeViewModel = hiltViewModel()
+            val outerConnectionState by outerBridgeVm.connectionState.collectAsState()
+            val outerIsBridgeConnected = outerConnectionState is ConnectionState.Connected
+
             BlockPrintCatTheme(themeManager = themeManager) {
                 var termsAccepted by remember { mutableStateOf(termsAcceptance.isAccepted()) }
                 if (!termsAccepted) {
@@ -177,9 +184,20 @@ class MainActivity : AppCompatActivity() {
                     themeManager = themeManager,
                     communityConfigManager = communityConfigManager,
                     onRequestSafFolder = { safFolderLauncher.launch(null) },
-                    onRehydrate = {
+                    // Tab-aware refresh:
+                    //   tab 0 (Local) → re-hydrate the on-disk blueprint list.
+                    //   tab 1 (PC)    → ask the bridge for a fresh server listing.
+                    //                   PC refresh MUST NOT touch the local
+                    //                   on-disk list — the user is looking at
+                    //                   remote blueprints, local rehydration
+                    //                   would be wasted IO + could mask a stale
+                    //                   local list behind the loading spinner.
+                    onRefresh = { tab ->
                         activityScope.launch(Dispatchers.IO) {
-                            blueprintManager.refresh()
+                            when (tab) {
+                                0 -> blueprintManager.refresh()
+                                1 -> if (outerIsBridgeConnected) outerBridgeVm.requestList()
+                            }
                         }
                     },
                     onImportSafer = { uri ->
@@ -215,8 +233,8 @@ fun BlockPrintCatAppContent(
     themeManager: ThemeManager,
     communityConfigManager: io.github.moxisuki.blockprint.cat.data.community.CommunityConfigManager,
     onRequestSafFolder: () -> Unit = {},
-    onRehydrate: () -> Unit = {},
     onImportSafer: (Uri) -> Unit = {},
+    onRefresh: (tab: Int) -> Unit = {},
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -444,7 +462,7 @@ fun BlockPrintCatAppContent(
                         composable(NavRoutes.HOME) {
                             Row(Modifier.fillMaxSize()) {
                                 Box(Modifier.weight(0.4f)) {
-                                    HomeScreen(navController = navController, bridgeVm = bridgeVm, snackbarHostState = snackbarHostState, onRequestSafFolder = onRequestSafFolder, onRefresh = onRehydrate, onBlueprintSelected = remember { { bp -> selectedBlueprintUuid = bp.uuid } }, showFab = false)
+                                    HomeScreen(navController = navController, bridgeVm = bridgeVm, snackbarHostState = snackbarHostState, onRequestSafFolder = onRequestSafFolder, onRefresh = onRefresh, onBlueprintSelected = remember { { bp -> selectedBlueprintUuid = bp.uuid } })
                                 }
                                 HorizontalDivider(modifier = Modifier.fillMaxHeight().width(1.dp))
                                 Box(Modifier.weight(0.6f)) {
@@ -731,7 +749,7 @@ fun BlockPrintCatAppContent(
                             bridgeVm = bridgeVm,
                             snackbarHostState = snackbarHostState,
                             onRequestSafFolder = onRequestSafFolder,
-                            onRefresh = onRehydrate,
+                            onRefresh = onRefresh,
                         )
                     }
                     composable(NavRoutes.COMMUNITY) {

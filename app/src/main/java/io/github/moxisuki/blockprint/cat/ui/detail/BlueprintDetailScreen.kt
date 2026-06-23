@@ -210,6 +210,16 @@ fun BlueprintDetailScreen(
                     }
                 }
 
+                if (convertRunning) {
+                    item {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                        )
+                    }
+                }
+
                 // 已生成 Card — 当 raw 被释放后展示，提示用户预览可用
                 if (bp.raw == null) {
                     item {
@@ -1009,6 +1019,15 @@ fun BlueprintDetailContent(
                             actionContentDescription = stringResource(R.string.detail_convert_action),
                             enabled = !convertRunning,
                             onActionClick = openConvertDialog,
+                        )
+                    }
+                }
+                if (convertRunning) {
+                    item {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
                         )
                     }
                 }

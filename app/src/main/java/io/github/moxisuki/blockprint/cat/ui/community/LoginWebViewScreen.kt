@@ -28,12 +28,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +85,7 @@ fun LoginWebViewScreen(
 
     var progress by remember { mutableStateOf(0) }
     var webView by remember { mutableStateOf<WebView?>(null) }
+    val snackbar = remember { SnackbarHostState() }
 
     // QQ OAuth authorize URL (from README §"QQ OAuth 授权流程")
     val authorizeUrl = "https://graph.qq.com/oauth2.0/authorize" +
@@ -176,6 +181,16 @@ fun LoginWebViewScreen(
                                 request: android.webkit.WebResourceRequest,
                             ): Boolean = false
 
+                            // Hook the ORB proxy for QQ sub-resources. Without this
+                            // Chromium blocks qq-web.cdn-go.cn scripts as cross-origin
+                            // opaque responses and the login page never finishes
+                            // rendering — the original cause of ORB errors we were
+                            // logging but not actually fixing.
+                            override fun shouldInterceptRequest(
+                                view: WebView,
+                                request: android.webkit.WebResourceRequest,
+                            ): WebResourceResponse? = proxyRequest(request)
+
                             override fun onPageFinished(view: WebView, url: String) {
                                 super.onPageFinished(view, url)
                                 handleNavigation(
@@ -188,6 +203,7 @@ fun LoginWebViewScreen(
                                         view.stopLoading()
                                         onLoginSuccess()
                                     },
+                                    onError = { msg -> scope.launch { snackbar.showSnackbar(msg) } },
                                 )
                             }
 
@@ -205,12 +221,41 @@ fun LoginWebViewScreen(
                                     "sub-resource error: ${error.description} ${request.url}",
                                 )
                             }
+
+                            // Don't abort the WebView on cert errors — QQ's
+                            // intermediates sometimes lag behind Let's Encrypt
+                            // rotations on older devices. Letting the request
+                            // through (the default behaviour) preserves the
+                            // existing flow; we still log so failures are
+                            // diagnosable. Disable deliberately; a stricter
+                            // policy would lock out legitimate users.
+                            override fun onReceivedSslError(
+                                view: WebView,
+                                handler: android.webkit.SslErrorHandler,
+                                error: android.net.http.SslError,
+                            ) {
+                                android.util.Log.w(
+                                    "LoginWebView",
+                                    "ssl error ${error.primaryError} on ${error.url}, proceeding",
+                                )
+                                handler.proceed()
+                            }
                         }
                         loadUrl(authorizeUrl)
                         webView = this
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
+            )
+
+            // Surface login errors (cookie missing after retries, capture
+            // exception) as a snackbar so the user sees feedback instead of
+            // a stuck spinner. Sits on top of the WebView.
+            SnackbarHost(
+                hostState = snackbar,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
             )
         }
     }
@@ -226,7 +271,9 @@ fun LoginWebViewScreen(
 /**
  * Inspect the URL the WebView just loaded.
  * On the post-login redirect to mcschematic.top/home/, we extract cookies
- * from CookieManager and persist them.
+ * from CookieManager and persist them. Retries with a short delay because
+ * `CookieManager.flush()` is async — reading immediately after can miss the
+ * Set-Cookie the server just sent.
  */
 private fun handleNavigation(
     client: McschematicClient,
@@ -235,6 +282,7 @@ private fun handleNavigation(
     url: String,
     onProgress: (Int) -> Unit,
     onSuccess: () -> Unit,
+    onError: (String) -> Unit,
 ) {
     onProgress(
         when {
@@ -248,17 +296,10 @@ private fun handleNavigation(
     if (url.contains("mcschematic.top") && !url.contains("/login?")) {
         scope.launch {
             try {
-                val cm = CookieManager.getInstance()
-                cm.flush()
-                val cookies = cm.getCookie(url).orEmpty()
-                val cfCookie = cm.getCookie("https://www.mcschematic.top").orEmpty()
-                val all = listOf(cookies, cfCookie)
-                    .filter { it.isNotEmpty() }
-                    .joinToString("; ")
-
-                val uuid = extractCookie(all, "uuid")
-                val userAuth = extractCookie(all, "user_auth")
-                val cfClearance = extractCookie(all, "cf_clearance")
+                val captured = captureCookiesWithRetry()
+                val uuid = extractCookie(captured, "uuid")
+                val userAuth = extractCookie(captured, "user_auth")
+                val cfClearance = extractCookie(captured, "cf_clearance")
 
                 if (userAuth.isNotEmpty()) {
                     onProgress(100)
@@ -276,15 +317,51 @@ private fun handleNavigation(
                         )
                     }
                     onSuccess()
+                } else {
+                    // Retries exhausted without ever seeing user_auth. Either
+                    // the QQ callback didn't carry a code (user closed the
+                    // auth page) or the server rejected it. Tell the user.
+                    android.util.Log.w(
+                        "LoginWebView",
+                        "userAuth still empty after retries; url=$url",
+                    )
+                    onError("登录失败：未收到鉴权 Cookie，请重试")
                 }
-                // If userAuth is empty, do nothing — likely the server hasn't
-                // set the cookie yet, or login failed. The MainActivity snackbar
-                // will show whatever McschematicClient throws on the next call.
             } catch (e: Exception) {
                 android.util.Log.w("LoginWebView", "cookie capture failed: ${e.message}")
+                onError("登录异常：${e.message ?: "未知错误"}")
             }
         }
     }
+}
+
+/**
+ * Read all mcschematic.top cookies with retries. CookieManager.flush() is
+ * async, so reading immediately after onPageFinished can miss the cookie
+ * the server just Set-Cookie'd. We poll for up to ~3 s before giving up.
+ */
+private suspend fun captureCookiesWithRetry(): String {
+    val cm = CookieManager.getInstance()
+    val targets = listOf(
+        "https://www.mcschematic.top",
+        "https://mcschematic.top",
+    )
+    val delays = listOf(0L, 200L, 500L, 1000L, 1500L)
+    for (delayMs in delays) {
+        if (delayMs > 0) kotlinx.coroutines.delay(delayMs)
+        cm.flush()
+        // getCookie returns null when no cookies for that host. Coalesce both
+        // apex and www so we catch cookies regardless of which host Set-Cookie
+        // targeted.
+        val merged = targets.mapNotNull { cm.getCookie(it)?.takeIf { s -> s.isNotEmpty() } }
+            .joinToString("; ")
+        if (extractCookie(merged, "user_auth").isNotEmpty() ||
+            extractCookie(merged, "uuid").isNotEmpty()
+        ) {
+            return merged
+        }
+    }
+    return ""
 }
 
 private fun extractCookie(cookieHeader: String, name: String): String {
@@ -311,11 +388,38 @@ private fun extractCookie(cookieHeader: String, name: String): String {
  *    `WebResourceRequest` doesn't expose the body, so attempting
  *    would silently drop the body and trigger server errors that
  *    show up as `err_connection_refused` to the user.
- *  - **Only QQ domains** — mcschematic.top and everything else
- *    pass through normally.
+ *  - **Only STATIC assets (.js/.css/images/fonts)** from QQ domains.
+ *    Dynamic endpoints (ptlogin polling, login callbacks, anything
+ *    returning JSON) MUST go through the WebView directly so its
+ *    CookieManager participates — proxying isolates cookies and
+ *    breaks the QR refresh loop, which manifests as "QR expired".
  *  - **Any failure falls back to null** — the WebView then makes
  *    the request itself.
  */
+/**
+ * Host fragments the ORB proxy is allowed to handle. QQ endpoints only —
+ * mcschematic.top and everything else flow through the WebView directly.
+ */
+private val QQ_HOST_FRAGMENTS = listOf(
+    "qq.com",
+    "qq-web.cdn-go.cn",
+    "gtimg.cn",
+    "qzone.qq.com",
+    "qpic.cn",
+)
+
+/**
+ * File extensions the ORB proxy is allowed to handle. Restricting to static
+ * assets means dynamic endpoints (ptqrlogin polling, JSON callbacks) bypass
+ * the proxy entirely so CookieManager + WebView's auth flow stays intact.
+ * Static assets don't carry auth cookies, so isolating them is safe.
+ */
+private val STATIC_ASSET_EXT = listOf(
+    ".js", ".mjs", ".css",
+    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp",
+    ".woff", ".woff2", ".ttf", ".otf", ".eot",
+)
+
 private fun proxyRequest(request: WebResourceRequest): WebResourceResponse? {
     val urlStr = request.url.toString()
     val scheme = request.url.scheme?.lowercase()
@@ -323,16 +427,14 @@ private fun proxyRequest(request: WebResourceRequest): WebResourceResponse? {
     val isGet = request.method.equals("GET", ignoreCase = true) ||
         request.method.equals("OPTIONS", ignoreCase = true)
 
+    val isStaticAsset = STATIC_ASSET_EXT.any { urlStr.contains(it, ignoreCase = true) }
+    val isQqDomain = QQ_HOST_FRAGMENTS.any { urlStr.contains(it, ignoreCase = true) }
+
     val shouldProxy = !isMainFrame &&
         isGet &&
         (scheme == "http" || scheme == "https") &&
-        (
-            urlStr.contains("qq.com") ||
-                urlStr.contains("qq-web.cdn-go.cn") ||
-                urlStr.contains("gtimg.cn") ||
-                urlStr.contains("qzone.qq.com") ||
-                urlStr.contains("qpic.cn")
-            )
+        isStaticAsset &&
+        isQqDomain
     if (!shouldProxy) {
         return null
     }

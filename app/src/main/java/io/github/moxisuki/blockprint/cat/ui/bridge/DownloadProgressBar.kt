@@ -148,7 +148,7 @@ private fun TransferRow(item: TransferItem) {
                     progress = { item.fraction ?: 0f },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp)
+                        .padding(top = 4.dp, bottom = 2.dp)
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp)),
                     color = progressColor,
@@ -158,7 +158,7 @@ private fun TransferRow(item: TransferItem) {
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp)
+                        .padding(top = 4.dp, bottom = 2.dp)
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp)),
                     color = progressColor,

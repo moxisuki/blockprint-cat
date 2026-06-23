@@ -147,40 +147,24 @@ fun HomeScreen(
     var renameTarget by remember { mutableStateOf<BlueprintMeta?>(null) }
     var renameText by remember { mutableStateOf("") }
     var sheetTarget by remember { mutableStateOf<RemoteBlueprint?>(null) }
-    // rememberSaveable so the picked tab survives rotation / process death.
-    // Earlier this was plain `remember` — rotating on the PC tab would
-    // snap back to Local because the index was lost.
-    var selectedTab by rememberSaveable { mutableStateOf(0) }
-    // HorizontalPager state for left/right swipe between Local and PC tabs.
-    // Seeded with selectedTab so external navigation (pill click) and swipe
-    // settle into the same page.
-    val pagerState = rememberPagerState(initialPage = selectedTab) { 2 }
-    // Pill click → animate pager to the target page with a clearly bouncy
-    // spring. dampingRatio = 0.4 → ~25 % overshoot: one dramatic bounce
-    // the user can see, no sustained wobble. stiffness = 450 settles in
-    // ~310 ms. beyondViewportPageCount=1 keeps the off-screen page
-    // composed, so the LazyColumn inside the bouncing page does NOT
-    // re-measure during the overshoot — the bounce only moves the page
-    // offset, content stays stable.
-    LaunchedEffect(selectedTab) {
-        if (pagerState.currentPage != selectedTab) {
-            pagerState.animateScrollToPage(
-                selectedTab,
-                animationSpec = androidx.compose.animation.core.spring(
-                    dampingRatio = 0.4f,
-                    stiffness = 450f,
-                ),
-            )
-        }
-    }
-    // Swipe → reflect into selectedTab so the pill highlight + per-tab
-    // action-button visibility (Import / Filter) follow the swipe LIVE.
-    // currentPage (not settledPage) updates the moment the swipe crosses
-    // the snap threshold, so the pill highlight flips right at the half-way
-    // mark instead of waiting for the gesture to fully release.
+    // 单一数据源：pagerState 是真理。savedInitialPage 仅承担 rememberSaveable
+    // 持久化职责（旋转 / 进程重启时恢复 tab）。
+    var savedInitialPage by rememberSaveable { mutableStateOf(0) }
+    val pagerState = rememberPagerState(initialPage = savedInitialPage) { 2 }
     LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != selectedTab) {
-            selectedTab = pagerState.currentPage
+        savedInitialPage = pagerState.currentPage
+    }
+    // 只读派生别名，避免下游 selectedTab == 0 等调用点全部改名。
+    val selectedTab = pagerState.currentPage
+
+    // 点胶囊 → 推 pager。和滑动 settle 走同一条 AnimSpec.tabSwitch，
+    // 让两种交互的动效性格完全一致。
+    val onTabClick: (Int) -> Unit = { target ->
+        scope.launch {
+            pagerState.animateScrollToPage(
+                target,
+                animationSpec = AnimSpec.tabSwitch,
+            )
         }
     }
     var localFilterVisible by rememberSaveable { mutableStateOf(false) }
@@ -241,7 +225,7 @@ fun HomeScreen(
                                 if (isSelected) MaterialTheme.colorScheme.primary
                                 else androidx.compose.ui.graphics.Color.Transparent
                             )
-                            .clickable { selectedTab = tab }
+                            .clickable { onTabClick(tab) }
                             .padding(horizontal = 20.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center,
                     ) {

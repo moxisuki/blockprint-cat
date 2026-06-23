@@ -70,4 +70,6 @@ sealed class BridgeUiEvent {
     data class UploadFailed(val fileName: String, val errorCode: String) : BridgeUiEvent()
     data class AuthFailed(val message: String) : BridgeUiEvent()
     data class Disconnected(val unexpected: Boolean) : BridgeUiEvent()
+    data class ConvertSucceeded(val fileName: String) : BridgeUiEvent()
+    data class ConvertFailed(val fileName: String, val errorCode: String) : BridgeUiEvent()
 }

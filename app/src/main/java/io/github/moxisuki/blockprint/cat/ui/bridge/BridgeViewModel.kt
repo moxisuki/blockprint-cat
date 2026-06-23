@@ -222,6 +222,43 @@ class BridgeViewModel @Inject constructor(
         bridgeClient.requestUpload(fileName, data, overwrite)
     }
 
+    /**
+     * Convert a loaded blueprint into [target] format. Delegates to
+     * [BlueprintManager.convert] (suspend, IO). Emits a
+     * [BridgeUiEvent.ConvertSucceeded] or [BridgeUiEvent.ConvertFailed]
+     * via the existing one-shot events channel so the activity can show
+     * a Snackbar.
+     *
+     * The file name passed to the event is the *source* blueprint's
+     * display name so the user can identify which file was converted
+     * (the new file has a `_converted` suffix and may not be visible
+     * to them by the time the snackbar shows).
+     *
+     * The [targetExtension] is the literal file extension to use for the
+     * output (e.g. "schem" or "schematic" — both are Sponge format on
+     * the blockprint-core side but differ in user-facing extension).
+     */
+    fun convertBlueprint(uuid: String, target: io.github.moxisuki.blockprint.core.SchematicFormat, targetExtension: String) {
+        val sourceDisplayName = blueprintManager.blueprints.value
+            .firstOrNull { it.uuid == uuid }
+            ?.displayName
+            ?: "?"
+        viewModelScope.launch {
+            val result = blueprintManager.convert(uuid, target, targetExtension)
+            result.onSuccess { meta ->
+                _events.trySend(BridgeUiEvent.ConvertSucceeded(meta.displayName))
+            }.onFailure { e ->
+                Log.w(TAG, "convertBlueprint: failed", e)
+                val code = when (e) {
+                    is io.github.moxisuki.blockprint.core.exceptions.LitematicException -> e.message ?: "LITEMATIC_ERROR"
+                    is IllegalStateException -> e.message ?: "ILLEGAL_STATE"
+                    else -> "IO_ERROR"
+                }
+                _events.trySend(BridgeUiEvent.ConvertFailed(sourceDisplayName, code))
+            }
+        }
+    }
+
     fun clearError() {
         val s = _connectionState.value
         if (s is ConnectionState.Error) {

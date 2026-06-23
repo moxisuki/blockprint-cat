@@ -347,6 +347,12 @@ fun BlockPrintCatAppContent(
                 is BridgeUiEvent.UploadFailed -> snackbarHostState.showSnackbar(
                     view.context.getString(R.string.snackbar_upload_failed, ev.fileName, ev.errorCode)
                 )
+                is BridgeUiEvent.ConvertSucceeded -> snackbarHostState.showSnackbar(
+                    view.context.getString(R.string.snackbar_convert_succeeded, ev.fileName)
+                )
+                is BridgeUiEvent.ConvertFailed -> snackbarHostState.showSnackbar(
+                    view.context.getString(R.string.snackbar_convert_failed, ev.fileName, ev.errorCode)
+                )
                 is BridgeUiEvent.AuthFailed -> snackbarHostState.showSnackbar(ev.message)
                 is BridgeUiEvent.Disconnected -> {
                     if (ev.unexpected) snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_disconnected))

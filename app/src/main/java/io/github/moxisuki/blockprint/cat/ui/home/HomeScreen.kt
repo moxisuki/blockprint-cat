@@ -27,12 +27,14 @@ import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -92,6 +94,9 @@ import androidx.compose.ui.res.stringResource
 import io.github.moxisuki.blockprint.cat.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -109,6 +114,7 @@ import io.github.moxisuki.blockprint.cat.ui.management.ManagementEvent
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 
 private const val PAGE_SIZE = 15
+private val SliderInset = 3.dp
 
 @Composable
 fun HomeScreen(
@@ -194,49 +200,74 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Pill: surfaceVariant background wrapping the two tabs. Each tab
-            // sizes to its own text + padding (NO weight(1f), which would
-            // balloon the pill to fill the remaining row width). Selected tab
-            // gets a primary-coloured background rounded to 10dp, sitting on
-            // top of the surfaceVariant capsule.
+            // 胶囊：BoxWithConstraints 容器（用来测自身宽度算滑块 offset）
+            //  - 底层：等宽滑块（宽 = 容器宽 / 2，offset 跟 currentPageOffsetFraction）
+            //  - 上层：Row 两个 tab 文字（weight(1f) 等宽，颜色 lerp 算出）
             //
-            // Snap-style discrete indicator (not a sliding overlay). The
-            // background switches instantly when the snap lands — simpler
-            // and keeps the pill compact.
-            Row(
+            // 滑块 offset 和文字颜色直接读 pagerState 的 fraction，不叠任何
+            // animateAsState —— pager 内部已经用 AnimSpec.tabSwitch 驱动这个
+            // fraction，再叠会变成"弹簧之上做弹簧"。
+            BoxWithConstraints(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                listOf(R.string.home_tab_local to 0, R.string.home_tab_pc to 1).forEachIndexed { _, (labelRes, tab) ->
-                    val label = stringResource(labelRes)
-                    val isSelected = selectedTab == tab
-                    // Snap-style discrete highlight (no colour cross-fade).
-                    // Animating background + text colour during the page
-                    // transition fights with the pager's own page-slide
-                    // animation and reads as "laggy" — switching the colour
-                    // instantly when the page commits feels more decisive.
-                    Box(
-                        modifier = Modifier
-                            .padding(3.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else androidx.compose.ui.graphics.Color.Transparent
+                val tabWidthDp = maxWidth / 2
+                val tabWidthPx = with(LocalDensity.current) { tabWidthDp.toPx() }
+
+                // pagePos：0.0 = 完全在 tab 0，1.0 = 完全在 tab 1，
+                // 中间值（含负数 / >1，boundary 反向滑时）由 coerceIn 兜
+                val pagePos by remember(pagerState) {
+                    derivedStateOf {
+                        pagerState.currentPage + pagerState.currentPageOffsetFraction
+                    }
+                }
+                // Clamp to [0, 1] for the slider — pager overscroll / bounce can push
+                // fraction outside the range; without clamping, the slider would fly
+                // out of the capsule. Coverage values (below) are already in range
+                // because they're derived from a clamped input.
+                val pagePosClamped = pagePos.coerceIn(0f, 1f)
+
+                // 底层滑块。padding(3dp) 视觉上和原版"选中 Box 外缘 3dp"对齐。
+                val sliderOffsetPx = pagePosClamped * tabWidthPx
+                Box(
+                    modifier = Modifier
+                        .padding(SliderInset)
+                        .width(tabWidthDp - SliderInset * 2)
+                        .height(28.dp)              // 文字 labelMedium + 上下 6dp ≈ 28dp
+                        .offset { IntOffset(sliderOffsetPx.roundToInt(), 0) }
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+
+                // 上层：两个 tab 文字，等宽 + clickable + 颜色 lerp
+                val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                val selectedColor = MaterialTheme.colorScheme.onPrimary
+                val coverage0 = 1f - pagePosClamped
+                val coverage1 = pagePosClamped
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    listOf(R.string.home_tab_local to 0, R.string.home_tab_pc to 1).forEach { (labelRes, tab) ->
+                        val label = stringResource(labelRes)
+                        // tab 0 的 coverage：pagePos = 0 → 1（完全白）；pagePos = 1 → 0（完全灰）
+                        // tab 1 的 coverage：pagePos = 0 → 0；pagePos = 1 → 1
+                        val coverage = if (tab == 0) coverage0 else coverage1
+                        val textColor = lerp(unselectedColor, selectedColor, coverage)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onTabClick(tab) }
+                                .padding(horizontal = 20.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = textColor,
                             )
-                            .clickable { onTabClick(tab) }
-                            .padding(horizontal = 20.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (isSelected)
-                                MaterialTheme.colorScheme.onPrimary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        }
                     }
                 }
             }

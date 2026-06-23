@@ -381,6 +381,9 @@
     <string name="snackbar_download_failed">Download failed: %1$s</string>
     <string name="snackbar_uploaded">Uploaded: %1$s</string>
     <string name="snackbar_upload_failed">Upload failed: %1$s (%2$s)</string>
+    <string name="snackbar_convert_succeeded">Converted: %1$s</string>
+    <string name="snackbar_convert_failed">Convert failed: %1$s (%2$s)</string>
+    <string name="detail_convert_running">Converting…</string>
     <string name="snackbar_disconnected">Disconnected</string>
     <string name="snackbar_community_downloaded">Downloaded: %1$s</string>
     <string name="nav_title_qr_scanner">Scan QR Code</string>

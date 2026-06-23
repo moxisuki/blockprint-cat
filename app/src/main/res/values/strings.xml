@@ -445,6 +445,9 @@
     <string name="snackbar_download_failed">下载失败: %1$s</string>
     <string name="snackbar_uploaded">已上传: %1$s</string>
     <string name="snackbar_upload_failed">上传失败: %1$s (%2$s)</string>
+    <string name="snackbar_convert_succeeded">已转换: %1$s</string>
+    <string name="snackbar_convert_failed">转换失败: %1$s (%2$s)</string>
+    <string name="detail_convert_running">正在转换…</string>
     <string name="snackbar_disconnected">连接中断</string>
     <string name="snackbar_community_downloaded">已下载: %1$s</string>
     <string name="nav_title_qr_scanner">扫描二维码</string>

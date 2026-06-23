@@ -55,4 +55,24 @@ object AnimSpec {
         animation = tween(1200, easing = LinearEasing),
         repeatMode = RepeatMode.Reverse,
     )
+
+    /**
+     * HomeScreen 顶部 tab（Local/PC）切换的统一弹簧规格。
+     *
+     * 同一条 spec 同时用于：
+     *  - 点胶囊：pagerState.animateScrollToPage(animationSpec = tabSwitch)
+     *  - 滑动 settle：PagerDefaults.flingBehavior(snapAnimationSpec = tabSwitch)
+     *
+     * dampingRatio = 0.7f → 末端轻微回弹（~5–10% 过冲），既有反馈感又不夸张。
+     * stiffness    = 400f → 280–320ms 内 settle，反复来回切换不显廉价。
+     *
+     * 重要：胶囊高亮滑块和文字颜色读 currentPageOffsetFraction 实时插值，
+     * 绝对不要再叠 animateFloatAsState / animateColorAsState —— pager
+     * 内部已经用这条 spec 驱动 fraction，叠两层会变成"弹簧之上做弹簧"，
+     * 肉眼能看出晃两下。
+     */
+    val tabSwitch = spring<Float>(
+        dampingRatio = 0.7f,
+        stiffness = 400f,
+    )
 }

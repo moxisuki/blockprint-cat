@@ -19,6 +19,7 @@
 # Misc
 .opencode/
 .claude/
+docs/superpowers/
 
 # Local
 local.properties

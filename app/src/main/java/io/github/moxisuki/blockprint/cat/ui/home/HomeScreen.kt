@@ -155,15 +155,20 @@ fun HomeScreen(
     // Seeded with selectedTab so external navigation (pill click) and swipe
     // settle into the same page.
     val pagerState = rememberPagerState(initialPage = selectedTab) { 2 }
-    // Pill click → animate pager to that page with a snappy spring so the
-    // tap feels like a physical "snap" rather than a linear slide.
+    // Pill click → animate pager to the target page with a clearly bouncy
+    // spring. dampingRatio = 0.4 → ~25 % overshoot: one dramatic bounce
+    // the user can see, no sustained wobble. stiffness = 450 settles in
+    // ~310 ms. beyondViewportPageCount=1 keeps the off-screen page
+    // composed, so the LazyColumn inside the bouncing page does NOT
+    // re-measure during the overshoot — the bounce only moves the page
+    // offset, content stays stable.
     LaunchedEffect(selectedTab) {
         if (pagerState.currentPage != selectedTab) {
             pagerState.animateScrollToPage(
                 selectedTab,
                 animationSpec = androidx.compose.animation.core.spring(
-                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                    dampingRatio = 0.4f,
+                    stiffness = 450f,
                 ),
             )
         }
@@ -223,32 +228,19 @@ fun HomeScreen(
                 listOf(R.string.home_tab_local to 0, R.string.home_tab_pc to 1).forEachIndexed { _, (labelRes, tab) ->
                     val label = stringResource(labelRes)
                     val isSelected = selectedTab == tab
-                    // Animate the per-tab background and text colour so the
-                    // pill highlight cross-fades instead of snapping when the
-                    // swipe commits (or the user taps the other pill). The
-                    // two adjacent rounded backgrounds blend across the
-                    // gap into one smooth colour sweep at ~150 ms.
-                    val tabBg by animateColorAsState(
-                        targetValue = if (isSelected)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            androidx.compose.ui.graphics.Color.Transparent,
-                        animationSpec = tween(durationMillis = 180),
-                        label = "tabBg_$tab",
-                    )
-                    val tabFg by animateColorAsState(
-                        targetValue = if (isSelected)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        animationSpec = tween(durationMillis = 180),
-                        label = "tabFg_$tab",
-                    )
+                    // Snap-style discrete highlight (no colour cross-fade).
+                    // Animating background + text colour during the page
+                    // transition fights with the pager's own page-slide
+                    // animation and reads as "laggy" — switching the colour
+                    // instantly when the page commits feels more decisive.
                     Box(
                         modifier = Modifier
                             .padding(3.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(tabBg)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else androidx.compose.ui.graphics.Color.Transparent
+                            )
                             .clickable { selectedTab = tab }
                             .padding(horizontal = 20.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center,
@@ -256,18 +248,24 @@ fun HomeScreen(
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelMedium,
-                            color = tabFg,
+                            color = if (isSelected)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
-            // Refresh button has TWO rotation triggers:
-            //  - manual click → continuous spin for ~1 s (the `refreshing`
-            //    state from rememberInfiniteTransition).
-            //  - tab change  → one-shot 360° spin via Animatable, so the
-            //    user gets visible feedback that switching tabs is loading
-            //    fresh data (whether from disk or from the bridge).
+            // Local-tab action cluster: Refresh + Upload + Filter. All three
+            // share ONE AnimatedVisibility so the fade in/out timing is
+            // exactly synchronised — same enter/exit spec, same trigger
+            // (selectedTab == 0), no per-button round-trip offset to fight
+            // the pager's own page transition.
+            //
+            // Refresh on PC tab is intentionally NOT shown — bridge events
+            // push list updates automatically, so a manual refresh there
+            // would either be redundant or race against an in-flight event.
             val refreshRotation by rememberInfiniteTransition(label = "refresh")
                 .animateFloat(
                     initialValue = 0f,
@@ -277,54 +275,44 @@ fun HomeScreen(
                     ),
                     label = "refreshRotation",
                 )
-            // One-shot spin animation, retriggered by `selectedTab` change
-            // (either pill click or swipe commit). Uses Animatable so the
-            // value snaps to 0 on each new key, then animates back to 360°.
-            val tabSwitchSpin = remember { androidx.compose.animation.core.Animatable(0f) }
-            LaunchedEffect(selectedTab) {
-                tabSwitchSpin.snapTo(0f)
-                tabSwitchSpin.animateTo(
-                    targetValue = 360f,
-                    animationSpec = tween(durationMillis = 600, easing = LinearEasing),
-                )
-            }
             val scope = rememberCoroutineScope()
             var refreshing by remember { mutableStateOf(false) }
-            val totalRotation = if (refreshing) refreshRotation else tabSwitchSpin.value
-            IconButton(
-                onClick = {
-                    if (refreshing) return@IconButton
-                    visibleCount = PAGE_SIZE
-                    refreshing = true
-                    onRefresh(selectedTab)
-                    scope.launch {
-                        delay(1_000)
-                        refreshing = false
-                    }
-                },
-                modifier = Modifier.size(32.dp),
-            ) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "刷新",
-                    modifier = Modifier
-                        .size(18.dp)
-                        .rotate(totalRotation),
-                    tint = if (refreshing)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            // Upload + Filter are local-tab-only. Wrap them in AnimatedVisibility
-            // so they fade + slide in/out instead of popping when the user
-            // swipes between Local and PC.
+            val refreshTint by animateColorAsState(
+                targetValue = if (refreshing)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                animationSpec = tween(durationMillis = 180),
+                label = "refreshTint",
+            )
             AnimatedVisibility(
                 visible = selectedTab == 0,
                 enter = expandVertically(animationSpec = tween(180)) + fadeIn(animationSpec = tween(180)),
                 exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(140)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            if (refreshing) return@IconButton
+                            visibleCount = PAGE_SIZE
+                            refreshing = true
+                            onRefresh(0)
+                            scope.launch {
+                                delay(1_000)
+                                refreshing = false
+                            }
+                        },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "刷新",
+                            modifier = Modifier
+                                .size(18.dp)
+                                .rotate(if (refreshing) refreshRotation else 0f),
+                            tint = refreshTint,
+                        )
+                    }
                     IconButton(onClick = { filePicker.launch(arrayOf("application/octet-stream", "*/*")) }, modifier = Modifier.size(32.dp)) {
                         Icon(
                             Icons.Default.FileUpload,
@@ -370,6 +358,12 @@ fun HomeScreen(
             key = { it }, // page 0 → LocalBlueprintList, page 1 → PC content
             pageSpacing = 0.dp,
             userScrollEnabled = true,
+            // Keep the adjacent page composed off-screen. Without this,
+            // switching tabs disposes the off-screen page and the next
+            // switch re-composes it from scratch — that's where the
+            // perceived "jank" on pill-tap comes from (LazyColumn state
+            // resets, header rebinds, scroll position lost).
+            beyondViewportPageCount = 1,
         ) { page ->
             Box(modifier = Modifier.fillMaxSize()) {
                 when (page) {

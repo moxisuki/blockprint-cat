@@ -265,6 +265,7 @@
     <string name="community_login_title">Sign in to mcschematic.top</string>
     <string name="community_login_desc">Sign in via QQ to browse and download community blueprints</string>
     <string name="community_login_qq">Sign in with QQ</string>
+    <string name="community_login_privacy_notice">No OAuth data is stored during sign-in (no QQ access_token, refresh_token, etc.). Only mcschematic.top auth cookies (uuid, user_auth, cf_clearance) are kept locally and can be cleared any time at Settings → Community Settings.</string>
 
     <!-- CommunityDetailScreen -->
     <string name="cdl_download">Download</string>

@@ -278,6 +278,7 @@
     <string name="community_login_title">登录 mcschematic.top</string>
     <string name="community_login_desc">通过 QQ 一键登录后可浏览、下载社区蓝图</string>
     <string name="community_login_qq">QQ 登录</string>
+    <string name="community_login_privacy_notice">登录过程中不会存储任何 OAuth 数据（如 QQ 的 access_token、refresh_token 等）。仅 mcschematic.top 的鉴权 Cookie（uuid、user_auth、cf_clearance）会保存在本机，可随时在 设置 → 社区配置 中清除。</string>
 
     <!-- CommunityDetailScreen -->
     <string name="cdl_download">下载</string>

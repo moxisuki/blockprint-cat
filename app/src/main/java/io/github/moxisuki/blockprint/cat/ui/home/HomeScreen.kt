@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInHorizontally
@@ -379,6 +380,14 @@ fun HomeScreen(
             // perceived "jank" on pill-tap comes from (LazyColumn state
             // resets, header rebinds, scroll position lost).
             beyondViewportPageCount = 1,
+            // 滑动松手 settle 走同一条 AnimSpec.tabSwitch 弹簧，
+            // 与 onTabClick 的 animateScrollToPage 完全一致——这就是
+            // "点击和滑动动效统一"的最关键一行。decay（fling 惯性）
+            // 保持默认，物理摩擦模型不归弹簧管。
+            flingBehavior = PagerDefaults.flingBehavior(
+                state = pagerState,
+                snapAnimationSpec = AnimSpec.tabSwitch,
+            ),
         ) { page ->
             Box(modifier = Modifier.fillMaxSize()) {
                 when (page) {

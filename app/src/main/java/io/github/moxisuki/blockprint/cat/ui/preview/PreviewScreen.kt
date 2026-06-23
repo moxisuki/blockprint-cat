@@ -186,13 +186,14 @@ fun PreviewScreen(
             Spacer(Modifier.height(4.dp))
             Text(error!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        glbEntry != null -> PreviewSceneContent(entry = glbEntry!!, onFullscreenChange = onFullscreenChange, fromCache = glbEntry!!.fromCache)
+        glbEntry != null -> PreviewSceneContent(uuid = uuid, entry = glbEntry!!, onFullscreenChange = onFullscreenChange, fromCache = glbEntry!!.fromCache)
         else -> HudStartupOverlay(visible = true)
     }
 }
 
 @Composable
 private fun PreviewSceneContent(
+    uuid: String,
     entry: GlbEntry,
     onFullscreenChange: ((Boolean) -> Unit)? = null,
     fromCache: Boolean = false,
@@ -315,13 +316,29 @@ private fun PreviewSceneContent(
         var modelErrorMessage by remember { mutableStateOf<String>(context.getString(R.string.preview_render_failed)) }
         // rememberModelInstance is the SceneView-native async loader:
         // reads bytes on IO, decodes textures on a worker, creates Filament
-        // objects on Main. Returns null while loading; the rest of the
-        // composable already handles null (ModelNode check below). The
-        // HudStartupOverlay stays visible (loadingVisible=true) until
-        // modelOnScreen flips true in onFrame.
-        val modelInst = rememberModelInstance(modelLoader, glbFile.absolutePath)
+        // objects on Main. Returns null while loading.
+        val filePath = glbFile.absolutePath
+        android.util.Log.d("PREVIEW", "[$uuid] rememberModelInstance start, path=$filePath exists=${glbFile.exists()} size=${glbFile.length()}")
+        val modelInst = rememberModelInstance(modelLoader, filePath)
+        android.util.Log.d("PREVIEW", "[$uuid] rememberModelInstance returned: ${modelInst?.javaClass?.simpleName ?: "null"}")
         LaunchedEffect(modelInst) {
+            android.util.Log.d("PREVIEW", "[$uuid] modelOnScreen flip from rememberModelInstance: ${modelInst != null}")
             modelOnScreen = modelInst != null
+        }
+        // Timeout fallback: if modelOnScreen doesn't flip true within 8s,
+        // force the HUD off and surface the file path + state via snackbar
+        // so we can diagnose silent rememberModelInstance hangs.
+        LaunchedEffect(entry) {
+            kotlinx.coroutines.delay(8_000)
+            if (!modelOnScreen) {
+                android.util.Log.w("PREVIEW", "[$uuid] modelOnScreen stuck false after 8s; forcing loadingVisible=false. file=$filePath exists=${glbFile.exists()} size=${glbFile.length()}")
+                loadingVisible = false
+                if (modelInst == null) {
+                    modelError = true
+                    modelErrorMessage = "模型加载超时: ${glbFile.name}"
+                    snackbar.showSnackbar(modelErrorMessage)
+                }
+            }
         }
         // Surface load errors as a snackbar (e.g. corrupt glb, missing file).
         // rememberModelInstance throws internally on parse failure; the throw

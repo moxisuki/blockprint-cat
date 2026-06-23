@@ -417,6 +417,7 @@ private fun PreviewButton(
             try {
                 // If raw was released after a previous generation, reload it before regenerating.
                 val lit = bp.raw ?: run {
+                    android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] start generation LaunchedEffect")
                     viewModel.load(bp.meta.uuid)
                     // Await load completion via the StateFlow — no polling.
                     // .map().filterNotNull().first() suspends until the StateFlow
@@ -429,6 +430,7 @@ private fun PreviewButton(
                             .first()
                     } ?: throw IllegalStateException("加载超时，litematic 文件可能已损坏或被删除")
                 }
+                android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] load raw: ${System.currentTimeMillis() - t0}ms (lit=${lit.regions.size} regions)")
                 val region = lit.regions.getOrNull(0)
                 val modelMinY = region?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f
                 val modelCX = region?.position?.x?.toFloat() ?: 0f
@@ -443,19 +445,25 @@ private fun PreviewButton(
                         genStage = stageName(p)
                     }
                 } ?: throw IllegalStateException("渲染引擎未初始化")
+                android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] generate: ${System.currentTimeMillis() - t0}ms (file=${cacheFile.length()} bytes)")
                 GlbResourceManager.putGlb(bp.meta.uuid, cacheFile, modelMinY, modelCX, modelCZ)
+                android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] putGlb: ${System.currentTimeMillis() - t0}ms")
                 // Drop the Litematic from ViewModel state — frees memory before
                 // Preview opens, avoiding post-generation lag.
                 viewModel.releaseLitematic()
+                android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] releaseLitematic: ${System.currentTimeMillis() - t0}ms")
                 // Workaround for blockprint-core Pass 2 not releasing its
                 // OffHeapBuf ByteArray segments promptly: force GC BEFORE
                 // navigating to Preview so Filament init + texture upload
                 // don't compete with collection of tens of MB of stale
                 // generation buffers.
                 System.gc()
+                android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] System.gc: ${System.currentTimeMillis() - t0}ms")
                 showDialog = false
                 navController.navigate(NavRoutes.previewRoute(bp.meta.uuid))
+                android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] navigate: ${System.currentTimeMillis() - t0}ms (entered Preview navigation)")
             } catch (_: Exception) {
+                android.util.Log.d("PREVIEW", "[${bp.meta.uuid}] exception path: ${System.currentTimeMillis() - t0}ms")
                 showDialog = false
             }
         }

@@ -34,6 +34,36 @@ import javax.inject.Singleton
 
 private const val TAG = "BlueprintManager"
 
+/**
+ * Build the output filename for a converted blueprint.
+ *
+ * Rules:
+ * - stem is everything before the last '.' in the source name (or the whole
+ *   name if there is no '.'), so ".litematic" / ".schematic" / ".schem" /
+ *   ".nbt" / ".json" are stripped and the stem (which may contain its own
+ *   dots) is preserved.
+ * - "_converted" is appended between stem and target extension.
+ * - Target extension comes from the [SchematicFormat]; notably
+ *   [SchematicFormat.Sponge] writes ".schem" (the WorldEdit extension), not
+ *   ".schematic" — see `SchematicFormat.fromExtension` for the read side.
+ *
+ * The result is a *candidate* name — uniqueness is checked separately
+ * via `resolveUniqueName` before writing.
+ */
+internal fun outputFileName(sourceName: String, target: SchematicFormat): String {
+    val dot = sourceName.lastIndexOf('.')
+    val stem = if (dot > 0) sourceName.substring(0, dot) else sourceName
+    val ext = when (target) {
+        SchematicFormat.Litematica -> "litematic"
+        SchematicFormat.Sponge -> "schem"
+        SchematicFormat.Structure -> "nbt"
+        SchematicFormat.BuildingHelper -> "json"
+        SchematicFormat.PartialNbt, SchematicFormat.Unknown ->
+            error("Cannot derive output extension for read-side format $target")
+    }
+    return "${stem}_converted.$ext"
+}
+
 @Singleton
 class BlueprintManager @Inject constructor(
     @ApplicationContext private val appContext: Context,

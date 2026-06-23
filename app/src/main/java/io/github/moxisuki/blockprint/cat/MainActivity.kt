@@ -488,7 +488,7 @@ fun BlockPrintCatAppContent(
                                         label = "blueprintDetail",
                                     ) { uuid ->
                                         if (uuid != null) {
-                                            BlueprintDetailContent(uuid = uuid, navController = navController, snackbarHostState = snackbarHostState)
+                                            BlueprintDetailContent(uuid = uuid, navController = navController, snackbarHostState = snackbarHostState, bridgeViewModel = bridgeVm)
                                         } else {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                                 androidx.compose.animation.AnimatedVisibility(
@@ -872,6 +872,7 @@ fun BlockPrintCatAppContent(
                             navController = navController,
                             onTitleChange = { detailTitle = it },
                             snackbarHostState = snackbarHostState,
+                            bridgeViewModel = bridgeVm,
                         )
                     }
                 }

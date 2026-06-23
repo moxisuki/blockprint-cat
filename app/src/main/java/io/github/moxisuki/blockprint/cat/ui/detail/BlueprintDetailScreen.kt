@@ -88,9 +88,9 @@ fun BlueprintDetailScreen(
     uuid: String,
     navController: NavController,
     onTitleChange: (String) -> Unit,
+    snackbarHostState: SnackbarHostState,
     viewModel: DetailViewModel = hiltViewModel(),
-    bridgeViewModel: BridgeViewModel = hiltViewModel(),
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    bridgeViewModel: BridgeViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -923,9 +923,9 @@ private fun UnknownIcon() {
 fun BlueprintDetailContent(
     uuid: String,
     navController: NavController? = null,
+    snackbarHostState: SnackbarHostState,
     viewModel: DetailViewModel = hiltViewModel(),
-    bridgeViewModel: BridgeViewModel = hiltViewModel(),
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    bridgeViewModel: BridgeViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

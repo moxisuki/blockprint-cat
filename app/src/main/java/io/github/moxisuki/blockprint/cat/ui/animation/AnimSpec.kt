@@ -63,8 +63,8 @@ object AnimSpec {
      *  - 点胶囊：pagerState.animateScrollToPage(animationSpec = tabSwitch)
      *  - 滑动 settle：PagerDefaults.flingBehavior(snapAnimationSpec = tabSwitch)
      *
-     * dampingRatio = 0.7f → 末端轻微回弹（~5–10% 过冲），既有反馈感又不夸张。
-     * stiffness    = 400f → 280–320ms 内 settle，反复来回切换不显廉价。
+     * dampingRatio = MediumBouncy (0.5) → 末端弹一下（~20% 过冲）。
+     * stiffness    = 360f → ~350ms 内 settle。
      *
      * 重要：胶囊高亮滑块和文字颜色读 currentPageOffsetFraction 实时插值，
      * 绝对不要再叠 animateFloatAsState / animateColorAsState —— pager
@@ -72,7 +72,7 @@ object AnimSpec {
      * 肉眼能看出晃两下。
      */
     val tabSwitch = spring<Float>(
-        dampingRatio = 0.7f,
-        stiffness = 400f,
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = 360f,
     )
 }

@@ -110,6 +110,7 @@ import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 
 private const val PAGE_SIZE = 15
 private val SliderInset = 3.dp
+private val CapsuleWidth = 160.dp
 
 @Composable
 fun HomeScreen(
@@ -204,6 +205,7 @@ fun HomeScreen(
             // fraction，再叠会变成"弹簧之上做弹簧"。
             BoxWithConstraints(
                 modifier = Modifier
+                    .width(CapsuleWidth)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
             ) {

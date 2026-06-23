@@ -604,6 +604,13 @@ private fun FormatRow(
                     modifier = Modifier.size(18.dp),
                 )
             }
+            if (!enabled) {
+                Spacer(Modifier.width(8.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                )
+            }
         }
     }
 }

@@ -67,9 +67,9 @@ class ThemeManager @Inject constructor(context: Context) {
         }
 
     val presets: List<ThemePreset> = listOf(
+        ThemePreset("薄荷绿", Color(0xFFA5D6A7), Color(0xFF388E3C)),
         ThemePreset("樱花粉", Color(0xFFF8BBD9), Color(0xFFE91E63)),
         ThemePreset("天空蓝", Color(0xFF81D4FA), Color(0xFF0288D1)),
-        ThemePreset("薄荷绿", Color(0xFFA5D6A7), Color(0xFF388E3C)),
         ThemePreset("柠檬黄", Color(0xFFFFF59D), Color(0xFFFBC02D)),
         ThemePreset("暮光紫", Color(0xFFCE93D8), Color(0xFF7B1FA2)),
         ThemePreset("珊瑚橙", Color(0xFFFFAB91), Color(0xFFE64A19)),
@@ -95,8 +95,9 @@ class ThemeManager @Inject constructor(context: Context) {
 
     fun currentColors(): Pair<Color, Color> {
         val state = _themeState.value
-        val p = parseColor(state.customPrimary) ?: presets.first().primary
-        val s = parseColor(state.customSecondary) ?: presets.first().secondary
+        // 首次启动 / 解析失败时落到薄荷绿（与 presets[0] 保持一致，显式写出来更稳）
+        val p = parseColor(state.customPrimary) ?: Color(0xFFA5D6A7)
+        val s = parseColor(state.customSecondary) ?: Color(0xFF388E3C)
         return p to s
     }
 

@@ -72,9 +72,9 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberFillLightNode
 import io.github.sceneview.rememberMaterialLoader
-import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberView
+import io.github.sceneview.model.ModelInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -314,20 +314,34 @@ private fun PreviewSceneContent(
         val context = LocalView.current.context
         var modelError by remember { mutableStateOf(false) }
         var modelErrorMessage by remember { mutableStateOf<String>(context.getString(R.string.preview_render_failed)) }
-        // rememberModelInstance is the SceneView-native async loader:
-        // reads bytes on IO, decodes textures on a worker, creates Filament
-        // objects on Main. Returns null while loading.
-        val filePath = glbFile.absolutePath
-        android.util.Log.d("PREVIEW", "[$uuid] rememberModelInstance start, path=$filePath exists=${glbFile.exists()} size=${glbFile.length()}")
-        val modelInst = rememberModelInstance(modelLoader, filePath)
-        android.util.Log.d("PREVIEW", "[$uuid] rememberModelInstance returned: ${modelInst?.javaClass?.simpleName ?: "null"}")
+        // loadModelInstanceAsync is the SceneView-native async loader: reads
+        // bytes on IO, decodes textures on a worker, creates Filament objects
+        // on Main. The onResult callback delivers ModelInstance? (null on
+        // parse/IO failure).
+        //
+        // We pass a file:// URI rather than a bare absolute path. The bare-path
+        // form was routing SceneView into its asset-based code path
+        // (AssetManager.open() throws FileNotFoundException for files outside
+        // the APK), and rememberModelInstance silently swallowed that throw and
+        // returned null forever — looking like a hang.
+        val filePath = android.net.Uri.fromFile(glbFile).toString()
+        android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync start, path=$filePath exists=${glbFile.exists()} size=${glbFile.length()}")
+        var modelInst by remember { mutableStateOf<ModelInstance?>(null) }
+        LaunchedEffect(filePath) {
+            modelInst = null
+            android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync launched, path=$filePath")
+            modelLoader.loadModelInstanceAsync(filePath) { result ->
+                android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync result: ${result?.javaClass?.simpleName ?: "null"}")
+                modelInst = result
+            }
+        }
         LaunchedEffect(modelInst) {
-            android.util.Log.d("PREVIEW", "[$uuid] modelOnScreen flip from rememberModelInstance: ${modelInst != null}")
+            android.util.Log.d("PREVIEW", "[$uuid] modelOnScreen flip from loadModelInstanceAsync: ${modelInst != null}")
             modelOnScreen = modelInst != null
         }
         // Timeout fallback: if modelOnScreen doesn't flip true within 8s,
         // force the HUD off and surface the file path + state via snackbar
-        // so we can diagnose silent rememberModelInstance hangs.
+        // so we can diagnose silent loader hangs.
         LaunchedEffect(entry) {
             kotlinx.coroutines.delay(8_000)
             if (!modelOnScreen) {
@@ -340,10 +354,10 @@ private fun PreviewSceneContent(
                 }
             }
         }
-        // Surface load errors as a snackbar (e.g. corrupt glb, missing file).
-        // rememberModelInstance throws internally on parse failure; the throw
-        // is captured into a Composition error by Compose, but we also keep
-        // the explicit size check as a soft fallback.
+        // Surface load errors as a snackbar (e.g. missing file). With
+        // loadModelInstanceAsync, parse failures arrive as a null result in
+        // the callback — we keep the explicit size check as a soft fallback
+        // so we don't have to model every failure mode in the loader path.
         LaunchedEffect(glbFile) {
             modelError = !glbFile.isFile
             if (!glbFile.isFile) {

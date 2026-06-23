@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.io.OutputStream
 
 private const val TAG = "SafFileStorage"
 private const val MIME_OCTET = "application/octet-stream"
@@ -73,6 +74,18 @@ class SafFileStorage @Inject constructor(
                 onProgress?.invoke(written.toLong(), total)
             }
         } ?: throw IllegalStateException("SAF write failed: $name")
+        DocumentsContract.getDocumentId(docUri)
+    }
+
+    override suspend fun writeStream(name: String, writer: (OutputStream) -> Unit): String = withContext(Dispatchers.IO) {
+        val treeUri = permissionManager.treeUri() ?: throw IllegalStateException("SAF not configured")
+        val folderDocId = permissionManager.folderDocId() ?: throw IllegalStateException("SAF not configured")
+        val folderUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderDocId)
+        val docUri = DocumentsContract.createDocument(context.contentResolver, folderUri, MIME_OCTET, name)
+            ?: throw IllegalStateException("SAF createDocument failed: $name")
+        context.contentResolver.openOutputStream(docUri)?.use { out ->
+            writer(out)
+        } ?: throw IllegalStateException("SAF writeStream failed: $name")
         DocumentsContract.getDocumentId(docUri)
     }
 

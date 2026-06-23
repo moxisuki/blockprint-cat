@@ -72,6 +72,7 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberFillLightNode
 import io.github.sceneview.rememberMaterialLoader
+import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberView
 import kotlinx.coroutines.Dispatchers
@@ -312,30 +313,24 @@ private fun PreviewSceneContent(
         val context = LocalView.current.context
         var modelError by remember { mutableStateOf(false) }
         var modelErrorMessage by remember { mutableStateOf<String>(context.getString(R.string.preview_render_failed)) }
-        // 用 LaunchedEffect 而非 remember,确保加载 overlay 先渲染,不阻塞首帧
-        var modelInst by remember { mutableStateOf<io.github.sceneview.model.ModelInstance?>(null) }
+        // rememberModelInstance is the SceneView-native async loader:
+        // reads bytes on IO, decodes textures on a worker, creates Filament
+        // objects on Main. Returns null while loading; the rest of the
+        // composable already handles null (ModelNode check below). The
+        // HudStartupOverlay stays visible (loadingVisible=true) until
+        // modelOnScreen flips true in onFrame.
+        val modelInst = rememberModelInstance(modelLoader, glbFile.absolutePath)
+        LaunchedEffect(modelInst) {
+            modelOnScreen = modelInst != null
+        }
+        // Surface load errors as a snackbar (e.g. corrupt glb, missing file).
+        // rememberModelInstance throws internally on parse failure; the throw
+        // is captured into a Composition error by Compose, but we also keep
+        // the explicit size check as a soft fallback.
         LaunchedEffect(glbFile) {
-            modelError = false
-            modelInst = null
-            modelOnScreen = false
-            try {
-                modelInst = if (glbFile.isFile) {
-                    // Run on IO dispatcher so the main thread is free to draw
-                    // HUD frames during the ~1 second it takes to parse + decode
-                    // textures + upload the model. Filament's AssetLoader is
-                    // thread-safe across calls; the engine internally synchronizes.
-                    withContext(Dispatchers.IO) {
-                        modelLoader.createModelInstance(glbFile)
-                    }
-                } else {
-                    modelErrorMessage = context.getString(R.string.preview_resource_missing)
-                    modelError = true; null
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "模型加载失败: ${e.message}", e)
-                modelErrorMessage = if (e.message?.contains("Empty vertex") == true) context.getString(R.string.preview_resource_missing)
-                else context.getString(R.string.preview_render_failed_with_msg, e.message ?: "")
-                modelError = true; null
+            modelError = !glbFile.isFile
+            if (!glbFile.isFile) {
+                modelErrorMessage = context.getString(R.string.preview_resource_missing)
             }
         }
         LaunchedEffect(modelError) { if (modelError) snackbar.showSnackbar(modelErrorMessage) }

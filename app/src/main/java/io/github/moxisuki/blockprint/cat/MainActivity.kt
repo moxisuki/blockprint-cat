@@ -344,7 +344,9 @@ fun BlockPrintCatAppContent(
                 }
                 is BridgeUiEvent.DownloadFailed -> Unit // Status shown in progress bar
                 is BridgeUiEvent.UploadSucceeded -> Unit
-                is BridgeUiEvent.UploadFailed -> Unit
+                is BridgeUiEvent.UploadFailed -> snackbarHostState.showSnackbar(
+                    view.context.getString(R.string.snackbar_upload_failed, ev.fileName, ev.errorCode)
+                )
                 is BridgeUiEvent.AuthFailed -> snackbarHostState.showSnackbar(ev.message)
                 is BridgeUiEvent.Disconnected -> {
                     if (ev.unexpected) snackbarHostState.showSnackbar(view.context.getString(R.string.snackbar_disconnected))

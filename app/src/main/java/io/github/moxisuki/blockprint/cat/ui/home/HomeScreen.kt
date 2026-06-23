@@ -580,7 +580,7 @@ private fun HomeBlueprintCard(blueprint: BlueprintMeta, onDetail: () -> Unit, on
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onUpload, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = onUpload, enabled = connected, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Default.CloudUpload, stringResource(R.string.action_sync), modifier = Modifier.size(20.dp),
                         tint = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
                 }

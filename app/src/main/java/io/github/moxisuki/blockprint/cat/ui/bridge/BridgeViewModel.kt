@@ -213,6 +213,11 @@ class BridgeViewModel @Inject constructor(
 
     fun requestUpload(fileName: String, data: ByteArray, overwrite: Boolean = false) {
         Log.d(TAG, "requestUpload($fileName, ${data.size}B, overwrite=$overwrite)")
+        if (_connectionState.value !is ConnectionState.Connected) {
+            Log.w(TAG, "requestUpload: not connected, aborting")
+            _events.trySend(BridgeUiEvent.UploadFailed(fileName, "NOT_CONNECTED"))
+            return
+        }
         addTransfer(TransferType.UPLOAD, fileName, data.size.toLong())
         bridgeClient.requestUpload(fileName, data, overwrite)
     }

@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import io.github.moxisuki.blockprint.core.BlueprintConverter
 import io.github.moxisuki.blockprint.core.Litematic
 import io.github.moxisuki.blockprint.core.LitematicReader
 import io.github.moxisuki.blockprint.core.MaterialList
@@ -185,6 +186,53 @@ class BlueprintManager @Inject constructor(
                 .map { (n, c) -> n to c }
             FullBlueprint(meta = entity.toMeta(), materials = materials, raw = lit)
         }.getOrNull()
+    }
+
+    /**
+     * Convert an existing blueprint into [target] format and save the result
+     * to the same folder. The new file is automatically ingested and will
+     * appear in the local list via the standard `observeAll` flow.
+     *
+     * If [target] is not Litematica and the source has multiple regions,
+     * only the primary (first) region is written — `BlueprintConverter`
+     * rejects multi-region inputs for Sponge / Structure / BuildingHelper.
+     * Single-region inputs are written verbatim.
+     *
+     * The output filename is `<stem>_converted.<extension>` with `-1`, `-2`, ...
+     * appended on collision (see [resolveUniqueName]).
+     *
+     * @throws LitematicException for read-side target formats
+     *   (PartialNbt / Unknown) — the UI should never offer these, but we
+     *   surface the error rather than silently misbehave.
+     * @throws java.io.IOException / [IllegalStateException] from SAF on
+     *   disk failure.
+     */
+    suspend fun convert(uuid: String, target: SchematicFormat, extension: String): Result<BlueprintMeta> = withContext(Dispatchers.IO) {
+        runCatching {
+            val entity = metaDao.getByUuid(uuid)
+                ?: throw IllegalStateException("Blueprint not found: $uuid")
+            val lit = LitematicReader.readLenient(storage.read(entity.fileDocId))
+            // For non-Litematica targets, BlueprintConverter rejects multi-region
+            // input. Fall back to the primary region so the user still gets a
+            // usable file rather than an exception.
+            val sourceForConvert = if (target != SchematicFormat.Litematica && lit.regions.size > 1) {
+                lit.copy(regions = listOfNotNull(lit.primaryRegion))
+            } else {
+                lit
+            }
+            // TODO(task-6): replace with outputFileName(sourceName, extension)
+            val candidate = "${entity.fileName.substringBeforeLast('.', entity.fileName)}_converted.$extension"
+            val finalName = resolveUniqueName(candidate)
+            val newDocId = storage.writeStream(finalName) { out ->
+                BlueprintConverter.convert(sourceForConvert, target, out)
+            }
+            // Re-read the bytes the streamer just produced so `ingest` parses
+            // the file's metadata (regions, blocks, format) and registers it in
+            // the meta DAO. This is one extra read, but it's bounded — the new
+            // file is on local storage and the SAF read is cheap.
+            val newBytes = storage.read(newDocId)
+            ingest(finalName, newBytes)
+        }
     }
 
     // ── helpers ──

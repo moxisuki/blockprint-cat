@@ -1,6 +1,5 @@
 package io.github.moxisuki.blockprint.cat.data.blueprint
 
-import io.github.moxisuki.blockprint.core.SchematicFormat
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -10,7 +9,7 @@ class OutputFileNameTest {
     fun litematica_appends_converted_and_litematic_ext() {
         assertEquals(
             "my_castle_converted.litematic",
-            outputFileName("my_castle.litematic", SchematicFormat.Litematica),
+            outputFileName("my_castle.litematic", "litematic"),
         )
     }
 
@@ -18,7 +17,7 @@ class OutputFileNameTest {
     fun sponge_uses_schem_extension_not_schematic() {
         assertEquals(
             "my_castle_converted.schem",
-            outputFileName("my_castle.litematic", SchematicFormat.Sponge),
+            outputFileName("my_castle.litematic", "schem"),
         )
     }
 
@@ -26,7 +25,7 @@ class OutputFileNameTest {
     fun structure_uses_nbt_extension() {
         assertEquals(
             "my_castle_converted.nbt",
-            outputFileName("my_castle.litematic", SchematicFormat.Structure),
+            outputFileName("my_castle.litematic", "nbt"),
         )
     }
 
@@ -34,7 +33,7 @@ class OutputFileNameTest {
     fun buildingHelper_uses_json_extension() {
         assertEquals(
             "my_castle_converted.json",
-            outputFileName("my_castle.litematic", SchematicFormat.BuildingHelper),
+            outputFileName("my_castle.litematic", "json"),
         )
     }
 
@@ -42,7 +41,7 @@ class OutputFileNameTest {
     fun name_with_no_extension_keeps_stem() {
         assertEquals(
             "my_castle_converted.schem",
-            outputFileName("my_castle", SchematicFormat.Sponge),
+            outputFileName("my_castle", "schem"),
         )
     }
 
@@ -52,7 +51,7 @@ class OutputFileNameTest {
         // even if the stem itself contains dots.
         assertEquals(
             "v1.0.castle_converted.schem",
-            outputFileName("v1.0.castle.litematic", SchematicFormat.Sponge),
+            outputFileName("v1.0.castle.litematic", "schem"),
         )
     }
 }

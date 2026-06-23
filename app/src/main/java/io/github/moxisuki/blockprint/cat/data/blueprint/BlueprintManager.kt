@@ -43,26 +43,20 @@ private const val TAG = "BlueprintManager"
  *   name if there is no '.'), so ".litematic" / ".schematic" / ".schem" /
  *   ".nbt" / ".json" are stripped and the stem (which may contain its own
  *   dots) is preserved.
- * - "_converted" is appended between stem and target extension.
- * - Target extension comes from the [SchematicFormat]; notably
- *   [SchematicFormat.Sponge] writes ".schem" (the WorldEdit extension), not
- *   ".schematic" — see `SchematicFormat.fromExtension` for the read side.
+ * - "_converted" is appended between stem and the caller-supplied
+ *   [extension] (e.g. "litematic", "schem", "schematic", "nbt", "json").
+ *   The extension is supplied by the caller (the UI dialog) because
+ *   Sponge format on blockprint-core's side covers both .schem and
+ *   .schematic; the extension is a user-facing choice, not a
+ *   format-derived one.
  *
  * The result is a *candidate* name — uniqueness is checked separately
  * via `resolveUniqueName` before writing.
  */
-internal fun outputFileName(sourceName: String, target: SchematicFormat): String {
+internal fun outputFileName(sourceName: String, extension: String): String {
     val dot = sourceName.lastIndexOf('.')
     val stem = if (dot > 0) sourceName.substring(0, dot) else sourceName
-    val ext = when (target) {
-        SchematicFormat.Litematica -> "litematic"
-        SchematicFormat.Sponge -> "schem"
-        SchematicFormat.Structure -> "nbt"
-        SchematicFormat.BuildingHelper -> "json"
-        SchematicFormat.PartialNbt, SchematicFormat.Unknown ->
-            error("Cannot derive output extension for read-side format $target")
-    }
-    return "${stem}_converted.$ext"
+    return "${stem}_converted.$extension"
 }
 
 @Singleton
@@ -220,8 +214,7 @@ class BlueprintManager @Inject constructor(
             } else {
                 lit
             }
-            // TODO(task-6): replace with outputFileName(sourceName, extension)
-            val candidate = "${entity.fileName.substringBeforeLast('.', entity.fileName)}_converted.$extension"
+            val candidate = outputFileName(entity.fileName, extension)
             val finalName = resolveUniqueName(candidate)
             val newDocId = storage.writeStream(finalName) { out ->
                 BlueprintConverter.convert(sourceForConvert, target, out)

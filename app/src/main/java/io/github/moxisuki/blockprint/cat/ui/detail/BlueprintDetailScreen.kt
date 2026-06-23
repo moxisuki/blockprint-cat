@@ -61,12 +61,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.data.blueprint.FullBlueprint
+import io.github.moxisuki.blockprint.cat.ui.bridge.BridgeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager
 import io.github.moxisuki.blockprint.core.MinecraftVersions
 import coil.compose.SubcomposeAsyncImage
@@ -86,6 +89,7 @@ fun BlueprintDetailScreen(
     navController: NavController,
     onTitleChange: (String) -> Unit,
     viewModel: DetailViewModel = hiltViewModel(),
+    bridgeViewModel: BridgeViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -105,6 +109,29 @@ fun BlueprintDetailScreen(
         }
         convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
         showConvertDialog = true
+    }
+    val coroutineScope = rememberCoroutineScope()
+    var convertRunning by remember { mutableStateOf(false) }
+    val runConvert = {
+        val (target, ext) = when (convertSelected) {
+            0 -> io.github.moxisuki.blockprint.core.SchematicFormat.Litematica to "litematic"
+            1 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schem"
+            2 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schematic"
+            3 -> io.github.moxisuki.blockprint.core.SchematicFormat.Structure to "nbt"
+            else -> error("Unexpected convert index: $convertSelected")
+        }
+        convertRunning = true
+        showConvertDialog = false
+        val targetUuid = uiState.fullBlueprint?.meta?.uuid
+        if (targetUuid != null) {
+            coroutineScope.launch {
+                bridgeViewModel.convertBlueprint(targetUuid, target, ext)
+                convertRunning = false
+            }
+        } else {
+            convertRunning = false
+        }
+        Unit
     }
 
     LaunchedEffect(uuid) {
@@ -176,6 +203,7 @@ fun BlueprintDetailScreen(
                                 label = stringResource(R.string.detail_meta_format),
                                 value = formatDisplayName(bp.meta.format),
                                 actionContentDescription = stringResource(R.string.detail_convert_action),
+                                enabled = !convertRunning,
                                 onActionClick = openConvertDialog,
                             )
                         }
@@ -272,7 +300,9 @@ fun BlueprintDetailScreen(
         selected = convertSelected,
         onSelectedChange = { convertSelected = it },
         onDismiss = { showConvertDialog = false },
-        onConfirm = { showConvertDialog = false },
+        onConfirm = runConvert,
+        running = convertRunning,
+        confirmEnabled = !convertRunning,
     )
 }
 
@@ -531,6 +561,7 @@ private fun FormatRow(
     label: String,
     value: String,
     actionContentDescription: String,
+    enabled: Boolean = true,
     onActionClick: () -> Unit,
 ) {
     Row(
@@ -554,6 +585,7 @@ private fun FormatRow(
             )
             FilledTonalIconButton(
                 onClick = onActionClick,
+                enabled = enabled,
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
@@ -578,6 +610,8 @@ private fun ConvertDialog(
     onSelectedChange: (Int) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
+    running: Boolean = false,
+    confirmEnabled: Boolean = true,
 ) {
     if (!visible) return
     val currentTargetIndex = when (currentFormat) {
@@ -626,9 +660,26 @@ private fun ConvertDialog(
                         onClick = { onSelectedChange(3) },
                     )
                 }
+                if (running) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.detail_convert_running),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
             }
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_confirm)) } },
+        confirmButton = { TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(stringResource(R.string.action_confirm)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
@@ -873,6 +924,7 @@ fun BlueprintDetailContent(
     uuid: String,
     navController: NavController? = null,
     viewModel: DetailViewModel = hiltViewModel(),
+    bridgeViewModel: BridgeViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -892,6 +944,29 @@ fun BlueprintDetailContent(
         }
         convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
         showConvertDialog = true
+    }
+    val coroutineScope = rememberCoroutineScope()
+    var convertRunning by remember { mutableStateOf(false) }
+    val runConvert = {
+        val (target, ext) = when (convertSelected) {
+            0 -> io.github.moxisuki.blockprint.core.SchematicFormat.Litematica to "litematic"
+            1 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schem"
+            2 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schematic"
+            3 -> io.github.moxisuki.blockprint.core.SchematicFormat.Structure to "nbt"
+            else -> error("Unexpected convert index: $convertSelected")
+        }
+        convertRunning = true
+        showConvertDialog = false
+        val targetUuid = uiState.fullBlueprint?.meta?.uuid
+        if (targetUuid != null) {
+            coroutineScope.launch {
+                bridgeViewModel.convertBlueprint(targetUuid, target, ext)
+                convertRunning = false
+            }
+        } else {
+            convertRunning = false
+        }
+        Unit
     }
 
     LaunchedEffect(uuid) { viewModel.load(uuid) }
@@ -932,6 +1007,7 @@ fun BlueprintDetailContent(
                             label = stringResource(R.string.detail_meta_format),
                             value = formatDisplayName(bp.meta.format),
                             actionContentDescription = stringResource(R.string.detail_convert_action),
+                            enabled = !convertRunning,
                             onActionClick = openConvertDialog,
                         )
                     }
@@ -1002,7 +1078,9 @@ fun BlueprintDetailContent(
         selected = convertSelected,
         onSelectedChange = { convertSelected = it },
         onDismiss = { showConvertDialog = false },
-        onConfirm = { showConvertDialog = false },
+        onConfirm = runConvert,
+        running = convertRunning,
+        confirmEnabled = !convertRunning,
     )
 }
 

@@ -802,14 +802,12 @@ private fun FormatChip(format: io.github.moxisuki.blockprint.core.SchematicForma
             MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) to "Litematica"
         io.github.moxisuki.blockprint.core.SchematicFormat.Sponge ->
             MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f) to "Schematic"
-        io.github.moxisuki.blockprint.core.SchematicFormat.Structure ->
-            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f) to "Structure"
-        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt ->
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "PartialNbt"
-        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper ->
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "JSON"
+        io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
+        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt,
         io.github.moxisuki.blockprint.core.SchematicFormat.Unknown ->
             MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "NBT"
+        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper ->
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "JSON"
     }
     Box(Modifier.background(bg, RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall,

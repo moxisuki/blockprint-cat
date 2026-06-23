@@ -147,6 +147,8 @@
     <string name="detail_meta_format_version">格式版本</string>
     <string name="detail_meta_region_count">区域数</string>
     <string name="detail_meta_block_count">方块数(不含空气)</string>
+    <string name="detail_meta_format">格式</string>
+    <string name="detail_format_building_helper">Building Helper (.json)</string>
     <string name="detail_resource_status">资源包状态</string>
     <string name="detail_region_list">区域列表</string>
     <string name="detail_region_unnamed">未命名区域</string>
@@ -154,6 +156,14 @@
     <string name="detail_material_empty">无材料数据</string>
     <string name="detail_generated_message">已生成 GLB</string>
     <string name="detail_regenerate_hint">点击重新生成可加载完整详情</string>
+    <string name="detail_convert_action">转换格式</string>
+    <string name="detail_convert_dialog_title">转换蓝图</string>
+    <string name="detail_convert_dialog_message">选择目标格式。转换后的文件将保存在原文件旁边。</string>
+    <string name="detail_convert_target_litematic">Litematica (.litematic)</string>
+    <string name="detail_convert_target_schem">Sponge Schematic (.schem)</string>
+    <string name="detail_convert_target_schematic">MCEdit Schematic (.schematic)</string>
+    <string name="detail_convert_target_nbt">NBT (.nbt)</string>
+    <string name="detail_format_nbt">NBT (.nbt)</string>
 
     <!-- SettingsScreen - extended -->
     <string name="theme_color_scheme">配色方案</string>

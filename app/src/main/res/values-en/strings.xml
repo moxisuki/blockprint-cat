@@ -115,6 +115,8 @@
     <string name="detail_meta_format_version">Format version</string>
     <string name="detail_meta_region_count">Regions</string>
     <string name="detail_meta_block_count">Blocks (excluding air)</string>
+    <string name="detail_meta_format">Format</string>
+    <string name="detail_format_building_helper">Building Helper (.json)</string>
     <string name="detail_resource_status">Resource pack status</string>
     <string name="detail_region_list">Regions</string>
     <string name="detail_region_unnamed">Unnamed region</string>
@@ -122,6 +124,14 @@
     <string name="detail_material_empty">No material data</string>
     <string name="detail_generated_message">GLB generated</string>
     <string name="detail_regenerate_hint">Tap regenerate to load full details again</string>
+    <string name="detail_convert_action">Convert</string>
+    <string name="detail_convert_dialog_title">Convert blueprint</string>
+    <string name="detail_convert_dialog_message">Choose the target format. The converted file will be saved alongside the original.</string>
+    <string name="detail_convert_target_litematic">Litematica (.litematic)</string>
+    <string name="detail_convert_target_schem">Sponge Schematic (.schem)</string>
+    <string name="detail_convert_target_schematic">MCEdit Schematic (.schematic)</string>
+    <string name="detail_convert_target_nbt">NBT (.nbt)</string>
+    <string name="detail_format_nbt">NBT (.nbt)</string>
 
     <!-- SettingsScreen - extended -->
     <string name="theme_color_scheme">Color scheme</string>

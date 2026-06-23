@@ -6,6 +6,7 @@ import androidx.compose.ui.res.stringResource
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,16 +24,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -84,6 +89,23 @@ fun BlueprintDetailScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // 转换 dialog 的 state（与 Pad 端 BlueprintDetailContent 独立但实现一致）
+    var showConvertDialog by remember { mutableStateOf(false) }
+    var convertSelected by remember { mutableIntStateOf(0) }
+    val currentFormat = uiState.fullBlueprint?.meta?.format
+        ?: io.github.moxisuki.blockprint.core.SchematicFormat.Unknown
+    val openConvertDialog = {
+        val currentTargetIndex = when (currentFormat) {
+            io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> 0
+            io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> 1
+            io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
+            io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> 3
+            else -> -1
+        }
+        convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
+        showConvertDialog = true
+    }
 
     LaunchedEffect(uuid) {
         viewModel.load(uuid)
@@ -150,6 +172,12 @@ fun BlueprintDetailScreen(
                             DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw?.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
                             DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
                             DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
+                            FormatRow(
+                                label = stringResource(R.string.detail_meta_format),
+                                value = formatDisplayName(bp.meta.format),
+                                actionContentDescription = stringResource(R.string.detail_convert_action),
+                                onActionClick = openConvertDialog,
+                            )
                         }
                     }
                 }
@@ -237,6 +265,15 @@ fun BlueprintDetailScreen(
             }
         }
     }
+
+    ConvertDialog(
+        visible = showConvertDialog,
+        currentFormat = currentFormat,
+        selected = convertSelected,
+        onSelectedChange = { convertSelected = it },
+        onDismiss = { showConvertDialog = false },
+        onConfirm = { showConvertDialog = false },
+    )
 }
 
 /** 预览按钮 — 含资源检查 + 大蓝图确认 + 进度对话框。手机/Pad 共用。 */
@@ -299,7 +336,7 @@ private fun PreviewButton(
 
     if (hasCache) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Button(
+            FilledTonalButton(
                 onClick = viewExisting,
                 modifier = Modifier.weight(1f),
             ) {
@@ -308,7 +345,7 @@ private fun PreviewButton(
                 Text(stringResource(R.string.detail_view_cached))
             }
             Spacer(modifier = Modifier.width(8.dp))
-            FilledIconButton(
+            FilledTonalIconButton(
                 onClick = startGenerate,
                 modifier = Modifier.size(48.dp),
             ) {
@@ -316,7 +353,7 @@ private fun PreviewButton(
             }
         }
     } else {
-        Button(
+        FilledTonalButton(
             onClick = startGenerate,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -485,6 +522,136 @@ private fun DetailRow(label: String, value: String) {
     }
 }
 
+/**
+ * 信息行 — label + value + 右侧 FilledTonalIconButton。用于 basic info Card 的"格式"行。
+ * 按钮点击触发转换 dialog（state 在调用方持有）。
+ */
+@Composable
+private fun FormatRow(
+    label: String,
+    value: String,
+    actionContentDescription: String,
+    onActionClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 12.dp, end = 8.dp),
+            )
+            FilledTonalIconButton(
+                onClick = onActionClick,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.SwapHoriz,
+                    contentDescription = actionContentDescription,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 格式转换对话框 — 4 个目标格式的单选。Show/hide + 选中项在调用方持有。
+ * Confirm 之后目前是 no-op，真正的转换逻辑后续接 blockprint-core 的 writer。
+ */
+@Composable
+private fun ConvertDialog(
+    visible: Boolean,
+    currentFormat: io.github.moxisuki.blockprint.core.SchematicFormat,
+    selected: Int,
+    onSelectedChange: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    if (!visible) return
+    val currentTargetIndex = when (currentFormat) {
+        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> 0
+        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> 1
+        io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
+        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> 3
+        else -> -1
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.detail_convert_dialog_title)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.detail_convert_dialog_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                if (currentTargetIndex != 0) {
+                    ConvertTargetRow(
+                        label = stringResource(R.string.detail_convert_target_litematic),
+                        selected = selected == 0,
+                        onClick = { onSelectedChange(0) },
+                    )
+                }
+                if (currentTargetIndex != 1) {
+                    ConvertTargetRow(
+                        label = stringResource(R.string.detail_convert_target_schem),
+                        selected = selected == 1,
+                        onClick = { onSelectedChange(1) },
+                    )
+                }
+                if (currentTargetIndex != 2) {
+                    ConvertTargetRow(
+                        label = stringResource(R.string.detail_convert_target_schematic),
+                        selected = selected == 2,
+                        onClick = { onSelectedChange(2) },
+                    )
+                }
+                if (currentTargetIndex != 3) {
+                    ConvertTargetRow(
+                        label = stringResource(R.string.detail_convert_target_nbt),
+                        selected = selected == 3,
+                        onClick = { onSelectedChange(3) },
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+@Composable
+private fun ConvertTargetRow(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
 @Composable
 private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
@@ -561,6 +728,18 @@ private fun materialColor(name: String): Color {
     val hue = (name.hashCode() and 0x7FFFFFFF) % 360
     return Color.hsl(hue.toFloat(), 0.45f, 0.55f)
 }
+
+/** SchematicFormat → 本地化显示文本。 */
+@Composable
+private fun formatDisplayName(format: io.github.moxisuki.blockprint.core.SchematicFormat): String =
+    when (format) {
+        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> stringResource(R.string.detail_convert_target_litematic)
+        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> stringResource(R.string.detail_convert_target_schem)
+        io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
+        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> stringResource(R.string.detail_format_nbt)
+        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper -> stringResource(R.string.detail_format_building_helper)
+        io.github.moxisuki.blockprint.core.SchematicFormat.Unknown -> stringResource(R.string.detail_meta_unknown)
+    }
 
 @Composable
 private fun MaterialRow(name: String, count: Int) {
@@ -698,6 +877,23 @@ fun BlueprintDetailContent(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // 转换 dialog 的 state（与手机端 BlueprintDetailScreen 独立但实现一致）
+    var showConvertDialog by remember { mutableStateOf(false) }
+    var convertSelected by remember { mutableIntStateOf(0) }
+    val currentFormat = uiState.fullBlueprint?.meta?.format
+        ?: io.github.moxisuki.blockprint.core.SchematicFormat.Unknown
+    val openConvertDialog = {
+        val currentTargetIndex = when (currentFormat) {
+            io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> 0
+            io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> 1
+            io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
+            io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> 3
+            else -> -1
+        }
+        convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
+        showConvertDialog = true
+    }
+
     LaunchedEffect(uuid) { viewModel.load(uuid) }
 
     LaunchedEffect(uiState.error) {
@@ -732,6 +928,12 @@ fun BlueprintDetailContent(
                         DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw?.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
                         DetailRow(stringResource(R.string.detail_meta_region_count), bp.meta.regionCount.toString())
                         DetailRow(stringResource(R.string.detail_meta_block_count), formatNumber(bp.meta.blockCount))
+                        FormatRow(
+                            label = stringResource(R.string.detail_meta_format),
+                            value = formatDisplayName(bp.meta.format),
+                            actionContentDescription = stringResource(R.string.detail_convert_action),
+                            onActionClick = openConvertDialog,
+                        )
                     }
                 }
                 // 已生成 Card — 当 raw 被释放后展示
@@ -793,6 +995,15 @@ fun BlueprintDetailContent(
             }
         }
     }
+
+    ConvertDialog(
+        visible = showConvertDialog,
+        currentFormat = currentFormat,
+        selected = convertSelected,
+        onSelectedChange = { convertSelected = it },
+        onDismiss = { showConvertDialog = false },
+        onConfirm = { showConvertDialog = false },
+    )
 }
 
 @EntryPoint

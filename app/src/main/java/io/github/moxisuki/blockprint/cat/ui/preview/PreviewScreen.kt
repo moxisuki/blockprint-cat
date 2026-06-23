@@ -125,26 +125,20 @@ fun PreviewScreen(
     }
 
     LaunchedEffect(uuid) {
-        val t0 = System.currentTimeMillis()
-        Log.d("PREVIEW", "[$uuid] start Preview LaunchedEffect")
         val key = GlbGenerator.Key(blueprintUuid = uuid)
 
         // Segment 1: in-memory hit (zero I/O)
         val cached = io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager.peek(uuid)
         val cachedFile = cached?.cacheFile
         if (cached != null && cachedFile != null && cachedFile.isFile && cachedFile.length() > GlbGenerator.MIN_VALID_GLB_BYTES) {
-            Log.d("PREVIEW", "[$uuid] segment1 in-memory hit at ${System.currentTimeMillis() - t0}ms")
             glbEntry = GlbEntry(cached.minY, cached.centerX, cached.centerZ, cachedFile, fromCache = true)
             return@LaunchedEffect
         }
-        Log.d("PREVIEW", "[$uuid] segment1 miss at ${System.currentTimeMillis() - t0}ms")
 
         // Segment 2: disk hit (peekCacheFile + litematic for region metadata only)
         val onDisk = generator?.peekCacheFile(key)
-        Log.d("PREVIEW", "[$uuid] segment2 peekCacheFile at ${System.currentTimeMillis() - t0}ms (onDisk=${onDisk != null})")
         if (onDisk != null) {
             val raw = try { blueprintManager.loadDetail(uuid)?.raw } catch (_: Exception) { null }
-            Log.d("PREVIEW", "[$uuid] segment2 loadDetail at ${System.currentTimeMillis() - t0}ms (raw=${raw != null})")
             val reg = raw?.regions?.getOrNull(0)
             glbEntry = GlbEntry(
                 minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
@@ -157,7 +151,6 @@ fun PreviewScreen(
         }
 
         // Segment 3: cache miss → generate
-        Log.d("PREVIEW", "[$uuid] segment3 generate start at ${System.currentTimeMillis() - t0}ms")
         glbProgress = 0f
         glbStageText = context.getString(R.string.preview_stage_region)
         try {
@@ -171,7 +164,6 @@ fun PreviewScreen(
                     glbStageText = stageFor(f)
                 } ?: throw IllegalStateException("渲染引擎未初始化")
             }
-            Log.d("PREVIEW", "[$uuid] segment3 generate done at ${System.currentTimeMillis() - t0}ms")
             val reg = blueprintManager.loadDetail(uuid)?.raw?.regions?.getOrNull(0)
             glbEntry = GlbEntry(
                 minY = reg?.let { it.position.y - it.height / 2 }?.toFloat() ?: 0f,
@@ -180,7 +172,6 @@ fun PreviewScreen(
                 cacheFile = cacheFile,
             )
         } catch (e: Exception) {
-            Log.d("PREVIEW", "[$uuid] segment3 exception at ${System.currentTimeMillis() - t0}ms")
             Log.e(TAG, "预览加载失败", e)
             error = "${e.javaClass.simpleName}: ${e.message ?: context.getString(R.string.preview_error_unknown)}"
         }
@@ -205,9 +196,7 @@ private fun PreviewSceneContent(
     onFullscreenChange: ((Boolean) -> Unit)? = null,
     fromCache: Boolean = false,
 ) {
-    val tScene = System.currentTimeMillis()
     val engine = rememberEngine()
-    Log.d("PREVIEW", "[scene] engine created at ${System.currentTimeMillis() - tScene}ms")
     val modelLoader = rememberModelLoader(engine = engine)
     val materialLoader = rememberMaterialLoader(engine = engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
@@ -216,7 +205,6 @@ private fun PreviewSceneContent(
     val fillLight = rememberFillLightNode(engine)
     // 自定义无圆盘太阳光 (sunAngularRadius=0,关掉 Filament 自带圆盘避免跟 MC 方块太阳重叠)
     val sunLight = rememberNoDiscSunLight(engine)
-    Log.d("PREVIEW", "[scene] all Filament resources created at ${System.currentTimeMillis() - tScene}ms")
 
     val groundY = entry.minY
     val cam = remember { CameraController(
@@ -327,20 +315,23 @@ private fun PreviewSceneContent(
         // 用 LaunchedEffect 而非 remember,确保加载 overlay 先渲染,不阻塞首帧
         var modelInst by remember { mutableStateOf<io.github.sceneview.model.ModelInstance?>(null) }
         LaunchedEffect(glbFile) {
-            val tLoad = System.currentTimeMillis()
             modelError = false
             modelInst = null
             modelOnScreen = false
             try {
                 modelInst = if (glbFile.isFile) {
-                    modelLoader.createModelInstance(glbFile)
+                    // Run on IO dispatcher so the main thread is free to draw
+                    // HUD frames during the ~1 second it takes to parse + decode
+                    // textures + upload the model. Filament's AssetLoader is
+                    // thread-safe across calls; the engine internally synchronizes.
+                    withContext(Dispatchers.IO) {
+                        modelLoader.createModelInstance(glbFile)
+                    }
                 } else {
                     modelErrorMessage = context.getString(R.string.preview_resource_missing)
                     modelError = true; null
                 }
-                Log.d("PREVIEW", "[scene] model loaded at ${System.currentTimeMillis() - tScene}ms (load=${System.currentTimeMillis() - tLoad}ms)")
             } catch (e: Exception) {
-                Log.d("PREVIEW", "[scene] model load exception at ${System.currentTimeMillis() - tScene}ms")
                 Log.e(TAG, "模型加载失败: ${e.message}", e)
                 modelErrorMessage = if (e.message?.contains("Empty vertex") == true) context.getString(R.string.preview_resource_missing)
                 else context.getString(R.string.preview_render_failed_with_msg, e.message ?: "")

@@ -68,8 +68,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 import io.github.moxisuki.blockprint.cat.ui.render.GlbResourceManager
 import io.github.moxisuki.blockprint.core.MinecraftVersions
 import coil.compose.SubcomposeAsyncImage
@@ -110,8 +108,7 @@ fun BlueprintDetailScreen(
         convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
         showConvertDialog = true
     }
-    val coroutineScope = rememberCoroutineScope()
-    var convertRunning by remember { mutableStateOf(false) }
+    val convertRunning by bridgeViewModel.convertInFlight.collectAsState()
     val runConvert = {
         val (target, ext) = when (convertSelected) {
             0 -> io.github.moxisuki.blockprint.core.SchematicFormat.Litematica to "litematic"
@@ -120,16 +117,10 @@ fun BlueprintDetailScreen(
             3 -> io.github.moxisuki.blockprint.core.SchematicFormat.Structure to "nbt"
             else -> error("Unexpected convert index: $convertSelected")
         }
-        convertRunning = true
         showConvertDialog = false
         val targetUuid = uiState.fullBlueprint?.meta?.uuid
         if (targetUuid != null) {
-            coroutineScope.launch {
-                bridgeViewModel.convertBlueprint(targetUuid, target, ext)
-                convertRunning = false
-            }
-        } else {
-            convertRunning = false
+            bridgeViewModel.convertBlueprint(targetUuid, target, ext)
         }
         Unit
     }
@@ -962,8 +953,7 @@ fun BlueprintDetailContent(
         convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
         showConvertDialog = true
     }
-    val coroutineScope = rememberCoroutineScope()
-    var convertRunning by remember { mutableStateOf(false) }
+    val convertRunning by bridgeViewModel.convertInFlight.collectAsState()
     val runConvert = {
         val (target, ext) = when (convertSelected) {
             0 -> io.github.moxisuki.blockprint.core.SchematicFormat.Litematica to "litematic"
@@ -972,16 +962,10 @@ fun BlueprintDetailContent(
             3 -> io.github.moxisuki.blockprint.core.SchematicFormat.Structure to "nbt"
             else -> error("Unexpected convert index: $convertSelected")
         }
-        convertRunning = true
         showConvertDialog = false
         val targetUuid = uiState.fullBlueprint?.meta?.uuid
         if (targetUuid != null) {
-            coroutineScope.launch {
-                bridgeViewModel.convertBlueprint(targetUuid, target, ext)
-                convertRunning = false
-            }
-        } else {
-            convertRunning = false
+            bridgeViewModel.convertBlueprint(targetUuid, target, ext)
         }
         Unit
     }

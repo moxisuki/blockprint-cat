@@ -47,6 +47,9 @@ class BridgeViewModel @Inject constructor(
     private val _transfers = MutableStateFlow<List<TransferItem>>(emptyList())
     val transfers: StateFlow<List<TransferItem>> = _transfers.asStateFlow()
 
+    private val _convertInFlight = MutableStateFlow(false)
+    val convertInFlight: StateFlow<Boolean> = _convertInFlight.asStateFlow()
+
     private val _events = Channel<BridgeUiEvent>(
         capacity = 16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
@@ -243,6 +246,7 @@ class BridgeViewModel @Inject constructor(
             .firstOrNull { it.uuid == uuid }
             ?.displayName
             ?: "?"
+        _convertInFlight.value = true
         viewModelScope.launch {
             val result = blueprintManager.convert(uuid, target, targetExtension)
             result.onSuccess { meta ->
@@ -256,6 +260,7 @@ class BridgeViewModel @Inject constructor(
                 }
                 _events.trySend(BridgeUiEvent.ConvertFailed(sourceDisplayName, code))
             }
+            _convertInFlight.value = false
         }
     }
 

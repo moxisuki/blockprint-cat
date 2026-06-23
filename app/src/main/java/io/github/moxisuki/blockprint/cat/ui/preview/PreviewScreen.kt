@@ -100,6 +100,11 @@ fun PreviewScreen(
     val context = LocalView.current.context
     var glbEntry by remember { mutableStateOf<GlbEntry?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Hoisted to PreviewScreen so the loading overlay can sit ON TOP of the
+    // entire screen — visible during engine init, SceneView composition, and
+    // the Filament createAsset() call (which blocks the main thread). It only
+    // clears once the model has actually been drawn for the first time.
+    var modelReady by remember { mutableStateOf(false) }
     var glbProgress by remember { mutableFloatStateOf(-1f) }
     var glbStageText by remember { mutableStateOf("") }
     // 进度阶段 → 提示文字
@@ -178,16 +183,35 @@ fun PreviewScreen(
         }
     }
 
-    when {
-        error != null -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(Icons.Default.ViewInAr, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.preview_failed), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(4.dp))
-            Text(error!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(androidx.compose.ui.graphics.Color.Black)
+    ) {
+        when {
+            error != null -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(Icons.Default.ViewInAr, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(16.dp))
+                Text(stringResource(R.string.preview_failed), style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(4.dp))
+                Text(error!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            glbEntry != null -> PreviewSceneContent(
+                uuid = uuid,
+                entry = glbEntry!!,
+                onFullscreenChange = onFullscreenChange,
+                fromCache = glbEntry!!.fromCache,
+                onModelReady = { modelReady = true },
+            )
+            // else: leave Box empty — overlay below covers it.
         }
-        glbEntry != null -> PreviewSceneContent(uuid = uuid, entry = glbEntry!!, onFullscreenChange = onFullscreenChange, fromCache = glbEntry!!.fromCache)
-        else -> HudStartupOverlay(visible = true)
+
+        // Loading overlay sits on top of the entire screen and stays visible
+        // from page entry (while the GLB is generating, then while the
+        // Filament engine + first createAsset() parse blocks the main thread)
+        // until the model is actually drawn for the first time.
+        if (error == null && !modelReady) {
+            HudStartupOverlay(visible = true)
+        }
     }
 }
 
@@ -197,6 +221,7 @@ private fun PreviewSceneContent(
     entry: GlbEntry,
     onFullscreenChange: ((Boolean) -> Unit)? = null,
     fromCache: Boolean = false,
+    onModelReady: () -> Unit = {},
 ) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine = engine)
@@ -226,24 +251,13 @@ private fun PreviewSceneContent(
     var layerPanelOpen by remember { mutableStateOf(false) }
     var centered by remember { mutableStateOf(false) }
     // `centered` = ModelNode 已挂到 SceneView 树(用于相机定位/网格/分层)
-    // `modelOnScreen` = SceneView 实际渲染出首帧(用于 loading 收尾)
+    // `modelOnScreen` = SceneView 实际渲染出首帧(用于通知外层收起加载动画)
     var modelOnScreen by remember { mutableStateOf(false) }
-    var loadingVisible by remember { mutableStateOf(true) }
     val modelAlpha by animateFloatAsState(
         targetValue = if (modelOnScreen) 1f else 0f,
         animationSpec = tween(durationMillis = 250),
         label = "modelAlpha",
     )
-    LaunchedEffect(modelOnScreen, entry) {
-        if (!modelOnScreen) {
-            loadingVisible = true
-        } else {
-            // Wait 250ms after model is on screen before hiding the overlay
-            // (gives GPU upload + first frame a moment to stabilize)
-            kotlinx.coroutines.delay(250)
-            loadingVisible = false
-        }
-    }
     var floorCount by remember { mutableIntStateOf(0) }
     var modelRoot by remember { mutableStateOf<Node?>(null) }
     val snackbar = remember { SnackbarHostState() }
@@ -327,31 +341,16 @@ private fun PreviewSceneContent(
         val filePath = android.net.Uri.fromFile(glbFile).toString()
         android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync start, path=$filePath exists=${glbFile.exists()} size=${glbFile.length()}")
         var modelInst by remember { mutableStateOf<ModelInstance?>(null) }
-        LaunchedEffect(filePath) {
-            modelInst = null
-            android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync launched, path=$filePath")
-            modelLoader.loadModelInstanceAsync(filePath) { result ->
-                android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync result: ${result?.javaClass?.simpleName ?: "null"}")
-                modelInst = result
-            }
-        }
         LaunchedEffect(modelInst) {
             android.util.Log.d("PREVIEW", "[$uuid] modelOnScreen flip from loadModelInstanceAsync: ${modelInst != null}")
-            modelOnScreen = modelInst != null
-        }
-        // Timeout fallback: if modelOnScreen doesn't flip true within 8s,
-        // force the HUD off and surface the file path + state via snackbar
-        // so we can diagnose silent loader hangs.
-        LaunchedEffect(entry) {
-            kotlinx.coroutines.delay(8_000)
-            if (!modelOnScreen) {
-                android.util.Log.w("PREVIEW", "[$uuid] modelOnScreen stuck false after 8s; forcing loadingVisible=false. file=$filePath exists=${glbFile.exists()} size=${glbFile.length()}")
-                loadingVisible = false
-                if (modelInst == null) {
-                    modelError = true
-                    modelErrorMessage = "模型加载超时: ${glbFile.name}"
-                    snackbar.showSnackbar(modelErrorMessage)
-                }
+            val ready = modelInst != null
+            modelOnScreen = ready
+            if (ready) {
+                // Tiny grace period so the first GPU upload settles before
+                // the overlay disappears — otherwise the user can briefly
+                // see the model's first frame pop in behind a fading overlay.
+                kotlinx.coroutines.delay(250)
+                onModelReady()
             }
         }
         // Surface load errors as a snackbar (e.g. missing file). With
@@ -393,6 +392,19 @@ private fun PreviewSceneContent(
             },
             onTouchEvent = null,
         ) {
+            // Model load lives inside SceneView's content lambda so it only
+            // fires once the SceneView composable has actually been entered —
+            // keeping the loading overlay visible throughout the engine init
+            // + createAsset() main-thread block (Filament's parser is
+            // synchronous on the engine's owning thread).
+            LaunchedEffect(filePath) {
+                modelInst = null
+                android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync launched (inside SceneView), path=$filePath")
+                modelLoader.loadModelInstanceAsync(filePath) { result ->
+                    android.util.Log.d("PREVIEW", "[$uuid] loadModelInstanceAsync result: ${result?.javaClass?.simpleName ?: "null"}")
+                    modelInst = result
+                }
+            }
             val lightCfg = LIGHT_PRESETS[lightPreset]
             val gridMat = remember(materialLoader) { materialLoader.createColorInstance(android.graphics.Color.argb(100, 128, 128, 128)) }
             val redMat = remember(materialLoader) { materialLoader.createColorInstance(android.graphics.Color.RED) }
@@ -438,9 +450,6 @@ private fun PreviewSceneContent(
         }
         } // key(glbFile)
         } // Box fade-in alpha
-
-        // HUD 风格启动屏 — 一直显示到 SceneView 渲染出首帧 + 250ms
-        HudStartupOverlay(visible = loadingVisible && !modelError)
 
         // 旋转手势层
         Box(

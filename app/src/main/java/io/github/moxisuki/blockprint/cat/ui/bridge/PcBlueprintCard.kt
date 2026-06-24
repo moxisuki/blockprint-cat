@@ -1,64 +1,67 @@
 package io.github.moxisuki.blockprint.cat.ui.bridge
 
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.background
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.clickable
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.Box
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.Column
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.Row
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.Spacer
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.fillMaxWidth
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.height
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.padding
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.size
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.width
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.shape.RoundedCornerShape
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.material.icons.Icons
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.material.icons.filled.MoreVert
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.material3.Card
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.material3.CardDefaults
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.material3.Icon
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.material3.MaterialTheme
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.material3.Text
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.runtime.Composable
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.ui.Alignment
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.ui.Modifier
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.ui.draw.clip
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.ui.unit.dp
-import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import io.github.moxisuki.blockprint.cat.data.bridge.RemoteBlueprint
+import io.github.moxisuki.blockprint.cat.ui.format.BadgeColor
+import io.github.moxisuki.blockprint.cat.ui.format.FormatCatalog
+import io.github.moxisuki.blockprint.cat.ui.format.formatShortLabelRes
+import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
+import io.github.moxisuki.blockprint.core.SchematicFormat
+
+/**
+ * Map a [RemoteBlueprint] from the PC side to a [SchematicFormat].
+ *
+ * The PC-side BlockPrint Link mod sends the `format` field as the
+ * canonical `SchematicFormat.name()` value (`Litematica` / `Sponge` /
+ * `Structure` / `BuildingHelper` / `PartialNbt` / `Unknown`). We parse
+ * it directly with `SchematicFormat.valueOf`. For unrecognized values
+ * (forward-compat with new enum variants or older mod versions),
+ * fall back to inspecting the file extension on [RemoteBlueprint.fileName].
+ */
+private fun formatOf(blueprint: RemoteBlueprint): SchematicFormat {
+    runCatching { return SchematicFormat.valueOf(blueprint.format) }
+    val name = blueprint.fileName.lowercase()
+    return when {
+        name.endsWith(".litematic") -> SchematicFormat.Litematica
+        name.endsWith(".schem") || name.endsWith(".schematic") -> SchematicFormat.Sponge
+        name.endsWith(".nbt") -> SchematicFormat.Structure
+        name.endsWith(".json") -> SchematicFormat.BuildingHelper
+        else -> SchematicFormat.Unknown
+    }
+}
 
 /**
  * Compact card for a [RemoteBlueprint] shown in HomeScreen's PC tab.
  *
  * Visual style mirrors the local [io.github.moxisuki.blockprint.cat.ui.home.HomeBlueprintCard]:
- * 4dp primary-color left bar + title row + two-line subtitle. No
- * format chip, no description — kept minimal per spec.
+ * 4dp primary-color left bar + title row + two-line subtitle + format chip
+ * on the right. The chip reads the PC-side `format` field, which the
+ * BlockPrint Link mod sends as the canonical [SchematicFormat] enum name.
  */
 @Composable
 fun PcBlueprintCard(
@@ -115,6 +118,26 @@ fun PcBlueprintCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            Spacer(Modifier.width(8.dp))
+            val display = FormatCatalog.from(formatOf(blueprint))
+            val bg = when (display.badgeColor) {
+                BadgeColor.Primary -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                BadgeColor.Secondary -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
+                else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
+            }
+            Box(
+                Modifier
+                    .background(bg, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
+            ) {
+                Text(
+                    stringResource(formatShortLabelRes(display.schematicFormat)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            Spacer(Modifier.width(4.dp))
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = null,

@@ -5,6 +5,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.res.stringResource
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
+import io.github.moxisuki.blockprint.cat.ui.format.FormatCatalog
+import io.github.moxisuki.blockprint.cat.ui.format.formatLongLabelRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -98,25 +100,16 @@ fun BlueprintDetailScreen(
     val currentFormat = uiState.fullBlueprint?.meta?.format
         ?: io.github.moxisuki.blockprint.core.SchematicFormat.Unknown
     val openConvertDialog = {
-        val currentTargetIndex = when (currentFormat) {
-            io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> 0
-            io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> 1
-            io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
-            io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> 3
-            else -> -1
-        }
-        convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
+        convertSelected = 0
         showConvertDialog = true
     }
     val convertRunning by bridgeViewModel.convertInFlight.collectAsState()
     val runConvert = {
-        val (target, ext) = when (convertSelected) {
-            0 -> io.github.moxisuki.blockprint.core.SchematicFormat.Litematica to "litematic"
-            1 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schem"
-            2 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schematic"
-            3 -> io.github.moxisuki.blockprint.core.SchematicFormat.Structure to "nbt"
-            else -> error("Unexpected convert index: $convertSelected")
-        }
+        val targets = FormatCatalog.convertTargetsExcluding(currentFormat)
+        val display = targets.getOrNull(convertSelected)
+            ?: error("convertSelected $convertSelected out of range for ${targets.size} targets")
+        val target = display.schematicFormat
+        val ext = display.fileExtension
         showConvertDialog = false
         val targetUuid = uiState.fullBlueprint?.meta?.uuid
         if (targetUuid != null) {
@@ -302,7 +295,6 @@ fun BlueprintDetailScreen(
         onSelectedChange = { convertSelected = it },
         onDismiss = { showConvertDialog = false },
         onConfirm = runConvert,
-        running = convertRunning,
         confirmEnabled = !convertRunning,
     )
 }
@@ -618,17 +610,9 @@ private fun ConvertDialog(
     onSelectedChange: (Int) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
-    running: Boolean = false,
     confirmEnabled: Boolean = true,
 ) {
     if (!visible) return
-    val currentTargetIndex = when (currentFormat) {
-        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> 0
-        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> 1
-        io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
-        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> 3
-        else -> -1
-    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.detail_convert_dialog_title)) },
@@ -640,50 +624,12 @@ private fun ConvertDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
-                if (currentTargetIndex != 0) {
+                FormatCatalog.convertTargetsExcluding(currentFormat).forEachIndexed { idx, display ->
                     ConvertTargetRow(
-                        label = stringResource(R.string.detail_convert_target_litematic),
-                        selected = selected == 0,
-                        onClick = { onSelectedChange(0) },
+                        label = stringResource(formatLongLabelRes(display.schematicFormat)),
+                        selected = selected == idx,
+                        onClick = { onSelectedChange(idx) },
                     )
-                }
-                if (currentTargetIndex != 1) {
-                    ConvertTargetRow(
-                        label = stringResource(R.string.detail_convert_target_schem),
-                        selected = selected == 1,
-                        onClick = { onSelectedChange(1) },
-                    )
-                }
-                if (currentTargetIndex != 2) {
-                    ConvertTargetRow(
-                        label = stringResource(R.string.detail_convert_target_schematic),
-                        selected = selected == 2,
-                        onClick = { onSelectedChange(2) },
-                    )
-                }
-                if (currentTargetIndex != 3) {
-                    ConvertTargetRow(
-                        label = stringResource(R.string.detail_convert_target_nbt),
-                        selected = selected == 3,
-                        onClick = { onSelectedChange(3) },
-                    )
-                }
-                if (running) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.detail_convert_running),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
                 }
             }
         },
@@ -791,14 +737,7 @@ private fun materialColor(name: String): Color {
 /** SchematicFormat → 本地化显示文本。 */
 @Composable
 private fun formatDisplayName(format: io.github.moxisuki.blockprint.core.SchematicFormat): String =
-    when (format) {
-        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> stringResource(R.string.detail_convert_target_litematic)
-        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> stringResource(R.string.detail_convert_target_schem)
-        io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
-        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> stringResource(R.string.detail_format_nbt)
-        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper -> stringResource(R.string.detail_format_building_helper)
-        io.github.moxisuki.blockprint.core.SchematicFormat.Unknown -> stringResource(R.string.detail_meta_unknown)
-    }
+    stringResource(formatLongLabelRes(format))
 
 @Composable
 private fun MaterialRow(name: String, count: Int) {
@@ -943,25 +882,16 @@ fun BlueprintDetailContent(
     val currentFormat = uiState.fullBlueprint?.meta?.format
         ?: io.github.moxisuki.blockprint.core.SchematicFormat.Unknown
     val openConvertDialog = {
-        val currentTargetIndex = when (currentFormat) {
-            io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> 0
-            io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> 1
-            io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
-            io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> 3
-            else -> -1
-        }
-        convertSelected = (0..3).firstOrNull { it != currentTargetIndex } ?: 0
+        convertSelected = 0
         showConvertDialog = true
     }
     val convertRunning by bridgeViewModel.convertInFlight.collectAsState()
     val runConvert = {
-        val (target, ext) = when (convertSelected) {
-            0 -> io.github.moxisuki.blockprint.core.SchematicFormat.Litematica to "litematic"
-            1 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schem"
-            2 -> io.github.moxisuki.blockprint.core.SchematicFormat.Sponge to "schematic"
-            3 -> io.github.moxisuki.blockprint.core.SchematicFormat.Structure to "nbt"
-            else -> error("Unexpected convert index: $convertSelected")
-        }
+        val targets = FormatCatalog.convertTargetsExcluding(currentFormat)
+        val display = targets.getOrNull(convertSelected)
+            ?: error("convertSelected $convertSelected out of range for ${targets.size} targets")
+        val target = display.schematicFormat
+        val ext = display.fileExtension
         showConvertDialog = false
         val targetUuid = uiState.fullBlueprint?.meta?.uuid
         if (targetUuid != null) {
@@ -1089,7 +1019,6 @@ fun BlueprintDetailContent(
         onSelectedChange = { convertSelected = it },
         onDismiss = { showConvertDialog = false },
         onConfirm = runConvert,
-        running = convertRunning,
         confirmEnabled = !convertRunning,
     )
 }

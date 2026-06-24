@@ -29,7 +29,7 @@ sealed class BridgeEvent {
     data class DownloadProgress(val fileName: String, val bytes: Long) : BridgeEvent()
     data class DownloadComplete(val fileName: String, val data: ByteArray) : BridgeEvent()
     data class UploadProgress(val fileName: String, val bytes: Long) : BridgeEvent()
-    data class UploadResult(val fileName: String, val ok: Boolean, val errorCode: String? = null) : BridgeEvent()
+    data class UploadResult(val fileName: String, val ok: Boolean, val error: String? = null) : BridgeEvent()
     data class Error(val code: String, val message: String?) : BridgeEvent()
     object Disconnected : BridgeEvent()
 }

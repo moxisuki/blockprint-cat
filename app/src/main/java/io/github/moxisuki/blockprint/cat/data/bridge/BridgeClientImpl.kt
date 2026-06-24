@@ -36,7 +36,7 @@ class BridgeClientImpl @Inject constructor(
     private var currentWs: WebSocket? = null
     private var downloadingFileName: String? = null
     private var currentUploadSm: UploadStateMachine? = null
-    private var currentUploadData: ByteArray? = null
+    private var currentUploadSize: Long = -1L
     private val downloadSm = DownloadStateMachine()
 
     override val isOpen: Boolean get() = currentWs != null && currentTarget != null
@@ -80,7 +80,7 @@ class BridgeClientImpl @Inject constructor(
                 currentWs = null
                 currentTarget = null
                 currentUploadSm = null
-                currentUploadData = null
+                currentUploadSize = -1L
             }
 
             override fun onClosed(ws: WebSocket, code: Int, reason: String) {
@@ -89,7 +89,7 @@ class BridgeClientImpl @Inject constructor(
                 currentWs = null
                 currentTarget = null
                 currentUploadSm = null
-                currentUploadData = null
+                currentUploadSize = -1L
             }
         })
         currentWs = ws
@@ -129,46 +129,57 @@ class BridgeClientImpl @Inject constructor(
             Log.w(TAG, "requestUpload: not connected")
             return
         }
-        val sha = try {
-            val md = java.security.MessageDigest.getInstance("SHA-256")
-            val digest = md.digest(data)
-            digest.joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
-            Log.w(TAG, "SHA-256 failed: ${e.message}")
-            ""
-        }
-        val sm = UploadStateMachine(fileName = fileName, size = data.size.toLong(), overwrite = overwrite, clientSha = sha)
-        currentUploadSm = sm
-        currentUploadData = data
+        currentUploadSize = data.size.toLong()
+        events.tryEmit(BridgeEvent.UploadProgress(fileName, 0L))
 
-        val initSignals = sm.onInit()
-        val init = initSignals.filterIsInstance<UploadAction.SendText>().first()
-        val initJson = JSONObject().apply {
-            put("type", init.type)
-            put("requestId", init.requestId)
-            put("fileName", init.fileName)
-            put("size", init.size)
-            put("overwrite", init.overwrite.toString())
-            if (!init.sha256.isNullOrBlank()) put("sha256", init.sha256)
-        }
-        ws.send(initJson.toString())
-        Log.d(TAG, "requestUpload: sent ${init.type} requestId=${init.requestId} size=${init.size}")
-
-        // Stream chunks in a background thread. The v2 spec allows
-        // binary chunks immediately after upload/init — server buffers
-        // them in uploadAccumulator until upload/ready then upload/commit.
-        // We send chunks eagerly (no Thread.sleep throttling — OkHttp
-        // backpressure handles flow control). After all chunks sent,
-        // emit upload/commit text frame.
+        // All upload work — SHA-256, upload/init text frame, binary chunk
+        // streaming, upload/commit — runs on this daemon thread so the
+        // calling thread (potentially UI for a click handler) isn't blocked
+        // by hashing a 100 MB file. OkHttp backpressure handles flow
+        // control; no Thread.sleep throttling.
         Thread {
             try {
+                val sha = try {
+                    val md = java.security.MessageDigest.getInstance("SHA-256")
+                    val digest = md.digest(data)
+                    digest.joinToString("") { "%02x".format(it) }
+                } catch (e: Exception) {
+                    Log.w(TAG, "SHA-256 failed: ${e.message}")
+                    ""
+                }
+                // Re-check connection — user may have disconnected between
+                // requestUpload() and this thread starting.
+                val liveWs = currentWs ?: run {
+                    Log.w(TAG, "requestUpload: aborted, ws gone before thread ran")
+                    currentUploadSize = -1L
+                    return@Thread
+                }
+                val sm = UploadStateMachine(fileName = fileName, size = data.size.toLong(), overwrite = overwrite, clientSha = sha)
+                currentUploadSm = sm
+
+                val initSignals = sm.onInit()
+                val init = initSignals.filterIsInstance<UploadAction.SendText>().first()
+                val initJson = JSONObject().apply {
+                    put("type", init.type)
+                    put("requestId", init.requestId)
+                    put("fileName", init.fileName)
+                    put("size", init.size)
+                    put("overwrite", init.overwrite.toString())
+                    if (!init.sha256.isNullOrBlank()) put("sha256", init.sha256)
+                }
+                liveWs.send(initJson.toString())
+                Log.d(TAG, "requestUpload: sent ${init.type} requestId=${init.requestId} size=${init.size}")
+
                 val chunkSize = 32 * 1024
                 var offset = 0
-                events.tryEmit(BridgeEvent.UploadProgress(fileName, 0L))
                 while (offset < data.size) {
+                    if (currentUploadSm == null) {
+                        Log.w(TAG, "upload aborted: disconnected mid-stream at $offset/${data.size}")
+                        return@Thread
+                    }
                     val end = minOf(offset + chunkSize, data.size)
                     val chunk = ByteString.of(*data.copyOfRange(offset, end))
-                    val ok = ws.send(chunk)
+                    val ok = liveWs.send(chunk)
                     if (!ok) {
                         Log.w(TAG, "ws.send returned false at $offset/${data.size}")
                         break
@@ -185,13 +196,13 @@ class BridgeClientImpl @Inject constructor(
                         put("requestId", commit.requestId)
                         put("fileName", commit.fileName)
                     }
-                    ws.send(commitJson.toString())
+                    liveWs.send(commitJson.toString())
                     Log.d(TAG, "requestUpload: sent ${commit.type} for ${commit.fileName}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "upload send failed: ${e.message}", e)
             }
-        }.start()
+        }.apply { isDaemon = true }.start()
     }
 
     private fun send(text: String) {
@@ -260,14 +271,14 @@ class BridgeClientImpl @Inject constructor(
                         }
                     }
                     currentUploadSm = null
-                    currentUploadData = null
+                    currentUploadSize = -1L
                 }
                 "upload/done" -> {
                     // upload/done is informational only — just log the final SHA.
                     val sha = obj.optString("sha256", "")
                     val fn = obj.optString("fileName", "")
-                    Log.d(TAG, "upload/done: $fn sha=${sha.take(16)}...")
-                    currentUploadData = null
+                    Log.d(TAG, "upload/done: $fn sha=${sha.take(16)}... size=${if (currentUploadSize > 0) currentUploadSize else 0L}")
+                    currentUploadSize = -1L
                     currentUploadSm = null
                 }
                 "error" -> {

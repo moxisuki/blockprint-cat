@@ -191,15 +191,22 @@ class BridgeClientImpl @Inject constructor(
                     put("overwrite", init.overwrite.toString())
                     if (!init.sha256.isNullOrBlank()) put("sha256", init.sha256)
                 }
-                liveWs.send(initJson.toString())
-                Log.d(TAG, "requestUpload: sent ${init.type} requestId=${init.requestId} size=${init.size}")
-
-                // Register continuation that runs when the server's
-                // `upload/ready` arrives. The continuation streams
-                // binary chunks (32 KiB each) and sends `upload/commit`,
-                // exactly like the Python reference.
+                // Register continuation FIRST, before sending upload/init.
+                // This closes the race: if the server processes init and
+                // replies with upload/ready before our daemon thread is
+                // scheduled again, the continuation is already in the
+                // field and ready to fire.
+                //
+                // The continuation gates on sm.phase == SENDING_CHUNKS
+                // (set by onServerReady() in handleMessage) — so even if
+                // the continuation fires before init is sent (impossible
+                // in practice), it's a safe no-op.
                 pendingChunksContinuation = runChunkStream@ { ws2 ->
                     try {
+                        if (sm.phase != UploadPhase.SENDING_CHUNKS) {
+                            Log.w(TAG, "upload continuation: not yet in SENDING_CHUNKS (phase=${sm.phase}) — deferred")
+                            return@runChunkStream
+                        }
                         val chunkSize = 32 * 1024
                         var offset = 0
                         while (offset < data.size) {
@@ -237,6 +244,12 @@ class BridgeClientImpl @Inject constructor(
                         Log.e(TAG, "chunk stream failed: ${e.message}", e)
                     }
                 }
+
+                // Send upload/init AFTER registering the continuation.
+                // See the comment above — this ordering closes the race
+                // where server's upload/ready arrives before the field is set.
+                liveWs.send(initJson.toString())
+                Log.d(TAG, "requestUpload: sent ${init.type} requestId=${init.requestId} size=${init.size}")
             } catch (e: Exception) {
                 Log.e(TAG, "upload init failed: ${e.message}", e)
             }

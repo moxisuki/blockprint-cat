@@ -73,7 +73,13 @@ class UploadStateMachine(
 
     /** Client just sent one binary chunk. */
     fun onChunkSent(chunkSize: Int): List<UploadSignal> {
-        if (phase != UploadPhase.SENDING_CHUNKS) return emptyList()
+        // Allow WAITING_READY → SENDING_CHUNKS transition because the
+        // client sends chunks eagerly before upload/ready arrives (the
+        // v2 server buffers to uploadAccumulator during this window).
+        if (phase != UploadPhase.SENDING_CHUNKS && phase != UploadPhase.WAITING_READY) {
+            return emptyList()
+        }
+        phase = UploadPhase.SENDING_CHUNKS
         sentBytes += chunkSize
         if (sentBytes >= size) phase = UploadPhase.WAITING_RESULT
         return emptyList()
@@ -81,7 +87,13 @@ class UploadStateMachine(
 
     /** Client just sent upload/commit text frame. */
     fun onCommit(): List<UploadSignal> {
-        if (phase != UploadPhase.WAITING_RESULT) return emptyList()
+        if (phase != UploadPhase.WAITING_RESULT && phase != UploadPhase.SENDING_CHUNKS) {
+            return emptyList()
+        }
+        // Move to WAITING_RESULT — server's upload/result will reset to IDLE.
+        // This applies whether we entered from SENDING_CHUNKS (eager chunk
+        // fill happened in onChunkSent) or were already in WAITING_RESULT.
+        phase = UploadPhase.WAITING_RESULT
         return listOf(
             UploadAction.SendText(
                 type = "upload/commit",

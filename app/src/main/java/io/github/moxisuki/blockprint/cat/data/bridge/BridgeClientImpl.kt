@@ -158,7 +158,11 @@ class BridgeClientImpl @Inject constructor(
                 currentUploadSm = sm
 
                 val initSignals = sm.onInit()
-                val init = initSignals.filterIsInstance<UploadAction.SendText>().first()
+                val init = initSignals.filterIsInstance<UploadAction.SendText>().firstOrNull()
+                if (init == null) {
+                    Log.e(TAG, "requestUpload: state machine returned no init action in phase=${sm.phase}")
+                    return@Thread
+                }
                 val initJson = JSONObject().apply {
                     put("type", init.type)
                     put("requestId", init.requestId)
@@ -190,7 +194,11 @@ class BridgeClientImpl @Inject constructor(
                 }
                 if (offset >= data.size) {
                     val commitSignals = sm.onCommit()
-                    val commit = commitSignals.filterIsInstance<UploadAction.SendText>().first()
+                    val commit = commitSignals.filterIsInstance<UploadAction.SendText>().firstOrNull()
+                    if (commit == null) {
+                        Log.e(TAG, "requestUpload: state machine returned no commit action in phase=${sm.phase}")
+                        return@Thread
+                    }
                     val commitJson = JSONObject().apply {
                         put("type", commit.type)
                         put("requestId", commit.requestId)

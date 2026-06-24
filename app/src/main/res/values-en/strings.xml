@@ -316,6 +316,10 @@
     <string name="mgmt_last_sync">Last sync: %1$s</string>
     <string name="mgmt_file_size">File size: %1$s</string>
     <string name="action_refresh">Refresh</string>
+    <string name="upload_worldedit_warn_title">WorldEdit filename warning</string>
+    <string name="upload_worldedit_warn_message">WorldEdit (Sponge) cannot read filenames containing Chinese characters or special symbols. Rename to letters, digits, underscore, dot, or hyphen before uploading.</string>
+    <string name="upload_worldedit_warn_suggestion_label">Suggested filename</string>
+    <string name="action_upload_anyway">Upload anyway</string>
 
     <!-- PreviewScreen -->
     <string name="preview_loading">Loading…</string>

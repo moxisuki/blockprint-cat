@@ -375,6 +375,10 @@
     <string name="action_sync">Sync</string>
     <string name="action_sync_started">Uploading %1$s to PC…</string>
     <string name="action_sync_failed">Failed to read %1$s</string>
+    <string name="upload_worldedit_warn_title">WorldEdit 文件名警告</string>
+    <string name="upload_worldedit_warn_message">WorldEdit (Sponge) 无法识别文件名中的中文和特殊字符，会导致 PC 端读取失败。请改名为仅含数字、英文、下划线、点、连字符的组合再上传。</string>
+    <string name="upload_worldedit_warn_suggestion_label">建议文件名</string>
+    <string name="action_upload_anyway">仍要上传</string>
     <string name="action_detail">Details</string>
     <string name="mgmt_empty">No blueprints loaded yet</string>
     <string name="mgmt_last_sync">Last sync: %1$s</string>

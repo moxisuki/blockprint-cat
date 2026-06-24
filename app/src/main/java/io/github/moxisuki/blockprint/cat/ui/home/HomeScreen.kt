@@ -117,6 +117,25 @@ private const val PAGE_SIZE = 15
 private val SliderInset = 3.dp
 private val CapsuleWidth = 160.dp
 
+/**
+ * True if [name] contains any character outside the "safe" set for WorldEdit
+ * (Sponge) schematic files: ASCII letters, digits, underscore, dot, hyphen.
+ * WorldEdit rejects anything else (Chinese characters, spaces, special
+ * punctuation), so the upload step must warn the user before sending.
+ */
+private fun hasUnsafeWorldEditChars(name: String): Boolean =
+    !name.matches(Regex("^[A-Za-z0-9_.\\-]+$"))
+
+/**
+ * Replace any character outside the WorldEdit-safe set with `_`. Used to
+ * pre-fill the rename dialog with a suggestion the PC side will accept.
+ * Preserves length and the overall structure of the original name (e.g.
+ * "樱花小屋_converted.schem" → "____.schem" becomes "____.schem" via the
+ * `_` substitution; the suggestion is "____.schem").
+ */
+private fun safeWorldEditName(name: String): String =
+    name.replace(Regex("[^A-Za-z0-9_.\\-]"), "_")
+
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -153,6 +172,7 @@ fun HomeScreen(
     var deleteTarget by remember { mutableStateOf<BlueprintMeta?>(null) }
     var renameTarget by remember { mutableStateOf<BlueprintMeta?>(null) }
     var renameText by remember { mutableStateOf("") }
+    var pendingUploadAfterRename by remember { mutableStateOf<BlueprintMeta?>(null) }
     var sheetTarget by remember { mutableStateOf<RemoteBlueprint?>(null) }
     // 单一数据源：pagerState 是真理。savedInitialPage 仅承担 rememberSaveable
     // 持久化职责（旋转 / 进程重启时恢复 tab）。
@@ -411,12 +431,23 @@ fun HomeScreen(
                             onDeleteTarget = { deleteTarget = it },
                             onRenameTarget = { bp -> renameTarget = bp; renameText = bp.fileName },
                             onUpload = { bp ->
-                                scope.launch {
-                                    val bytes = managementViewModel.readBytes(bp.uuid)
-                                    if (bytes != null) {
-                                        bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
-                                    } else {
-                                        scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.action_sync_failed, bp.fileName)) }
+                                val isSponge = bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Sponge
+                                val needsRename = isSponge && hasUnsafeWorldEditChars(bp.fileName)
+                                if (needsRename) {
+                                    // Defer upload until the user confirms a rename. The existing rename
+                                    // dialog handles the actual rename; we just pre-fill the suggestion
+                                    // and remember to upload afterwards.
+                                    renameTarget = bp
+                                    renameText = safeWorldEditName(bp.fileName)
+                                    pendingUploadAfterRename = bp
+                                } else {
+                                    scope.launch {
+                                        val bytes = managementViewModel.readBytes(bp.uuid)
+                                        if (bytes != null) {
+                                            bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
+                                        } else {
+                                            scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.action_sync_failed, bp.fileName)) }
+                                        }
                                     }
                                 }
                             },
@@ -469,7 +500,7 @@ fun HomeScreen(
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
     renameTarget?.let { bp ->
-        AlertDialog(onDismissRequest = { renameTarget = null }, title = { Text(stringResource(R.string.dialog_rename_title)) },
+        AlertDialog(onDismissRequest = { renameTarget = null; pendingUploadAfterRename = null }, title = { Text(stringResource(R.string.dialog_rename_title)) },
             text = {
                 Column {
                     OutlinedTextField(value = renameText, onValueChange = { renameText = it }, label = { Text(stringResource(R.string.dialog_rename_label)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -477,8 +508,32 @@ fun HomeScreen(
                     Text(stringResource(R.string.dialog_rename_preview, renameText), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            confirmButton = { TextButton(onClick = { if (renameText.isNotBlank() && renameText != bp.fileName) managementViewModel.rename(context, bp.uuid, renameText); renameTarget = null }) { Text(stringResource(R.string.action_confirm)) } },
-            dismissButton = { TextButton(onClick = { renameTarget = null }) { Text(stringResource(R.string.action_cancel)) } })
+            confirmButton = {
+            TextButton(onClick = {
+                val wasPendingUpload = pendingUploadAfterRename
+                val newName = renameText.trim()
+                if (newName.isNotBlank() && newName != bp.fileName) {
+                    managementViewModel.rename(context, bp.uuid, newName)
+                }
+                renameTarget = null
+                // If this rename was triggered by the upload safety check, kick off
+                // the upload with the new name as soon as the dialog closes.
+                if (wasPendingUpload != null) {
+                    pendingUploadAfterRename = null
+                    scope.launch {
+                        val bytes = managementViewModel.readBytes(wasPendingUpload.uuid)
+                        if (bytes != null) {
+                            bridgeVm.requestUpload(newName, bytes, overwrite = true)
+                        } else {
+                            scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.action_sync_failed, newName)) }
+                        }
+                    }
+                }
+            }) {
+                Text(stringResource(R.string.action_confirm))
+            }
+        },
+            dismissButton = { TextButton(onClick = { renameTarget = null; pendingUploadAfterRename = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
     sheetTarget?.let { bp ->
         PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName) }, onDismiss = { sheetTarget = null })

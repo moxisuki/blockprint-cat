@@ -106,6 +106,7 @@ import io.github.moxisuki.blockprint.cat.ui.bridge.TransferProgressBar
 import io.github.moxisuki.blockprint.cat.ui.format.BadgeColor
 import io.github.moxisuki.blockprint.cat.ui.format.FormatCatalog
 import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
+import io.github.moxisuki.blockprint.cat.ui.format.formatShortLabelRes
 import io.github.moxisuki.blockprint.cat.ui.management.BlueprintViewModel
 import io.github.moxisuki.blockprint.cat.ui.management.ManagementEvent
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
@@ -796,24 +797,15 @@ private fun FormatChipFilter(label: String, selected: Boolean, onClick: () -> Un
     )
 }
 
-private fun formatShortLabelRes(format: io.github.moxisuki.blockprint.core.SchematicFormat): Int =
-    when (format) {
-        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> R.string.format_short_litematica
-        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> R.string.format_short_worldedit
-        io.github.moxisuki.blockprint.core.SchematicFormat.Structure -> R.string.format_short_nbt
-        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> R.string.format_short_nbt
-        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper -> R.string.format_short_building_helper
-        io.github.moxisuki.blockprint.core.SchematicFormat.Unknown -> R.string.format_short_unknown
-    }
-
 @Composable
 private fun FormatChip(format: io.github.moxisuki.blockprint.core.SchematicFormat) {
     val display = FormatCatalog.from(format)
     val bg = when (display.badgeColor) {
         BadgeColor.Primary -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         BadgeColor.Secondary -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
-        BadgeColor.Outline -> MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
-        BadgeColor.Tertiary -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f)
+        // Catalog currently emits Primary/Secondary/Outline; anything else
+        // (Tertiary, future colors) gets the neutral Outline tint.
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
     }
     Box(
         Modifier

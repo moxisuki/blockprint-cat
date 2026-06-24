@@ -127,14 +127,18 @@ private fun hasUnsafeWorldEditChars(name: String): Boolean =
     !name.matches(Regex("^[A-Za-z0-9_.\\-]+$"))
 
 /**
- * Replace any character outside the WorldEdit-safe set with `_`. Used to
- * pre-fill the rename dialog with a suggestion the PC side will accept.
- * Preserves length and the overall structure of the original name (e.g.
- * "樱花小屋_converted.schem" → "____.schem" becomes "____.schem" via the
- * `_` substitution; the suggestion is "____.schem").
+ * Produce a WorldEdit-safe filename by **removing** any character outside
+ * the safe set (ASCII letters, digits, underscore, dot, hyphen). Strips
+ * unsafe chars rather than replacing them with `_` — "樱花小屋.schem"
+ * becomes "小屋.schem" (or just ".schem" if all leading chars are unsafe).
+ * Also collapses runs of dots and trims leading/trailing dots so the result
+ * is a valid filename stem, not just a prefix of dots.
  */
-private fun safeWorldEditName(name: String): String =
-    name.replace(Regex("[^A-Za-z0-9_.\\-]"), "_")
+private fun safeWorldEditName(name: String): String {
+    val stripped = name.replace(Regex("[^A-Za-z0-9_.\\-]"), "")
+    val collapsed = stripped.replace(Regex("\\.+"), ".")
+    return collapsed.trim('.', '_', '-')
+}
 
 @Composable
 fun HomeScreen(
@@ -173,6 +177,7 @@ fun HomeScreen(
     var renameTarget by remember { mutableStateOf<BlueprintMeta?>(null) }
     var renameText by remember { mutableStateOf("") }
     var pendingUploadAfterRename by remember { mutableStateOf<BlueprintMeta?>(null) }
+    var worldEditWarningBlueprint by remember { mutableStateOf<BlueprintMeta?>(null) }
     var sheetTarget by remember { mutableStateOf<RemoteBlueprint?>(null) }
     // 单一数据源：pagerState 是真理。savedInitialPage 仅承担 rememberSaveable
     // 持久化职责（旋转 / 进程重启时恢复 tab）。
@@ -432,14 +437,9 @@ fun HomeScreen(
                             onRenameTarget = { bp -> renameTarget = bp; renameText = bp.fileName },
                             onUpload = { bp ->
                                 val isSponge = bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Sponge
-                                val needsRename = isSponge && hasUnsafeWorldEditChars(bp.fileName)
-                                if (needsRename) {
-                                    // Defer upload until the user confirms a rename. The existing rename
-                                    // dialog handles the actual rename; we just pre-fill the suggestion
-                                    // and remember to upload afterwards.
-                                    renameTarget = bp
-                                    renameText = safeWorldEditName(bp.fileName)
-                                    pendingUploadAfterRename = bp
+                                if (isSponge && hasUnsafeWorldEditChars(bp.fileName)) {
+                                    // Don't upload yet — show the warning dialog and let the user choose.
+                                    worldEditWarningBlueprint = bp
                                 } else {
                                     scope.launch {
                                         val bytes = managementViewModel.readBytes(bp.uuid)
@@ -534,6 +534,45 @@ fun HomeScreen(
             }
         },
             dismissButton = { TextButton(onClick = { renameTarget = null; pendingUploadAfterRename = null }) { Text(stringResource(R.string.action_cancel)) } })
+    }
+    worldEditWarningBlueprint?.let { bp ->
+        AlertDialog(
+            onDismissRequest = { worldEditWarningBlueprint = null },
+            title = { Text(stringResource(R.string.upload_worldedit_warn_dialog_title)) },
+            text = {
+                Text(stringResource(R.string.upload_worldedit_warn_dialog_message, bp.fileName))
+            },
+            confirmButton = {
+                // "Rename" — pre-fill the existing rename dialog with a safe suggestion.
+                TextButton(onClick = {
+                    worldEditWarningBlueprint = null
+                    renameTarget = bp
+                    renameText = safeWorldEditName(bp.fileName)
+                    pendingUploadAfterRename = bp
+                }) { Text(stringResource(R.string.dialog_rename_title)) }
+            },
+            dismissButton = {
+                // "Upload anyway" — skip the rename; the PC side will likely fail,
+                // but the user is asking for it explicitly.
+                Row {
+                    TextButton(onClick = {
+                        worldEditWarningBlueprint = null
+                        scope.launch {
+                            val bytes = managementViewModel.readBytes(bp.uuid)
+                            if (bytes != null) {
+                                bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.action_sync_failed, bp.fileName)) }
+                            }
+                        }
+                    }) { Text(stringResource(R.string.action_upload_anyway)) }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = { worldEditWarningBlueprint = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            },
+        )
     }
     sheetTarget?.let { bp ->
         PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName) }, onDismiss = { sheetTarget = null })

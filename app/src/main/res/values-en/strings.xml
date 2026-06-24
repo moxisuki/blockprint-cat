@@ -320,6 +320,8 @@
     <string name="upload_worldedit_warn_message">WorldEdit (Sponge) cannot read filenames containing Chinese characters or special symbols. Rename to letters, digits, underscore, dot, or hyphen before uploading.</string>
     <string name="upload_worldedit_warn_suggestion_label">Suggested filename</string>
     <string name="action_upload_anyway">Upload anyway</string>
+    <string name="upload_worldedit_warn_dialog_title">WorldEdit cannot read this filename</string>
+    <string name="upload_worldedit_warn_dialog_message">The filename \"%1$s\" contains characters (such as Chinese text or special symbols) that WorldEdit on the PC side cannot parse.\n\nChoose an action below.</string>
 
     <!-- PreviewScreen -->
     <string name="preview_loading">Loading…</string>

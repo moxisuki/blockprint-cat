@@ -395,6 +395,8 @@
     <string name="upload_worldedit_warn_message">WorldEdit (Sponge) 无法识别文件名中的中文和特殊字符，会导致 PC 端读取失败。请改名为仅含数字、英文、下划线、点、连字符的组合再上传。</string>
     <string name="upload_worldedit_warn_suggestion_label">建议文件名</string>
     <string name="action_upload_anyway">仍要上传</string>
+    <string name="upload_worldedit_warn_dialog_title">WorldEdit 无法识别此文件名</string>
+    <string name="upload_worldedit_warn_dialog_message">文件名 \"%1$s\" 包含中文或特殊字符，PC 端的 WorldEdit 无法解析。\n\n请选择下面的操作。</string>
 
     <!-- PreviewScreen -->
     <string name="preview_loading">加载中…</string>

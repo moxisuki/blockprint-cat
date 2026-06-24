@@ -43,15 +43,6 @@ class UploadStateMachineTest {
     }
 
     @Test
-    fun orphan_binary_when_no_in_flight_is_silently_dropped() {
-        val sm = UploadStateMachine(fileName = "y.litematic", size = 100L, overwrite = false, clientSha = "")
-        // 没调 onInit 直接 onBinaryReceived
-        val out = sm.onBinaryReceived(byteArrayOf(1, 2, 3))
-        assertTrue(out.isEmpty())
-        assertEquals(UploadPhase.IDLE, sm.phase)
-    }
-
-    @Test
     fun request_id_format_is_up_prefix_then_8_hex() {
         val sm = UploadStateMachine(fileName = "z.litematic", size = 100L, overwrite = false, clientSha = "")
         assertTrue(sm.requestId.matches(Regex("^up-[0-9a-f]{8}$")))
@@ -67,5 +58,38 @@ class UploadStateMachineTest {
         val out = sm.onResult(ok = false, errorCode = "SHA_MISMATCH", sha256 = null)
         assertEquals(1, out.size)
         assertEquals(UploadPhase.IDLE, sm.phase)
+    }
+
+    @Test
+    fun onServerReady_in_idle_phase_returns_empty() {
+        val sm = UploadStateMachine(fileName = "a.litematic", size = 100L, overwrite = false, clientSha = "")
+        // No onInit() called.
+        val out = sm.onServerReady()
+        assertTrue(out.isEmpty())
+        assertEquals(UploadPhase.IDLE, sm.phase)
+    }
+
+    @Test
+    fun onCommit_before_sending_chunks_returns_empty() {
+        val sm = UploadStateMachine(fileName = "a.litematic", size = 100L, overwrite = false, clientSha = "")
+        sm.onInit()
+        sm.onServerReady()
+        // Skip onChunkSent; jump straight to onCommit.
+        val out = sm.onCommit()
+        assertTrue(out.isEmpty())
+        assertEquals(UploadPhase.SENDING_CHUNKS, sm.phase)
+    }
+
+    @Test
+    fun multi_chunk_accumulates_sent_bytes() {
+        val sm = UploadStateMachine(fileName = "a.litematic", size = 100L, overwrite = false, clientSha = "")
+        sm.onInit()
+        sm.onServerReady()
+        sm.onChunkSent(30)
+        assertEquals(UploadPhase.SENDING_CHUNKS, sm.phase)
+        sm.onChunkSent(30)
+        assertEquals(UploadPhase.SENDING_CHUNKS, sm.phase)
+        sm.onChunkSent(40) // total 100
+        assertEquals(UploadPhase.WAITING_RESULT, sm.phase)
     }
 }

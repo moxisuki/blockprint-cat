@@ -178,6 +178,7 @@ fun BlueprintDetailScreen(
                             Text(stringResource(R.string.detail_meta_title), style = MaterialTheme.typography.titleMedium)
                             Spacer(modifier = Modifier.height(8.dp))
                             DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
+                            DetailRow(stringResource(R.string.detail_meta_file_name), bp.meta.fileName)
                             DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
                             DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw?.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
                             DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw?.version?.toString() ?: stringResource(R.string.detail_meta_unknown))
@@ -929,6 +930,7 @@ fun BlueprintDetailContent(
                 item {
                     SectionCard(title = stringResource(R.string.detail_meta_title)) {
                         DetailRow(stringResource(R.string.detail_meta_name), bp.meta.displayName)
+                        DetailRow(stringResource(R.string.detail_meta_file_name), bp.meta.fileName)
                         DetailRow(stringResource(R.string.detail_meta_author), bp.meta.author.ifEmpty { stringResource(R.string.detail_meta_unknown) })
                         DetailRow(stringResource(R.string.detail_meta_mc_version), bp.raw?.minecraftDataVersion?.let { MinecraftVersions[it] } ?: stringResource(R.string.detail_meta_unknown))
                         DetailRow(stringResource(R.string.detail_meta_format_version), bp.raw?.version?.toString() ?: stringResource(R.string.detail_meta_unknown))

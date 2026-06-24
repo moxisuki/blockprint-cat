@@ -109,6 +109,7 @@
     <string name="detail_generating_progress">%1$d%% — %2$ds</string>
     <string name="detail_meta_title">Information</string>
     <string name="detail_meta_name">Name</string>
+    <string name="detail_meta_file_name">File name</string>
     <string name="detail_meta_author">Author</string>
     <string name="detail_meta_unknown">Unknown</string>
     <string name="detail_meta_mc_version">Minecraft version</string>

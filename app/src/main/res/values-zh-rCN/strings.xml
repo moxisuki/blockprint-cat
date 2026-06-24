@@ -141,6 +141,7 @@
     <string name="detail_generating_progress">%1$d%% — %2$ds</string>
     <string name="detail_meta_title">基本信息</string>
     <string name="detail_meta_name">蓝图名称</string>
+    <string name="detail_meta_file_name">文件名</string>
     <string name="detail_meta_author">作者</string>
     <string name="detail_meta_unknown">未知</string>
     <string name="detail_meta_mc_version">Minecraft 版本</string>

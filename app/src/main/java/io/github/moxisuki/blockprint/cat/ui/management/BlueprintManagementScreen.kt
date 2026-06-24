@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.background
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
-import androidx.compose.ui.draw.clip
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import androidx.compose.foundation.layout.fillMaxSize
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber

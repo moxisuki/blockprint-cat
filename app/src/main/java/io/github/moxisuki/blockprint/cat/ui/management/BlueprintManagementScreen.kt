@@ -116,6 +116,10 @@ import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMeta
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
+import io.github.moxisuki.blockprint.cat.ui.format.BadgeColor
+import io.github.moxisuki.blockprint.cat.ui.format.FormatCatalog
+import io.github.moxisuki.blockprint.cat.ui.format.formatShortLabelRes
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -338,42 +342,23 @@ private fun BlueprintCard(
 private fun FormatChip(
     format: io.github.moxisuki.blockprint.core.SchematicFormat,
 ) {
-    val (label, bg, fg) = when (format) {
-        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica ->
-            Triple("Litematica",
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                MaterialTheme.colorScheme.primary)
-        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge ->
-            Triple("Sponge",
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f),
-                MaterialTheme.colorScheme.secondary)
-        io.github.moxisuki.blockprint.core.SchematicFormat.Structure ->
-            Triple("Structure",
-                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f),
-                MaterialTheme.colorScheme.tertiary)
-        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt ->
-            Triple("PartialNBT",
-                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f),
-                MaterialTheme.colorScheme.tertiary)
-        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper ->
-            Triple("BuildingHelper",
-                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f),
-                MaterialTheme.colorScheme.tertiary)
-        io.github.moxisuki.blockprint.core.SchematicFormat.Unknown ->
-            Triple("Unknown",
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
-                MaterialTheme.colorScheme.onSurfaceVariant)
+    val display = FormatCatalog.from(format)
+    val bg = when (display.badgeColor) {
+        BadgeColor.Primary -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        BadgeColor.Secondary -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
+        // Outline covers Structure / PartialNbt / BuildingHelper / Unknown per the catalog.
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
     }
     Box(
         modifier = Modifier
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-            .background(bg)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .background(bg, RoundedCornerShape(4.dp))
+            .padding(horizontal = 5.dp, vertical = 1.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = label,
+            stringResource(formatShortLabelRes(format)),
             style = MaterialTheme.typography.labelSmall,
-            color = fg,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
         )
     }

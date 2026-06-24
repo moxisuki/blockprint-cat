@@ -152,6 +152,24 @@
     <string name="detail_convert_target_nbt">NBT (.nbt)</string>
     <string name="detail_format_nbt">NBT (.nbt)</string>
 
+    <string name="format_short_litematica">投影</string>
+    <string name="format_short_worldedit">创世神</string>
+    <string name="format_short_nbt">NBT</string>
+    <string name="format_short_building_helper">建筑小帮手</string>
+    <string name="format_short_unknown">未知</string>
+
+    <string name="format_long_litematica">投影 (.litematic)</string>
+    <string name="format_long_worldedit">创世神 Schematic (.schem)</string>
+    <string name="format_long_nbt_vanilla">原版 (.nbt)</string>
+    <string name="format_long_nbt_generic">通用 (.nbt)</string>
+    <string name="format_long_building_helper">建筑小帮手 (.json)</string>
+    <string name="format_long_unknown">未知</string>
+
+    <string name="format_filter_litematica">投影</string>
+    <string name="format_filter_schematic">创世神</string>
+    <string name="format_filter_nbt">NBT</string>
+    <string name="format_filter_json">建筑小帮手</string>
+
     <!-- SettingsScreen - extended -->
     <string name="theme_color_scheme">Color scheme</string>
     <string name="theme_display_mode">Display mode</string>

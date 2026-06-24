@@ -133,6 +133,24 @@
     <string name="detail_convert_target_nbt">NBT (.nbt)</string>
     <string name="detail_format_nbt">NBT (.nbt)</string>
 
+    <string name="format_short_litematica">Litematica</string>
+    <string name="format_short_worldedit">WorldEdit</string>
+    <string name="format_short_nbt">NBT</string>
+    <string name="format_short_building_helper">Building Helper</string>
+    <string name="format_short_unknown">Unknown</string>
+
+    <string name="format_long_litematica">Litematica (.litematic)</string>
+    <string name="format_long_worldedit">WorldEdit Schematic (.schem)</string>
+    <string name="format_long_nbt_vanilla">Vanilla (.nbt)</string>
+    <string name="format_long_nbt_generic">Generic (.nbt)</string>
+    <string name="format_long_building_helper">Building Helper (.json)</string>
+    <string name="format_long_unknown">Unknown</string>
+
+    <string name="format_filter_litematica">Litematica</string>
+    <string name="format_filter_schematic">Schematic</string>
+    <string name="format_filter_nbt">NBT</string>
+    <string name="format_filter_json">JSON</string>
+
     <!-- SettingsScreen - extended -->
     <string name="theme_color_scheme">Color scheme</string>
     <string name="theme_display_mode">Display mode</string>

@@ -202,10 +202,23 @@ class BlueprintManager @Inject constructor(
      *   disk failure.
      */
     suspend fun convert(uuid: String, target: SchematicFormat, extension: String): Result<BlueprintMeta> = withContext(Dispatchers.IO) {
+        val t0 = System.currentTimeMillis()
+        var t: Long
         runCatching {
+            t = System.currentTimeMillis()
             val entity = metaDao.getByUuid(uuid)
                 ?: throw IllegalStateException("Blueprint not found: $uuid")
-            val lit = LitematicReader.readLenient(storage.read(entity.fileDocId))
+            Log.d(TAG, "convert stage[1] metaDao.getByUuid: ${System.currentTimeMillis() - t} ms")
+
+            t = System.currentTimeMillis()
+            val srcBytes = storage.read(entity.fileDocId)
+            Log.d(TAG, "convert stage[2] storage.read(source, ${srcBytes.size} bytes): ${System.currentTimeMillis() - t} ms")
+
+            t = System.currentTimeMillis()
+            val lit = LitematicReader.readLenient(srcBytes)
+            Log.d(TAG, "convert stage[3] LitematicReader.readLenient: ${System.currentTimeMillis() - t} ms")
+
+            t = System.currentTimeMillis()
             // For non-Litematica targets, BlueprintConverter rejects multi-region
             // input. Fall back to the primary region so the user still gets a
             // usable file rather than an exception.
@@ -214,17 +227,33 @@ class BlueprintManager @Inject constructor(
             } else {
                 lit
             }
+            Log.d(TAG, "convert stage[4] multi-region fallback: ${System.currentTimeMillis() - t} ms")
+
+            t = System.currentTimeMillis()
             val candidate = outputFileName(entity.fileName, extension)
             val finalName = resolveUniqueName(candidate)
+            Log.d(TAG, "convert stage[5] outputFileName+resolveUniqueName: ${System.currentTimeMillis() - t} ms")
+
+            t = System.currentTimeMillis()
             val newDocId = storage.writeStream(finalName) { out ->
                 BlueprintConverter.convert(sourceForConvert, target, out)
             }
+            Log.d(TAG, "convert stage[6] storage.writeStream+convert: ${System.currentTimeMillis() - t} ms")
+
+            t = System.currentTimeMillis()
             // Re-read the bytes the streamer just produced so `ingest` parses
             // the file's metadata (regions, blocks, format) and registers it in
             // the meta DAO. This is one extra read, but it's bounded — the new
             // file is on local storage and the SAF read is cheap.
             val newBytes = storage.read(newDocId)
-            ingest(finalName, newBytes)
+            Log.d(TAG, "convert stage[7] storage.read(target, ${newBytes.size} bytes): ${System.currentTimeMillis() - t} ms")
+
+            t = System.currentTimeMillis()
+            val result = ingest(finalName, newBytes)
+            Log.d(TAG, "convert stage[8] ingest: ${System.currentTimeMillis() - t} ms")
+
+            Log.d(TAG, "convert TOTAL: ${System.currentTimeMillis() - t0} ms")
+            result
         }
     }
 

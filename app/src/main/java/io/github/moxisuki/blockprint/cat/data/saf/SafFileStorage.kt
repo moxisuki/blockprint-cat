@@ -138,6 +138,6 @@ class SafFileStorage @Inject constructor(
 
     private fun isBlueprintFile(name: String): Boolean {
         val l = name.lowercase()
-        return l.endsWith(".litematic") || l.endsWith(".nbt") || l.endsWith(".schematic") || l.endsWith(".schem")
+        return l.endsWith(".litematic") || l.endsWith(".nbt") || l.endsWith(".schematic") || l.endsWith(".schem") || l.endsWith(".json")
     }
 }

@@ -578,7 +578,7 @@ fun HomeScreen(
         )
     }
     sheetTarget?.let { bp ->
-        PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName) }, enabled = canTransfer, onDismiss = { sheetTarget = null })
+        PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName, bp.source) }, enabled = canTransfer, onDismiss = { sheetTarget = null })
     }
 }
 

@@ -129,14 +129,15 @@ class BridgeClientImpl @Inject constructor(
         send(msg.toString())
     }
 
-    override fun requestDownload(fileName: String) {
+    override fun requestDownload(fileName: String, source: String) {
         val requestId = downloadSm.newRequestId()
-        val signals = downloadSm.onDownloadRequested(fileName = fileName, requestId = requestId, source = null)
+        val signals = downloadSm.onDownloadRequested(fileName = fileName, requestId = requestId, source = source)
         val sendText = signals.filterIsInstance<DownloadAction.SendText>().first()
         val msg = JSONObject().apply {
             put("type", sendText.type)
             put("requestId", sendText.requestId)
             put("fileName", sendText.fileName)
+            if (source != "schematics") put("source", source)
         }
         send(msg.toString())
     }
@@ -409,5 +410,6 @@ class BridgeClientImpl @Inject constructor(
         minecraftDataVersion = if (obj.isNull("minecraftDataVersion")) null else obj.optInt("minecraftDataVersion"),
         version = if (obj.isNull("version")) null else obj.optInt("version"),
         regions = obj.optInt("regions"),
+        source = obj.optString("source", "schematics"),
     )
 }

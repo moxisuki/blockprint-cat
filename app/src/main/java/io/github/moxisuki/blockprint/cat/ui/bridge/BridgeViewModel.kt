@@ -213,8 +213,8 @@ class BridgeViewModel @Inject constructor(
         if (_connectionState.value is ConnectionState.Connected) bridgeClient.requestList()
     }
 
-    fun requestDownload(fileName: String) {
-        Log.d(TAG, "requestDownload($fileName)")
+    fun requestDownload(fileName: String, source: String = "schematics") {
+        Log.d(TAG, "requestDownload($fileName, source=$source)")
         if (_connectionState.value !is ConnectionState.Connected) return
         if (isTaskInFlight.value) {
             Log.w(TAG, "requestDownload: BUSY_LOCAL, ignoring $fileName")
@@ -223,7 +223,7 @@ class BridgeViewModel @Inject constructor(
         }
         addTransfer(TransferType.DOWNLOAD, fileName, 0L)
         currentDownloadId = transferSeq
-        bridgeClient.requestDownload(fileName)
+        bridgeClient.requestDownload(fileName, source)
     }
 
     fun requestUpload(fileName: String, data: ByteArray, overwrite: Boolean = false) {

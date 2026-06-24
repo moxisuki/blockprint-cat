@@ -13,6 +13,7 @@ data class RemoteBlueprint(
     val minecraftDataVersion: Int?,
     val version: Int?,
     val regions: Int,
+    val source: String = "schematics",
 )
 
 data class SessionInfo(
@@ -41,6 +42,6 @@ interface BridgeClient {
     fun connect(host: String, port: Int, token: String)
     fun disconnect()
     fun requestList()
-    fun requestDownload(fileName: String)
+    fun requestDownload(fileName: String, source: String = "schematics")
     fun requestUpload(fileName: String, data: ByteArray, overwrite: Boolean = false)
 }

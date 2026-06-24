@@ -59,6 +59,29 @@ class SafFileStorage @Inject constructor(
     override suspend fun write(name: String, bytes: ByteArray, onProgress: ((Long, Long) -> Unit)?): String = withContext(Dispatchers.IO) {
         val treeUri = permissionManager.treeUri() ?: throw IllegalStateException("SAF not configured")
         val folderDocId = permissionManager.folderDocId() ?: throw IllegalStateException("SAF not configured")
+        val childFolderUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, folderDocId)
+
+        // If a child with this name already exists, delete it before re-creating.
+        // Without this, Android's DocumentsContract.createDocument auto-suffixes
+        // the new file with "(1)" — which means calling write() twice with the same
+        // name produces two files instead of overwriting. BlueprintManager.convert()
+        // relies on this overwrite behaviour (the first writeStream produces the
+        // conversion output, then ingest() calls write() to re-register it in the
+        // meta DAO; without this fix the second write creates a "(1)" duplicate).
+        val existingDocId: String? = context.contentResolver.query(
+            childFolderUri,
+            arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID),
+            "${DocumentsContract.Document.COLUMN_DISPLAY_NAME}=?",
+            arrayOf(name),
+            null,
+        )?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        existingDocId?.let { existing ->
+            DocumentsContract.deleteDocument(
+                context.contentResolver,
+                DocumentsContract.buildDocumentUriUsingTree(treeUri, existing),
+            )
+        }
+
         val folderUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderDocId)
         val docUri = DocumentsContract.createDocument(context.contentResolver, folderUri, MIME_OCTET, name)
             ?: throw IllegalStateException("SAF createDocument failed: $name")

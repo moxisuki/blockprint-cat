@@ -241,19 +241,22 @@ class BlueprintManager @Inject constructor(
             Log.d(TAG, "convert stage[6] storage.writeStream+convert: ${System.currentTimeMillis() - t} ms")
 
             t = System.currentTimeMillis()
-            // Re-read the bytes the streamer just produced so `ingest` parses
-            // the file's metadata (regions, blocks, format) and registers it in
-            // the meta DAO. This is one extra read, but it's bounded — the new
-            // file is on local storage and the SAF read is cheap.
+            // Re-read the bytes the streamer just produced. Don't call ingest() —
+            // ingest calls storage.write() which would createDocument with the
+            // same name, and Android's SAF auto-suffixes the new file with "(1)".
+            // Instead parse the bytes we already read and insert the meta directly.
             val newBytes = storage.read(newDocId)
             Log.d(TAG, "convert stage[7] storage.read(target, ${newBytes.size} bytes): ${System.currentTimeMillis() - t} ms")
 
             t = System.currentTimeMillis()
-            val result = ingest(finalName, newBytes)
-            Log.d(TAG, "convert stage[8] ingest: ${System.currentTimeMillis() - t} ms")
+            val lit2 = LitematicReader.readLenient(newBytes)
+            val meta2 = metaFromLit(lit2, newDocId, finalName)
+            val now = System.currentTimeMillis()
+            metaDao.upsert(meta2.copy(lastScannedAt = now).toEntity())
+            Log.d(TAG, "convert stage[8] insert: ${System.currentTimeMillis() - t} ms")
 
             Log.d(TAG, "convert TOTAL: ${System.currentTimeMillis() - t0} ms")
-            result
+            meta2.toMeta()
         }
     }
 

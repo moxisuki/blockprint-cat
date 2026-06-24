@@ -39,6 +39,21 @@ class BridgeClientImpl @Inject constructor(
     private var currentUploadSize: Long = -1L
     private val downloadSm = DownloadStateMachine()
 
+    /**
+     * Continuation fired by the "upload/ready" handler that streams the
+     * binary chunks and sends upload/commit. Matches the Python reference
+     * (`ws_smoke_test.py` lines 114-124): the client must wait for the
+     * server's upload/ready ack before sending any binary frames, so the
+     * server's `handleUploadCommit` length check doesn't reject with
+     * LENGTH_MISMATCH when commit races ahead of in-flight chunks.
+     *
+     * Stored here because [requestUpload] runs on a daemon thread while
+     * `upload/ready` arrives on the OkHttp WebSocket dispatcher; the
+     * latter thread cannot directly resume the former.
+     */
+    @Volatile
+    private var pendingChunksContinuation: ((WebSocket) -> Unit)? = null
+
     override val isOpen: Boolean get() = currentWs != null && currentTarget != null
 
     override fun connect(host: String, port: Int, token: String) {
@@ -81,6 +96,7 @@ class BridgeClientImpl @Inject constructor(
                 currentTarget = null
                 currentUploadSm = null
                 currentUploadSize = -1L
+                pendingChunksContinuation = null
             }
 
             override fun onClosed(ws: WebSocket, code: Int, reason: String) {
@@ -90,6 +106,7 @@ class BridgeClientImpl @Inject constructor(
                 currentTarget = null
                 currentUploadSm = null
                 currentUploadSize = -1L
+                pendingChunksContinuation = null
             }
         })
         currentWs = ws
@@ -132,11 +149,14 @@ class BridgeClientImpl @Inject constructor(
         currentUploadSize = data.size.toLong()
         events.tryEmit(BridgeEvent.UploadProgress(fileName, 0L))
 
-        // All upload work — SHA-256, upload/init text frame, binary chunk
-        // streaming, upload/commit — runs on this daemon thread so the
-        // calling thread (potentially UI for a click handler) isn't blocked
-        // by hashing a 100 MB file. OkHttp backpressure handles flow
-        // control; no Thread.sleep throttling.
+        // SHA-256 + upload/init run on this daemon thread so the calling
+        // thread (potentially UI for a click handler) isn't blocked by
+        // hashing a 100 MB file. The binary chunk stream is NOT sent
+        // here — it waits for the server's `upload/ready` ack (see
+        // pendingChunksContinuation), matching the Python reference
+        // (`ws_smoke_test.py` lines 114-124). Sending chunks eagerly
+        // races with the server's `handleUploadCommit` length check
+        // and trips LENGTH_MISMATCH.
         Thread {
             try {
                 val sha = try {
@@ -174,41 +194,51 @@ class BridgeClientImpl @Inject constructor(
                 liveWs.send(initJson.toString())
                 Log.d(TAG, "requestUpload: sent ${init.type} requestId=${init.requestId} size=${init.size}")
 
-                val chunkSize = 32 * 1024
-                var offset = 0
-                while (offset < data.size) {
-                    if (currentUploadSm == null) {
-                        Log.w(TAG, "upload aborted: disconnected mid-stream at $offset/${data.size}")
-                        return@Thread
+                // Register continuation that runs when the server's
+                // `upload/ready` arrives. The continuation streams
+                // binary chunks (32 KiB each) and sends `upload/commit`,
+                // exactly like the Python reference.
+                pendingChunksContinuation = runChunkStream@ { ws2 ->
+                    try {
+                        val chunkSize = 32 * 1024
+                        var offset = 0
+                        while (offset < data.size) {
+                            if (currentUploadSm == null) {
+                                Log.w(TAG, "upload aborted: disconnected mid-stream at $offset/${data.size}")
+                                return@runChunkStream
+                            }
+                            val end = minOf(offset + chunkSize, data.size)
+                            val chunk = ByteString.of(*data.copyOfRange(offset, end))
+                            val ok = ws2.send(chunk)
+                            if (!ok) {
+                                Log.w(TAG, "ws.send returned false at $offset/${data.size}")
+                                break
+                            }
+                            sm.onChunkSent(end - offset)
+                            offset = end
+                            events.tryEmit(BridgeEvent.UploadProgress(fileName, offset.toLong()))
+                        }
+                        if (offset >= data.size) {
+                            val commitSignals = sm.onCommit()
+                            val commit = commitSignals.filterIsInstance<UploadAction.SendText>().firstOrNull()
+                            if (commit == null) {
+                                Log.e(TAG, "requestUpload: state machine returned no commit action in phase=${sm.phase}")
+                                return@runChunkStream
+                            }
+                            val commitJson = JSONObject().apply {
+                                put("type", commit.type)
+                                put("requestId", commit.requestId)
+                                put("fileName", commit.fileName)
+                            }
+                            ws2.send(commitJson.toString())
+                            Log.d(TAG, "requestUpload: sent ${commit.type} for ${commit.fileName}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "chunk stream failed: ${e.message}", e)
                     }
-                    val end = minOf(offset + chunkSize, data.size)
-                    val chunk = ByteString.of(*data.copyOfRange(offset, end))
-                    val ok = liveWs.send(chunk)
-                    if (!ok) {
-                        Log.w(TAG, "ws.send returned false at $offset/${data.size}")
-                        break
-                    }
-                    sm.onChunkSent(end - offset)
-                    offset = end
-                    events.tryEmit(BridgeEvent.UploadProgress(fileName, offset.toLong()))
-                }
-                if (offset >= data.size) {
-                    val commitSignals = sm.onCommit()
-                    val commit = commitSignals.filterIsInstance<UploadAction.SendText>().firstOrNull()
-                    if (commit == null) {
-                        Log.e(TAG, "requestUpload: state machine returned no commit action in phase=${sm.phase}")
-                        return@Thread
-                    }
-                    val commitJson = JSONObject().apply {
-                        put("type", commit.type)
-                        put("requestId", commit.requestId)
-                        put("fileName", commit.fileName)
-                    }
-                    liveWs.send(commitJson.toString())
-                    Log.d(TAG, "requestUpload: sent ${commit.type} for ${commit.fileName}")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "upload send failed: ${e.message}", e)
+                Log.e(TAG, "upload init failed: ${e.message}", e)
             }
         }.apply { isDaemon = true }.start()
     }
@@ -246,6 +276,34 @@ class BridgeClientImpl @Inject constructor(
                     downloadSm.onServerReady(reqId, size = size, sha256 = sha)
                     events.tryEmit(BridgeEvent.DownloadStart(fn, size, sha))
                 }
+                "upload/ready" -> {
+                    val fn = obj.getString("fileName")
+                    val reqId = obj.optString("requestId", "")
+                    Log.d(TAG, "upload/ready: $fn requestId=$reqId")
+
+                    // Verify it matches our in-flight upload (defensive).
+                    // No early-return label is available here (no enclosing
+                    // `apply`/`run`), so use if/else to skip the rest.
+                    if (currentUploadSm?.requestId == reqId) {
+                        // Advance the SM: WAITING_READY → SENDING_CHUNKS
+                        currentUploadSm?.onServerReady()
+
+                        // Trigger the chunk-stream continuation registered
+                        // by requestUpload. Capture-and-null prevents a
+                        // stale continuation from firing after a later
+                        // onFailure / onClosed already cleared the ws.
+                        val cont = pendingChunksContinuation
+                        pendingChunksContinuation = null
+                        val ws = currentWs
+                        if (cont != null && ws != null) {
+                            cont(ws)
+                        } else {
+                            Log.w(TAG, "upload/ready: no continuation or no ws — aborting")
+                        }
+                    } else {
+                        Log.w(TAG, "upload/ready: requestId mismatch (have=${currentUploadSm?.requestId}, got=$reqId)")
+                    }
+                }
                 "download/done" -> {
                     val fn = obj.optString("fileName", "")
                     val reqId = obj.optString("requestId", "")
@@ -278,6 +336,7 @@ class BridgeClientImpl @Inject constructor(
                             else -> { /* no-op for now */ }
                         }
                     }
+                    pendingChunksContinuation = null
                     currentUploadSm = null
                     currentUploadSize = -1L
                 }

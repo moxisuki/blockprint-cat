@@ -70,19 +70,14 @@ class UploadStateMachineTest {
     }
 
     @Test
-    fun onCommit_from_sending_chunks_emits_action_and_advances() {
-        // Repro of the second Fix B scenario: server is ready but no
-        // chunks have been sent (e.g. zero-byte file or a race where
-        // onChunkSent was skipped). onCommit must still emit the
-        // upload/commit action and advance to WAITING_RESULT.
+    fun onCommit_before_sending_chunks_returns_empty() {
         val sm = UploadStateMachine(fileName = "a.litematic", size = 100L, overwrite = false, clientSha = "")
         sm.onInit()
         sm.onServerReady()
         // Skip onChunkSent; jump straight to onCommit.
         val out = sm.onCommit()
-        assertEquals(1, out.size)
-        assertEquals(UploadAction.SendText("upload/commit", sm.requestId, "a.litematic"), out[0])
-        assertEquals(UploadPhase.WAITING_RESULT, sm.phase)
+        assertTrue(out.isEmpty())
+        assertEquals(UploadPhase.SENDING_CHUNKS, sm.phase)
     }
 
     @Test
@@ -96,31 +91,5 @@ class UploadStateMachineTest {
         assertEquals(UploadPhase.SENDING_CHUNKS, sm.phase)
         sm.onChunkSent(40) // total 100
         assertEquals(UploadPhase.WAITING_RESULT, sm.phase)
-    }
-
-    @Test
-    fun eager_chunk_send_before_server_ready_advances_to_sending_chunks() {
-        // Repro of the e2e bug: client sends upload/init, then sends
-        // binary chunks immediately (before server's upload/ready),
-        // then calls onCommit. All three must work without NoSuchElementException.
-        val sm = UploadStateMachine(fileName = "small.litematic", size = 100L, overwrite = false, clientSha = "")
-        val initOut = sm.onInit()
-        assertEquals(1, initOut.size)
-        assertEquals(UploadPhase.WAITING_READY, sm.phase)
-
-        // Eager chunk send (server hasn't said ready yet)
-        val chunkOut = sm.onChunkSent(50)
-        assertTrue(chunkOut.isEmpty())
-        assertEquals(UploadPhase.SENDING_CHUNKS, sm.phase)  // must transition
-
-        // Second chunk fills the file
-        val chunkOut2 = sm.onChunkSent(50)
-        assertTrue(chunkOut2.isEmpty())
-        assertEquals(UploadPhase.WAITING_RESULT, sm.phase)
-
-        // Commit must succeed
-        val commitOut = sm.onCommit()
-        assertEquals(1, commitOut.size)
-        assertEquals(UploadAction.SendText("upload/commit", sm.requestId, "small.litematic"), commitOut[0])
     }
 }

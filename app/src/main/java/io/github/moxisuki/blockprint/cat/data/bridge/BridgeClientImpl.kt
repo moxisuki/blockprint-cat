@@ -287,6 +287,7 @@ class BridgeClientImpl @Inject constructor(
                     val sha = obj.optString("sha256", "")
                     val reqId = obj.optString("requestId", "")
                     downloadSm.onServerReady(reqId, size = size, sha256 = sha)
+                    Log.d(TAG, "download/ready: $fn size=$size reqId=$reqId → phase=${downloadSm.stateOf(reqId)?.phase}")
                     events.tryEmit(BridgeEvent.DownloadStart(fn, size, sha))
                 }
                 "upload/ready" -> {
@@ -374,14 +375,24 @@ class BridgeClientImpl @Inject constructor(
     }
 
     private fun handleBinary(data: ByteArray) {
+        Log.d(TAG, "recv binary: ${data.size} bytes")
         // v2 binary frames don't carry requestId. The download state machine
         // routes by the single RECEIVING download (UI mutex from Task 5 ensures
         // only one is in flight per connection).
         val out = downloadSm.onOrphanBinaryReceived(data)
+        if (out.isEmpty()) {
+            Log.w(TAG, "recv binary: no RECEIVING download (orphan/drop ${data.size} bytes)")
+        }
         out.forEach { signal ->
             when (signal) {
-                is DownloadEvent.Complete -> events.tryEmit(BridgeEvent.DownloadComplete(signal.fileName, signal.payload))
-                is DownloadEvent.Failed -> events.tryEmit(BridgeEvent.Error("DOWNLOAD_FAILED", "${signal.fileName}: ${signal.errorCode}"))
+                is DownloadEvent.Complete -> {
+                    Log.d(TAG, "recv binary: last chunk → DownloadComplete(${signal.fileName}, ${signal.payload.size}B)")
+                    events.tryEmit(BridgeEvent.DownloadComplete(signal.fileName, signal.payload))
+                }
+                is DownloadEvent.Failed -> {
+                    Log.w(TAG, "download failed: ${signal.fileName} ${signal.errorCode}")
+                    events.tryEmit(BridgeEvent.Error("DOWNLOAD_FAILED", "${signal.fileName}: ${signal.errorCode}"))
+                }
                 else -> { /* no-op */ }
             }
         }

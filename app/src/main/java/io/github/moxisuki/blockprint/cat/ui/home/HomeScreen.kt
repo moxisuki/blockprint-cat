@@ -103,9 +103,12 @@ import io.github.moxisuki.blockprint.cat.ui.bridge.ConnectionState
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcActionSheet
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcBlueprintCard
 import io.github.moxisuki.blockprint.cat.ui.bridge.TransferProgressBar
-import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
+import io.github.moxisuki.blockprint.cat.ui.format.BadgeColor
+import io.github.moxisuki.blockprint.cat.ui.format.FormatCatalog
+import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
 import io.github.moxisuki.blockprint.cat.ui.management.BlueprintViewModel
 import io.github.moxisuki.blockprint.cat.ui.management.ManagementEvent
+import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 
 private const val PAGE_SIZE = 15
@@ -722,8 +725,6 @@ private fun LocalBlueprintList(
     }
 }
 
-private enum class FormatFilter { All, Litematica, Schematic, Nbt, Json }
-
 @Composable
 private fun BlueprintFilterBar(
     query: String,
@@ -771,10 +772,10 @@ private fun BlueprintFilterBar(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             FormatChipFilter(label = stringResource(R.string.home_filter_format_all), selected = selected == FormatFilter.All) { onSelectedChange(FormatFilter.All) }
-            FormatChipFilter(label = "Litematica", selected = selected == FormatFilter.Litematica) { onSelectedChange(FormatFilter.Litematica) }
-            FormatChipFilter(label = "Schematic", selected = selected == FormatFilter.Schematic) { onSelectedChange(FormatFilter.Schematic) }
-            FormatChipFilter(label = "JSON", selected = selected == FormatFilter.Json) { onSelectedChange(FormatFilter.Json) }
-            FormatChipFilter(label = "NBT", selected = selected == FormatFilter.Nbt) { onSelectedChange(FormatFilter.Nbt) }
+            FormatChipFilter(label = stringResource(R.string.format_filter_litematica), selected = selected == FormatFilter.Litematica) { onSelectedChange(FormatFilter.Litematica) }
+            FormatChipFilter(label = stringResource(R.string.format_filter_schematic), selected = selected == FormatFilter.Schematic) { onSelectedChange(FormatFilter.Schematic) }
+            FormatChipFilter(label = stringResource(R.string.format_filter_json), selected = selected == FormatFilter.Json) { onSelectedChange(FormatFilter.Json) }
+            FormatChipFilter(label = stringResource(R.string.format_filter_nbt), selected = selected == FormatFilter.Nbt) { onSelectedChange(FormatFilter.Nbt) }
         }
     }
 }
@@ -795,23 +796,36 @@ private fun FormatChipFilter(label: String, selected: Boolean, onClick: () -> Un
     )
 }
 
+private fun formatShortLabelRes(format: io.github.moxisuki.blockprint.core.SchematicFormat): Int =
+    when (format) {
+        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica -> R.string.format_short_litematica
+        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge -> R.string.format_short_worldedit
+        io.github.moxisuki.blockprint.core.SchematicFormat.Structure -> R.string.format_short_nbt
+        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt -> R.string.format_short_nbt
+        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper -> R.string.format_short_building_helper
+        io.github.moxisuki.blockprint.core.SchematicFormat.Unknown -> R.string.format_short_unknown
+    }
+
 @Composable
 private fun FormatChip(format: io.github.moxisuki.blockprint.core.SchematicFormat) {
-    val (bg, label) = when (format) {
-        io.github.moxisuki.blockprint.core.SchematicFormat.Litematica ->
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) to "Litematica"
-        io.github.moxisuki.blockprint.core.SchematicFormat.Sponge ->
-            MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f) to "Schematic"
-        io.github.moxisuki.blockprint.core.SchematicFormat.Structure,
-        io.github.moxisuki.blockprint.core.SchematicFormat.PartialNbt,
-        io.github.moxisuki.blockprint.core.SchematicFormat.Unknown ->
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "NBT"
-        io.github.moxisuki.blockprint.core.SchematicFormat.BuildingHelper ->
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f) to "JSON"
+    val display = FormatCatalog.from(format)
+    val bg = when (display.badgeColor) {
+        BadgeColor.Primary -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        BadgeColor.Secondary -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
+        BadgeColor.Outline -> MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)
+        BadgeColor.Tertiary -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f)
     }
-    Box(Modifier.background(bg, RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    Box(
+        Modifier
+            .background(bg, RoundedCornerShape(4.dp))
+            .padding(horizontal = 5.dp, vertical = 1.dp),
+    ) {
+        Text(
+            stringResource(formatShortLabelRes(format)),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }
 

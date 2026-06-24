@@ -53,7 +53,7 @@ sealed class DownloadEvent : DownloadSignal {
         }
         override fun hashCode(): Int = fileName.hashCode() * 31 + payload.contentHashCode()
     }
-    data class Progress(val fileName: String, val bytes: Long) : DownloadEvent()
+    data class Failed(val fileName: String, val errorCode: String) : DownloadEvent()
 }
 
 /**
@@ -68,9 +68,6 @@ class DownloadStateMachine {
     fun newRequestId(): String = "dl-" + UUID.randomUUID().toString().take(8)
 
     fun stateOf(requestId: String): DownloadState? = states[requestId]
-
-    /** Returns the requestIds currently tracked, for routing orphan binary frames to a single active download. */
-    fun allRequestIds(): Set<String> = states.keys.toSet()
 
     /** Caller is about to send the `download` text frame. Create state eagerly so chunks/done can route by requestId. */
     fun onDownloadRequested(fileName: String, requestId: String, source: String?): List<DownloadSignal> {
@@ -104,9 +101,27 @@ class DownloadStateMachine {
         return emptyList()
     }
 
+    /**
+     * Route an inbound binary frame that doesn't carry requestId.
+     * Picks the single RECEIVING download (UI mutex ensures at most one exists).
+     * If none exists, drops. Returns the resulting signals.
+     */
+    fun onOrphanBinaryReceived(bytes: ByteArray): List<DownloadSignal> {
+        val active = states.values.firstOrNull { it.phase == DownloadPhase.RECEIVING }
+            ?: return emptyList()
+        return onBinaryReceived(active.requestId, bytes)
+    }
+
     fun onServerDone(requestId: String, ok: Boolean, bytes: Long, sha256: String?): List<DownloadSignal> {
         val s = states.remove(requestId) ?: return emptyList()
-        val payload = s.accumulator.toByteArray()
-        return listOf(DownloadEvent.Complete(s.fileName, payload))
+        if (!ok) {
+            return listOf(DownloadEvent.Failed(s.fileName, "SERVER_NOT_OK"))
+        }
+        // Optional: SHA-256 verification
+        val expected = s.sha256
+        if (expected.isNotBlank() && sha256 != null && sha256.isNotBlank() && !expected.equals(sha256, ignoreCase = true)) {
+            return listOf(DownloadEvent.Failed(s.fileName, "SHA_MISMATCH"))
+        }
+        return listOf(DownloadEvent.Complete(s.fileName, s.accumulator.toByteArray()))
     }
 }

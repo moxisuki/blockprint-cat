@@ -76,4 +76,30 @@ class DownloadStateMachineTest {
         val id = sm.newRequestId()
         assertTrue(id.matches(Regex("^dl-[0-9a-f]{8}$")))
     }
+
+    @Test
+    fun onServerDone_with_ok_false_emits_failed_event() {
+        val sm = DownloadStateMachine()
+        val r = "dl-44444444"
+        sm.onDownloadRequested("a.litematic", r, null)
+        sm.onServerReady(r, size = 100, sha256 = "h")
+        sm.onBinaryReceived(r, ByteArray(50))
+        val out = sm.onServerDone(r, ok = false, bytes = 50, sha256 = "h")
+        assertEquals(1, out.size)
+        assertTrue(out[0] is DownloadEvent.Failed)
+        assertNull(sm.stateOf(r))
+    }
+
+    @Test
+    fun onServerDone_with_sha_mismatch_emits_failed_event() {
+        val sm = DownloadStateMachine()
+        val r = "dl-55555555"
+        sm.onDownloadRequested("a.litematic", r, null)
+        sm.onServerReady(r, size = 10, sha256 = "deadbeef")
+        sm.onBinaryReceived(r, ByteArray(5))
+        val out = sm.onServerDone(r, ok = true, bytes = 5, sha256 = "cafebabe")
+        assertEquals(1, out.size)
+        assertTrue(out[0] is DownloadEvent.Failed)
+        assertEquals("SHA_MISMATCH", (out[0] as DownloadEvent.Failed).errorCode)
+    }
 }

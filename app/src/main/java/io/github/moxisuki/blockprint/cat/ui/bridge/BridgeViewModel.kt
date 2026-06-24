@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -46,6 +48,11 @@ class BridgeViewModel @Inject constructor(
 
     private val _transfers = MutableStateFlow<List<TransferItem>>(emptyList())
     val transfers: StateFlow<List<TransferItem>> = _transfers.asStateFlow()
+
+    val isTaskInFlight: StateFlow<Boolean> = _transfers
+        .map { isAnyTransferInFlight(it) }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _convertInFlight = MutableStateFlow(false)
     val convertInFlight: StateFlow<Boolean> = _convertInFlight.asStateFlow()
@@ -209,6 +216,11 @@ class BridgeViewModel @Inject constructor(
     fun requestDownload(fileName: String) {
         Log.d(TAG, "requestDownload($fileName)")
         if (_connectionState.value !is ConnectionState.Connected) return
+        if (isTaskInFlight.value) {
+            Log.w(TAG, "requestDownload: BUSY_LOCAL, ignoring $fileName")
+            _events.trySend(BridgeUiEvent.DownloadFailed(fileName, "BUSY_LOCAL"))
+            return
+        }
         addTransfer(TransferType.DOWNLOAD, fileName, 0L)
         currentDownloadId = transferSeq
         bridgeClient.requestDownload(fileName)
@@ -219,6 +231,11 @@ class BridgeViewModel @Inject constructor(
         if (_connectionState.value !is ConnectionState.Connected) {
             Log.w(TAG, "requestUpload: not connected, aborting")
             _events.trySend(BridgeUiEvent.UploadFailed(fileName, "NOT_CONNECTED"))
+            return
+        }
+        if (isTaskInFlight.value) {
+            Log.w(TAG, "requestUpload: BUSY_LOCAL, ignoring $fileName")
+            _events.trySend(BridgeUiEvent.UploadFailed(fileName, "BUSY_LOCAL"))
             return
         }
         addTransfer(TransferType.UPLOAD, fileName, data.size.toLong())
@@ -464,6 +481,18 @@ private fun PairedDeviceEntity.sessionInfoOrNull(): SessionInfo? {
     val fn = folderName ?: return null
     return SessionInfo(mcVersion = mc, loader = ld, loaderVersion = lv, folderName = fn)
 }
+
+/**
+ * Pure predicate: is any transfer item currently in the running phase?
+ * Extracted for unit testing — see `IsAnyTransferInFlightTest`.
+ *
+ * NOTE: Per the design spec, the mutex considers ONLY RUNNING transfers
+ * as "in-flight". DONE and FAILED transfers (even if still in the list
+ * during the 2-second display animation before removal) do NOT block new
+ * uploads/downloads.
+ */
+fun isAnyTransferInFlight(transfers: List<TransferItem>): Boolean =
+    transfers.any { it.phase == TransferPhase.RUNNING }
 
 enum class TransferType { DOWNLOAD, UPLOAD }
 

@@ -45,6 +45,7 @@ fun PcActionSheet(
     blueprint: RemoteBlueprint,
     onDownload: () -> Unit,
     onDismiss: () -> Unit,
+    enabled: Boolean = true,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -99,6 +100,7 @@ fun PcActionSheet(
 
             Button(
                 onClick = { onDownload(); onDismiss() },
+                enabled = enabled,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(14.dp),
             ) {

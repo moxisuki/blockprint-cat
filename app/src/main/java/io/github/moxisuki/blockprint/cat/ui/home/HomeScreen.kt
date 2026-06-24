@@ -160,6 +160,8 @@ fun HomeScreen(
     val pcEntries = (connectionState as? ConnectionState.Connected)?.entries ?: emptyList()
     val pcHost = (connectionState as? ConnectionState.Connected)?.host ?: ""
     val pcPort = (connectionState as? ConnectionState.Connected)?.port ?: 0
+    val inFlight by bridgeVm.isTaskInFlight.collectAsState()
+    val canTransfer = !inFlight && isBridgeConnected
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -452,6 +454,7 @@ fun HomeScreen(
                                 }
                             },
                             bridgeConnected = isBridgeConnected,
+                            canTransfer = canTransfer,
                             snackbarHostState = snackbarHostState,
                             filterVisible = localFilterVisible,
                             filterQuery = localFilterQuery,
@@ -529,7 +532,7 @@ fun HomeScreen(
                         }
                     }
                 }
-            }) {
+            }, enabled = canTransfer) {
                 Text(stringResource(R.string.action_confirm))
             }
         },
@@ -565,7 +568,7 @@ fun HomeScreen(
                                 scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.action_sync_failed, bp.fileName)) }
                             }
                         }
-                    }) { Text(stringResource(R.string.action_upload_anyway)) }
+                    }, enabled = canTransfer) { Text(stringResource(R.string.action_upload_anyway)) }
                     Spacer(Modifier.width(8.dp))
                     TextButton(onClick = { worldEditWarningBlueprint = null }) {
                         Text(stringResource(R.string.action_cancel))
@@ -575,7 +578,7 @@ fun HomeScreen(
         )
     }
     sheetTarget?.let { bp ->
-        PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName) }, onDismiss = { sheetTarget = null })
+        PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName) }, enabled = canTransfer, onDismiss = { sheetTarget = null })
     }
 }
 
@@ -624,7 +627,7 @@ private fun EmptyHomeState(modifier: Modifier = Modifier, onScanFolder: () -> Un
 }
 
 @Composable
-private fun HomeBlueprintCard(blueprint: BlueprintMeta, onDetail: () -> Unit, onDelete: () -> Unit, onRename: () -> Unit, onUpload: () -> Unit, connected: Boolean = false) {
+private fun HomeBlueprintCard(blueprint: BlueprintMeta, onDetail: () -> Unit, onDelete: () -> Unit, onRename: () -> Unit, onUpload: () -> Unit, connected: Boolean = false, canTransfer: Boolean = true) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onDetail() },
         shape = RoundedCornerShape(16.dp),
@@ -685,9 +688,9 @@ private fun HomeBlueprintCard(blueprint: BlueprintMeta, onDetail: () -> Unit, on
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onUpload, enabled = connected, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = onUpload, enabled = canTransfer, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Default.CloudUpload, stringResource(R.string.action_sync), modifier = Modifier.size(20.dp),
-                        tint = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                        tint = if (canTransfer) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
                 }
                 IconButton(onClick = onRename, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Default.Edit, stringResource(R.string.action_rename), modifier = Modifier.size(20.dp),
@@ -716,6 +719,7 @@ private fun LocalBlueprintList(
     onRenameTarget: (BlueprintMeta) -> Unit,
     onUpload: (BlueprintMeta) -> Unit,
     bridgeConnected: Boolean,
+    canTransfer: Boolean,
     snackbarHostState: SnackbarHostState,
     filterVisible: Boolean,
     filterQuery: String,
@@ -810,6 +814,7 @@ private fun LocalBlueprintList(
                             onRename = { onRenameTarget(bp) },
                             onUpload = { onUpload(bp) },
                             connected = bridgeConnected,
+                            canTransfer = canTransfer,
                         )
                     }
                     if (hasMore) {

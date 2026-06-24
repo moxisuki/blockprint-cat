@@ -35,6 +35,9 @@ class BridgeClientImpl @Inject constructor(
     private var currentTarget: Triple<String, Int, String>? = null
     private var currentWs: WebSocket? = null
     private var downloadingFileName: String? = null
+    private var currentUploadSm: UploadStateMachine? = null
+    private var currentUploadData: ByteArray? = null
+    private val downloadSm = DownloadStateMachine()
 
     override val isOpen: Boolean get() = currentWs != null && currentTarget != null
 
@@ -76,6 +79,8 @@ class BridgeClientImpl @Inject constructor(
                 events.tryEmit(BridgeEvent.Disconnected)
                 currentWs = null
                 currentTarget = null
+                currentUploadSm = null
+                currentUploadData = null
             }
 
             override fun onClosed(ws: WebSocket, code: Int, reason: String) {
@@ -83,6 +88,8 @@ class BridgeClientImpl @Inject constructor(
                 events.tryEmit(BridgeEvent.Disconnected)
                 currentWs = null
                 currentTarget = null
+                currentUploadSm = null
+                currentUploadData = null
             }
         })
         currentWs = ws
@@ -106,12 +113,13 @@ class BridgeClientImpl @Inject constructor(
     }
 
     override fun requestDownload(fileName: String) {
-        val id = "dl-${UUID.randomUUID().toString().take(8)}"
-        downloadingFileName = fileName
+        val requestId = downloadSm.newRequestId()
+        val signals = downloadSm.onDownloadRequested(fileName = fileName, requestId = requestId, source = null)
+        val sendText = signals.filterIsInstance<DownloadAction.SendText>().first()
         val msg = JSONObject().apply {
-            put("type", "download")
-            put("requestId", id)
-            put("fileName", fileName)
+            put("type", sendText.type)
+            put("requestId", sendText.requestId)
+            put("fileName", sendText.fileName)
         }
         send(msg.toString())
     }
@@ -129,37 +137,56 @@ class BridgeClientImpl @Inject constructor(
             Log.w(TAG, "SHA-256 failed: ${e.message}")
             ""
         }
-        val msg = JSONObject().apply {
-            put("type", "upload")
-            put("fileName", fileName)
-            put("size", data.size)
-            put("sha256", sha)
-            put("overwrite", overwrite.toString())
+        val sm = UploadStateMachine(fileName = fileName, size = data.size.toLong(), overwrite = overwrite, clientSha = sha)
+        currentUploadSm = sm
+        currentUploadData = data
+
+        val initSignals = sm.onInit()
+        val init = initSignals.filterIsInstance<UploadAction.SendText>().first()
+        val initJson = JSONObject().apply {
+            put("type", init.type)
+            put("requestId", init.requestId)
+            put("fileName", init.fileName)
+            put("size", init.size)
+            put("overwrite", init.overwrite.toString())
+            if (!init.sha256.isNullOrBlank()) put("sha256", init.sha256)
         }
-        ws.send(msg.toString())
-        // 分块发送以提供进度反馈（OkHttp WebSocket send 是非阻塞写入底层 socket，
-        // 真正发送字节数不可见；按字节切片并让出线程，使其他协程能观察到中间状态）
-        val total = data.size.toLong()
-        val chunkSize = 32 * 1024
-        events.tryEmit(BridgeEvent.UploadProgress(fileName, 0L))
+        ws.send(initJson.toString())
+        Log.d(TAG, "requestUpload: sent ${init.type} requestId=${init.requestId} size=${init.size}")
+
+        // Stream chunks in a background thread. The v2 spec allows
+        // binary chunks immediately after upload/init — server buffers
+        // them in uploadAccumulator until upload/ready then upload/commit.
+        // We send chunks eagerly (no Thread.sleep throttling — OkHttp
+        // backpressure handles flow control). After all chunks sent,
+        // emit upload/commit text frame.
         Thread {
             try {
+                val chunkSize = 32 * 1024
                 var offset = 0
+                events.tryEmit(BridgeEvent.UploadProgress(fileName, 0L))
                 while (offset < data.size) {
                     val end = minOf(offset + chunkSize, data.size)
                     val chunk = ByteString.of(*data.copyOfRange(offset, end))
                     val ok = ws.send(chunk)
                     if (!ok) {
-                        Log.w(TAG, "ws.send returned false at $offset/$total")
+                        Log.w(TAG, "ws.send returned false at $offset/${data.size}")
                         break
                     }
+                    sm.onChunkSent(end - offset)
                     offset = end
                     events.tryEmit(BridgeEvent.UploadProgress(fileName, offset.toLong()))
-                    // 节流：每块之间 sleep 让 UI 有时间显示进度
-                    Thread.sleep(40)
                 }
                 if (offset >= data.size) {
-                    events.tryEmit(BridgeEvent.UploadProgress(fileName, total))
+                    val commitSignals = sm.onCommit()
+                    val commit = commitSignals.filterIsInstance<UploadAction.SendText>().first()
+                    val commitJson = JSONObject().apply {
+                        put("type", commit.type)
+                        put("requestId", commit.requestId)
+                        put("fileName", commit.fileName)
+                    }
+                    ws.send(commitJson.toString())
+                    Log.d(TAG, "requestUpload: sent ${commit.type} for ${commit.fileName}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "upload send failed: ${e.message}", e)
@@ -192,17 +219,56 @@ class BridgeClientImpl @Inject constructor(
                         events.tryEmit(BridgeEvent.ListChanged(session, entries))
                     }
                 }
-                "download/start" -> {
+                "download/ready" -> {
                     val fn = obj.getString("fileName")
                     val size = obj.optLong("size", -1L)
                     val sha = obj.optString("sha256", "")
+                    val reqId = obj.optString("requestId", "")
+                    downloadSm.onServerReady(reqId, size = size, sha256 = sha)
                     events.tryEmit(BridgeEvent.DownloadStart(fn, size, sha))
+                }
+                "download/done" -> {
+                    val fn = obj.optString("fileName", "")
+                    val reqId = obj.optString("requestId", "")
+                    val ok = obj.optBoolean("ok", false)
+                    val bytes = obj.optLong("bytes", 0L)
+                    val sha = obj.optString("sha256", "")
+                    val out = downloadSm.onServerDone(reqId, ok = ok, bytes = bytes, sha256 = sha)
+                    out.forEach { signal ->
+                        when (signal) {
+                            is DownloadEvent.Complete -> events.tryEmit(BridgeEvent.DownloadComplete(signal.fileName, signal.payload))
+                            is DownloadEvent.Failed -> {
+                                Log.w(TAG, "download failed: ${signal.fileName} ${signal.errorCode}")
+                                // TODO Task 4 doesn't add a new BridgeEvent for failed download yet;
+                                // emit a generic Error event so BridgeViewModel surfaces it.
+                                events.tryEmit(BridgeEvent.Error("DOWNLOAD_FAILED", "${signal.fileName}: ${signal.errorCode}"))
+                            }
+                            else -> { /* no-op */ }
+                        }
+                    }
+                    downloadingFileName = null
                 }
                 "upload/result" -> {
                     val fn = obj.optString("fileName", "")
                     val ok = obj.optBoolean("ok", false)
-                    val err = obj.optString("errorCode", "").takeIf { it.isNotBlank() }
-                    events.tryEmit(BridgeEvent.UploadResult(fn, ok, err))
+                    val err = obj.optString("error", "").takeIf { it.isNotBlank() }
+                    val sha = obj.optString("sha256", "").takeIf { it.isNotBlank() }
+                    currentUploadSm?.onResult(ok = ok, errorCode = err, sha256 = sha)?.forEach { signal ->
+                        when (signal) {
+                            is UploadEvent.Result -> events.tryEmit(BridgeEvent.UploadResult(signal.fileName, signal.ok, signal.errorCode))
+                            else -> { /* no-op for now */ }
+                        }
+                    }
+                    currentUploadSm = null
+                    currentUploadData = null
+                }
+                "upload/done" -> {
+                    // upload/done is informational only — just log the final SHA.
+                    val sha = obj.optString("sha256", "")
+                    val fn = obj.optString("fileName", "")
+                    Log.d(TAG, "upload/done: $fn sha=${sha.take(16)}...")
+                    currentUploadData = null
+                    currentUploadSm = null
                 }
                 "error" -> {
                     events.tryEmit(BridgeEvent.Error(
@@ -217,11 +283,16 @@ class BridgeClientImpl @Inject constructor(
     }
 
     private fun handleBinary(data: ByteArray) {
-        val fn = downloadingFileName
-        if (fn != null) {
-            Log.d(TAG, "recv binary: ${data.size} bytes for $fn")
-            downloadingFileName = null
-            events.tryEmit(BridgeEvent.DownloadComplete(fn, data))
+        // v2 binary frames don't carry requestId. The download state machine
+        // routes by the single RECEIVING download (UI mutex from Task 5 ensures
+        // only one is in flight per connection).
+        val out = downloadSm.onOrphanBinaryReceived(data)
+        out.forEach { signal ->
+            when (signal) {
+                is DownloadEvent.Complete -> events.tryEmit(BridgeEvent.DownloadComplete(signal.fileName, signal.payload))
+                is DownloadEvent.Failed -> events.tryEmit(BridgeEvent.Error("DOWNLOAD_FAILED", "${signal.fileName}: ${signal.errorCode}"))
+                else -> { /* no-op */ }
+            }
         }
     }
 

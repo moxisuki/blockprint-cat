@@ -296,7 +296,7 @@ class BridgeViewModel @Inject constructor(
                 if (event.ok) {
                     _events.trySend(BridgeUiEvent.UploadSucceeded(event.fileName))
                 } else {
-                    _events.trySend(BridgeUiEvent.UploadFailed(event.fileName, event.errorCode ?: getApplication<android.app.Application>().getString(R.string.bridge_error_unknown)))
+                    _events.trySend(BridgeUiEvent.UploadFailed(event.fileName, event.error ?: getApplication<android.app.Application>().getString(R.string.bridge_error_unknown)))
                 }
             }
             is BridgeEvent.UploadProgress -> {

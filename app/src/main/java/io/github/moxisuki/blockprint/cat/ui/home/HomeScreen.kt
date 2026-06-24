@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -210,6 +211,7 @@ fun HomeScreen(
             BoxWithConstraints(
                 modifier = Modifier
                     .width(CapsuleWidth)
+                    .height(34.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
             ) {
@@ -229,13 +231,16 @@ fun HomeScreen(
                 // because they're derived from a clamped input.
                 val pagePosClamped = pagePos.coerceIn(0f, 1f)
 
-                // 底层滑块。padding(3dp) 视觉上和原版"选中 Box 外缘 3dp"对齐。
+                // 底层滑块。padding(SliderInset) (3dp 上下) 让 slider 视觉上和原版"选中 Box 外缘 3dp"对齐。
+                // slider 28dp + padding 6dp = 34dp 撑起 BoxWithConstraints；这样 capsule 高度
+                // 始终 34dp，跟按钮组高度变化（expandVertically/shrinkVertically）解耦，
+                // 切换 tab 时 capsule 不会上下抖动。
                 val sliderOffsetPx = pagePosClamped * tabWidthPx
                 Box(
                     modifier = Modifier
                         .padding(SliderInset)
                         .width(tabWidthDp - SliderInset * 2)
-                        .height(28.dp)              // 文字 labelMedium + 上下 6dp ≈ 28dp
+                        .height(28.dp)
                         .offset { IntOffset(sliderOffsetPx.roundToInt(), 0) }
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.primary),
@@ -252,15 +257,14 @@ fun HomeScreen(
                 ) {
                     listOf(R.string.home_tab_local to 0, R.string.home_tab_pc to 1).forEach { (labelRes, tab) ->
                         val label = stringResource(labelRes)
-                        // tab 0 的 coverage：pagePos = 0 → 1（完全白）；pagePos = 1 → 0（完全灰）
-                        // tab 1 的 coverage：pagePos = 0 → 0；pagePos = 1 → 1
                         val coverage = if (tab == 0) coverage0 else coverage1
                         val textColor = lerp(unselectedColor, selectedColor, coverage)
                         Box(
                             modifier = Modifier
                                 .weight(1f)
+                                .fillMaxHeight()
                                 .clickable { onTabClick(tab) }
-                                .padding(horizontal = 20.dp, vertical = 6.dp),
+                                .padding(horizontal = 20.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -303,8 +307,11 @@ fun HomeScreen(
             )
             AnimatedVisibility(
                 visible = selectedTab == 0,
-                enter = expandVertically(animationSpec = tween(180)) + fadeIn(animationSpec = tween(180)),
-                exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(140)),
+                // Don't shrink on exit — that would let the row's height collapse,
+                // pulling the pill out of verticalAlignment.CenterVertically and
+                // making the capsule jitter as the user swipes between tabs.
+                enter = fadeIn(animationSpec = tween(180)),
+                exit = fadeOut(animationSpec = tween(140)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(

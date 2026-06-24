@@ -18,7 +18,7 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         exclusiveContent {
-            forRepositories(/* mavenLocal(), */ mavenCentral())
+            forRepositories(mavenLocal(), mavenCentral())
             filter {
                 includeGroup("io.github.moxisuki")
             }

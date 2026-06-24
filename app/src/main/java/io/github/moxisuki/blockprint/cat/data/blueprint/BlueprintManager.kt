@@ -281,13 +281,14 @@ class BlueprintManager @Inject constructor(
     }
 
     private suspend fun resolveUniqueName(name: String): String {
-        if (!storage.exists(name)) return name
+        val existing: Set<String> = storage.list().map { it.name }.toHashSet()
+        if (name !in existing) return name
         val dot = name.lastIndexOf('.')
         val base = if (dot > 0) name.substring(0, dot) else name
         val ext = if (dot > 0) name.substring(dot) else ""
         for (s in 1..999) {
             val candidate = "$base-$s$ext"
-            if (!storage.exists(candidate)) return candidate
+            if (candidate !in existing) return candidate
         }
         return "$base-${System.currentTimeMillis()}$ext"
     }

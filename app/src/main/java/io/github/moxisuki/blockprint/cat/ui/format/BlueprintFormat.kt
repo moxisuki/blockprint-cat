@@ -104,10 +104,16 @@ object FormatCatalog {
     }
 
     /**
-     * The 4 writable convert targets (Litematica / Sponge / Structure /
-     * BuildingHelper), excluding the format that matches [current]. PartialNbt
-     * and Unknown are NOT valid convert targets — they are read-side
-     * categories that BlueprintConverter rejects — so they never appear here.
+     * The writable convert targets (Litematica / Sponge / Structure),
+     * excluding the format that matches [current]. PartialNbt and Unknown
+     * are NOT valid convert targets — they are read-side categories that
+     * BlueprintConverter rejects — so they never appear here.
+     *
+     * BuildingHelper(.json) is also currently excluded — bidirectional
+     * conversion involving BuildingHelper is temporarily disabled (see
+     * caller-side `current == BuildingHelper` → empty-list guard). When
+     * it's re-enabled, just add `SchematicFormat.BuildingHelper` back to
+     * the [writable] list below.
      *
      * Used by the convert dialog to render its radio rows. The caller is
      * responsible for showing these labels via `stringResource` (for i18n)
@@ -119,8 +125,13 @@ object FormatCatalog {
             SchematicFormat.Litematica,
             SchematicFormat.Sponge,
             SchematicFormat.Structure,
-            SchematicFormat.BuildingHelper,
         )
+        // BuildingHelper is excluded as a convert target AND as a convert
+        // source — i.e. when the current format is BuildingHelper, no
+        // conversion is offered. Until the bidirectional BuildingHelper
+        // round-trip is re-enabled, callers should treat an empty list as
+        // "no convert available for this blueprint" and hide the entry point.
+        if (current == SchematicFormat.BuildingHelper) return emptyList()
         return writable
             .filter { it != current }
             .map { from(it) }

@@ -99,13 +99,21 @@ fun BlueprintDetailScreen(
     var convertSelected by remember { mutableIntStateOf(0) }
     val currentFormat = uiState.fullBlueprint?.meta?.format
         ?: io.github.moxisuki.blockprint.core.SchematicFormat.Unknown
+    val convertTargets = remember(currentFormat) {
+        FormatCatalog.convertTargetsExcluding(currentFormat)
+    }
+    val hasConvertTarget = convertTargets.isNotEmpty()
     val openConvertDialog = {
-        convertSelected = 0
-        showConvertDialog = true
+        // BuildingHelper is currently disabled as a convert source — guard
+        // here so the user never sees an empty dialog or a crash.
+        if (convertTargets.isNotEmpty()) {
+            convertSelected = 0
+            showConvertDialog = true
+        }
     }
     val convertRunning by bridgeViewModel.convertInFlight.collectAsState()
     val runConvert = {
-        val targets = FormatCatalog.convertTargetsExcluding(currentFormat)
+        val targets = convertTargets
         val display = targets.getOrNull(convertSelected)
             ?: error("convertSelected $convertSelected out of range for ${targets.size} targets")
         val target = display.schematicFormat
@@ -188,7 +196,7 @@ fun BlueprintDetailScreen(
                                 label = stringResource(R.string.detail_meta_format),
                                 value = formatDisplayName(bp.meta.format),
                                 actionContentDescription = stringResource(R.string.detail_convert_action),
-                                enabled = !convertRunning,
+                                enabled = !convertRunning && hasConvertTarget,
                                 onActionClick = openConvertDialog,
                             )
                         }
@@ -882,13 +890,21 @@ fun BlueprintDetailContent(
     var convertSelected by remember { mutableIntStateOf(0) }
     val currentFormat = uiState.fullBlueprint?.meta?.format
         ?: io.github.moxisuki.blockprint.core.SchematicFormat.Unknown
+    val convertTargets = remember(currentFormat) {
+        FormatCatalog.convertTargetsExcluding(currentFormat)
+    }
+    val hasConvertTarget = convertTargets.isNotEmpty()
     val openConvertDialog = {
-        convertSelected = 0
-        showConvertDialog = true
+        // BuildingHelper is currently disabled as a convert source — guard
+        // here so the user never sees an empty dialog or a crash.
+        if (convertTargets.isNotEmpty()) {
+            convertSelected = 0
+            showConvertDialog = true
+        }
     }
     val convertRunning by bridgeViewModel.convertInFlight.collectAsState()
     val runConvert = {
-        val targets = FormatCatalog.convertTargetsExcluding(currentFormat)
+        val targets = convertTargets
         val display = targets.getOrNull(convertSelected)
             ?: error("convertSelected $convertSelected out of range for ${targets.size} targets")
         val target = display.schematicFormat

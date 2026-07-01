@@ -115,14 +115,21 @@ internal data class NavGraphFlags(
     val isQrScanner: Boolean,
     val isCommunitySettings: Boolean,
     val connectionState: ConnectionState,
-    val communityState: io.github.moxisuki.blockprint.cat.ui.community.CommunityListState,
+    // Community fields are flattened to stable primitives so this data class
+    // stays Stable. The previous single `communityState: CommunityListState`
+    // field was Unstable because CommunityListState's `mcs` / `cms`
+    // (PerSourceState) carry `schematics: List<...>` which the Kotlin
+    // compiler can't prove immutable.
+    val communityCurrentSource: io.github.moxisuki.blockprint.cat.data.community.CommunitySource,
+    val communityReady: Boolean,
+    val communityHeatSort: Boolean,
+    val pcEntriesCount: Int,
 ) {
     val isBridgeConnected: Boolean = connectionState is ConnectionState.Connected
     val isBridgeConnecting: Boolean = connectionState is ConnectionState.Connecting
     val pcSession: io.github.moxisuki.blockprint.cat.data.bridge.SessionInfo? =
         (connectionState as? ConnectionState.Connected)?.session
-    val pcEntries: List<RemoteBlueprint> =
-        (connectionState as? ConnectionState.Connected)?.entries ?: emptyList()
+    val hasPcEntries: Boolean = pcEntriesCount > 0
 
     val showBottomBar: Boolean =
         !isDetail && !isRender && !isPreview && !isCommunityDetail &&
@@ -152,6 +159,11 @@ private fun rememberNavGraphFlags(
 
     return remember(currentDestination, connectionState, communityState) {
         val route = currentDestination?.route
+        val connected = connectionState as? ConnectionState.Connected
+        // Flatten CommunityListState into stable primitives here, before
+        // constructing NavGraphFlags. If we put `communityState` (Unstable)
+        // on the data class, the whole class loses skip-ability.
+        val active = communityState.active
         NavGraphFlags(
             route = route,
             isHome = route == NavRoutes.HOME,
@@ -167,7 +179,10 @@ private fun rememberNavGraphFlags(
             isQrScanner = route == NavRoutes.QR_SCANNER,
             isCommunitySettings = route == NavRoutes.COMMUNITY_SETTINGS,
             connectionState = connectionState,
-            communityState = communityState,
+            communityCurrentSource = communityState.currentSource,
+            communityReady = active.ready,
+            communityHeatSort = active.heatSort,
+            pcEntriesCount = connected?.entries?.size ?: 0,
         )
     }
 }
@@ -285,7 +300,8 @@ private fun PadLayout(
     }
 
     val padOnCommunity = flags.isCommunity
-    val padActive = flags.communityState.active
+    val padActiveReady = flags.communityReady
+    val padActiveHeatSort = flags.communityHeatSort
 
     val padFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { onImportSafer(it) }
@@ -298,15 +314,15 @@ private fun PadLayout(
                     AppTopBar(
                         title = topBarTitle,
                         showBackButton = flags.showBackButton,
-                        showCommunityActions = padOnCommunity && padActive.ready,
-                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
+                        showCommunityActions = padOnCommunity && padActiveReady,
+                        showLogout = flags.communityCurrentSource == CommunitySource.MCS,
                         onCommunity = padOnCommunity,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
                         onRefresh = { communityVm.refresh() },
                         onLogout = { communityVm.logout(); communityVm.refreshLoginState() },
                         onBack = { navController.popBackStack() },
-                        isHeatSort = padActive.heatSort,
+                        isHeatSort = padActiveHeatSort,
                         actions = {
                             IconButton(onClick = { navController.navigate(NavRoutes.CONNECTION) }) {
                                 Box(
@@ -326,15 +342,15 @@ private fun PadLayout(
                     AppTopBar(
                         title = topBarTitle,
                         showBackButton = flags.showBackButton,
-                        showCommunityActions = padOnCommunity && padActive.ready,
-                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
+                        showCommunityActions = padOnCommunity && padActiveReady,
+                        showLogout = flags.communityCurrentSource == CommunitySource.MCS,
                         onCommunity = padOnCommunity,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
                         onRefresh = { communityVm.refresh() },
                         onLogout = { communityVm.logout(); communityVm.refreshLoginState() },
                         onBack = { navController.popBackStack() },
-                        isHeatSort = padActive.heatSort,
+                        isHeatSort = padActiveHeatSort,
                     )
                 }
             }
@@ -623,7 +639,8 @@ private fun CompactLayout(
     val showMainTopBar = !flags.isSettings && !isPreviewFullscreen
 
     val onCommunity2 = flags.isCommunity
-    val active2 = flags.communityState.active
+    val active2Ready = flags.communityReady
+    val active2HeatSort = flags.communityHeatSort
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -633,15 +650,15 @@ private fun CompactLayout(
                     AppTopBar(
                         title = topBarTitle,
                         showBackButton = flags.showBackButton,
-                        showCommunityActions = onCommunity2 && active2.ready,
-                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
+                        showCommunityActions = onCommunity2 && active2Ready,
+                        showLogout = flags.communityCurrentSource == CommunitySource.MCS,
                         onCommunity = onCommunity2,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
                         onRefresh = { communityVm.refresh() },
                         onLogout = { communityVm.logout(); communityVm.refreshLoginState() },
                         onBack = { navController.popBackStack() },
-                        isHeatSort = active2.heatSort,
+                        isHeatSort = active2HeatSort,
                         actions = {
                             IconButton(onClick = { navController.navigate(NavRoutes.CONNECTION) }) {
                                 Box(
@@ -663,15 +680,15 @@ private fun CompactLayout(
                     AppTopBar(
                         title = topBarTitle,
                         showBackButton = flags.showBackButton,
-                        showCommunityActions = onCommunity2 && active2.ready,
-                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
+                        showCommunityActions = onCommunity2 && active2Ready,
+                        showLogout = flags.communityCurrentSource == CommunitySource.MCS,
                         onCommunity = onCommunity2,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
                         onRefresh = { communityVm.refresh() },
                         onLogout = { communityVm.logout(); communityVm.refreshLoginState() },
                         onBack = { navController.popBackStack() },
-                        isHeatSort = active2.heatSort,
+                        isHeatSort = active2HeatSort,
                     )
                 }
             }

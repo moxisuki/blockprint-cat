@@ -13,6 +13,24 @@ val localProps = Properties().apply {
     if (f.exists()) load(f.inputStream())
 }
 
+// Compose Compiler Reports — 开启稳定性推断 + 重组次数统计
+// 输出到 app/build/compose_reports/ + app/build/compose_metrics/
+// 加 `-Pplugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=...`
+// 触发后跑 ./gradlew :app:assembleDebug 即可生成 app_release-classes.txt 等
+// 用来定位 unstable class / restartable-but-not-skippable Composable
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-P",
+            "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=" +
+                layout.buildDirectory.dir("compose_reports").get().asFile.absolutePath,
+            "-P",
+            "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=" +
+                layout.buildDirectory.dir("compose_metrics").get().asFile.absolutePath,
+        )
+    }
+}
+
 android {
     namespace = "io.github.moxisuki.blockprint.cat"
     compileSdk {

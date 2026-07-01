@@ -198,7 +198,14 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
             ) {
                 val tabWidthDp = maxWidth / 2
-                val tabWidthPx = with(LocalDensity.current) { tabWidthDp.toPx() }
+                // Cache the dp→px conversion: maxWidth is stable per BoxWithConstraints
+                // re-measure, but `with(LocalDensity.current) {...}` is a Composable call.
+                // Hoist the density read into a normal val (Composable context) and let
+                // the remember lambda only do the pure conversion.
+                val density = LocalDensity.current
+                val tabWidthPx = remember(maxWidth, density) {
+                    with(density) { tabWidthDp.toPx() }
+                }
 
                 val pagePos by remember(pagerState) {
                     derivedStateOf {

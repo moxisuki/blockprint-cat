@@ -155,13 +155,12 @@ fun BlockPrintCatAppContent(
     val view = LocalView.current
 
     val themeState by themeManager.themeState.collectAsState()
-    val colorScheme = themeManager.colorSchemeFor(
-        when (themeState.mode) {
-            ThemeManager.MODE_DARK -> true
-            ThemeManager.MODE_LIGHT -> false
-            else -> isSystemInDarkTheme()
-        }
-    )
+    val resolvedDark = when (themeState.mode) {
+        ThemeManager.MODE_DARK -> true
+        ThemeManager.MODE_LIGHT -> false
+        else -> isSystemInDarkTheme()
+    }
+    val colorScheme = themeManager.colorSchemeFor(resolvedDark)
 
     var detailTitle by remember { mutableStateOf("") }
     var isPreviewFullscreen by remember { mutableStateOf(false) }
@@ -174,8 +173,12 @@ fun BlockPrintCatAppContent(
         if (isPreviewFullscreen) return@SideEffect
         val window = (view.context as? android.app.Activity)?.window
         if (window != null) {
+            // Use the *resolved* dark/light state (mode may be MODE_SYSTEM,
+            // which delegates to isSystemInDarkTheme). The old `mode != DARK`
+            // check mis-classified system-follow + system-dark as light and
+            // rendered dark status-bar icons on a dark surface.
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
-                themeState.mode != ThemeManager.MODE_DARK
+                !resolvedDark
             window.statusBarColor = colorScheme.surface.toArgb()
         }
     }

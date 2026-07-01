@@ -2,9 +2,10 @@
 -keep class dagger.hilt.** { *; }
 -keep class javax.inject.** { *; }
 -keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
--keep class com.github.moxisuki.litematiccat.*_HiltComponents { *; }
--keep class com.github.moxisuki.litematiccat.*_MembersInjector { *; }
--keep class com.github.moxisuki.litematiccat.*_Factory { *; }
+-keep class io.github.moxisuki.blockprint.cat.*_HiltComponents { *; }
+-keep class io.github.moxisuki.blockprint.cat.*_MembersInjector { *; }
+-keep class io.github.moxisuki.blockprint.cat.*_Factory { *; }
+-keep class io.github.moxisuki.blockprint.cat.**_HiltModules$* { *; }
 -keep class * extends dagger.hilt.android.lifecycle.HiltViewModelFactory { *; }
 -keep @dagger.hilt.android.HiltAndroidApp class * { *; }
 -keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
@@ -14,13 +15,14 @@
 -keep class * extends androidx.room.RoomDatabase
 -keep @androidx.room.Entity class * { *; }
 -keep @androidx.room.Dao class * { *; }
--keep class com.github.moxisuki.litematiccat.data.BlueprintEntity { *; }
--keep class com.github.moxisuki.litematiccat.data.AppDatabase { *; }
--keep class com.github.moxisuki.litematiccat.data.BlueprintDao { *; }
-
-# Room — preserve generated impls
--keep class com.github.moxisuki.litematiccat.data.AppDatabase_Impl { *; }
--keep class com.github.moxisuki.litematiccat.data.BlueprintDao_Impl { *; }
+-keep class io.github.moxisuki.blockprint.cat.data.AppDatabase { *; }
+# DAO _Impl classes are generated for every @Dao across these subpackages:
+-keep class io.github.moxisuki.blockprint.cat.data.blueprint.*_Impl { *; }
+-keep class io.github.moxisuki.blockprint.cat.data.bridge.*_Impl { *; }
+-keep class io.github.moxisuki.blockprint.cat.data.community.*_Impl { *; }
+-keep class io.github.moxisuki.blockprint.cat.data.render.*_Impl { *; }
+-keep class io.github.moxisuki.blockprint.cat.data.vanilla.*_Impl { *; }
+-keep class io.github.moxisuki.blockprint.cat.data.AppDatabase_Impl { *; }
 
 # Coil
 -keep class coil.** { *; }
@@ -54,12 +56,9 @@
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 
 # Data classes — keep all fields for JSON/Hilt/Room
--keep class com.github.moxisuki.litematiccat.data.** { *; }
--keep class com.github.moxisuki.litematiccat.data.bridge.** { *; }
--keep class com.github.moxisuki.litematiccat.data.community.** { *; }
--keep class com.github.moxisuki.litematiccat.data.repository.** { *; }
--keep class com.github.moxisuki.litematiccat.di.** { *; }
--keep class com.github.moxisuki.litematiccat.ui.** { *; }
+-keep class io.github.moxisuki.blockprint.cat.data.** { *; }
+-keep class io.github.moxisuki.blockprint.cat.di.** { *; }
+-keep class io.github.moxisuki.blockprint.cat.ui.** { *; }
 
 # WebView — preserve JavaScript interface if used
 -keepclassmembers class * {

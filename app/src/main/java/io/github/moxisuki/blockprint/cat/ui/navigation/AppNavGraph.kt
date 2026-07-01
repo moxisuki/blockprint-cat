@@ -62,6 +62,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import io.github.moxisuki.blockprint.cat.R
+import io.github.moxisuki.blockprint.cat.data.bridge.RemoteBlueprint
 import io.github.moxisuki.blockprint.cat.data.community.CommunitySource
 import io.github.moxisuki.blockprint.cat.ui.adaptive.AdaptiveNavRail
 import io.github.moxisuki.blockprint.cat.ui.animation.AnimSpec
@@ -82,6 +83,94 @@ import io.github.moxisuki.blockprint.cat.ui.settings.AboutScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.CommunitySettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.SettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.TermsScreen
+
+/**
+ * Derived state shared between Pad and Compact layout branches.
+ *
+ * Both branches used to re-derive the same 11 route booleans + connection /
+ * community state from the navigation controller and ViewModels on every
+ * recomposition. Hoisting the derivation:
+ *   1. Halves the recomputation cost on every nav / VM emission
+ *   2. Eliminates the risk of one branch using a slightly different route
+ *      matcher (the previous `isHome` derivation was missing in PadLayout)
+ *   3. Makes it easy to add a new route by editing one place
+ *
+ * `showBottomBar` / `showBackButton` are stored vals (not `get()`) so the
+ * data class can be passed as a stable argument into the layout functions.
+ * `isBridgeConnected` / `pcSession` / `pcEntries` are derived from
+ * [connectionState] in one place so all consumers see the same snapshot.
+ */
+internal data class NavGraphFlags(
+    val route: String?,
+    val isHome: Boolean,
+    val isDetail: Boolean,
+    val isPreview: Boolean,
+    val isSettings: Boolean,
+    val isRender: Boolean,
+    val isCommunity: Boolean,
+    val isCommunityDetail: Boolean,
+    val isCommunityLogin: Boolean,
+    val isAbout: Boolean,
+    val isTerms: Boolean,
+    val isQrScanner: Boolean,
+    val isCommunitySettings: Boolean,
+    val connectionState: ConnectionState,
+    val communityState: io.github.moxisuki.blockprint.cat.ui.community.CommunityListState,
+) {
+    val isBridgeConnected: Boolean = connectionState is ConnectionState.Connected
+    val isBridgeConnecting: Boolean = connectionState is ConnectionState.Connecting
+    val pcSession: io.github.moxisuki.blockprint.cat.data.bridge.SessionInfo? =
+        (connectionState as? ConnectionState.Connected)?.session
+    val pcEntries: List<RemoteBlueprint> =
+        (connectionState as? ConnectionState.Connected)?.entries ?: emptyList()
+
+    val showBottomBar: Boolean =
+        !isDetail && !isRender && !isPreview && !isCommunityDetail &&
+            !isCommunityLogin && !isAbout && !isTerms && !isQrScanner && !isCommunitySettings
+
+    val showBackButton: Boolean =
+        isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin ||
+            isAbout || isTerms || isQrScanner || isCommunitySettings
+}
+
+/**
+ * Single-shot collector for everything both layout branches need. Wraps
+ * the destination + connection + community derivations in a `remember`
+ * keyed on the three reactive sources so the result is computed at most
+ * once per emission.
+ */
+@Composable
+private fun rememberNavGraphFlags(
+    navController: NavHostController,
+    bridgeVm: BridgeViewModel,
+    communityVm: CommunityViewModel,
+): NavGraphFlags {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val connectionState by bridgeVm.connectionState.collectAsState()
+    val communityState by communityVm.state.collectAsState()
+
+    return remember(currentDestination, connectionState, communityState) {
+        val route = currentDestination?.route
+        NavGraphFlags(
+            route = route,
+            isHome = route == NavRoutes.HOME,
+            isDetail = route?.startsWith(NavRoutes.DETAIL) == true,
+            isPreview = route?.startsWith(NavRoutes.PREVIEW) == true,
+            isSettings = route == NavRoutes.SETTINGS,
+            isRender = route?.startsWith(NavRoutes.RENDER) == true,
+            isCommunity = route == NavRoutes.COMMUNITY,
+            isCommunityDetail = route?.startsWith(NavRoutes.COMMUNITY_DETAIL) == true,
+            isCommunityLogin = route == NavRoutes.COMMUNITY_LOGIN,
+            isAbout = route == NavRoutes.ABOUT,
+            isTerms = route == NavRoutes.TERMS,
+            isQrScanner = route == NavRoutes.QR_SCANNER,
+            isCommunitySettings = route == NavRoutes.COMMUNITY_SETTINGS,
+            connectionState = connectionState,
+            communityState = communityState,
+        )
+    }
+}
 
 /**
  * Layout dispatcher that picks the Pad (≥840dp) or Compact (<840dp) branch.
@@ -113,9 +202,12 @@ internal fun AppNavGraph(
     communityEnabled: Boolean,
 ) {
     val isExpanded = LocalConfiguration.current.screenWidthDp >= 840
+    // Hoist all the cross-branch state into one place; see NavGraphFlags.
+    val flags = rememberNavGraphFlags(navController, bridgeVm, communityVm)
     if (isExpanded) {
         PadLayout(
             navController = navController,
+            flags = flags,
             bridgeVm = bridgeVm,
             communityVm = communityVm,
             snackbarHostState = snackbarHostState,
@@ -130,6 +222,7 @@ internal fun AppNavGraph(
     } else {
         CompactLayout(
             navController = navController,
+            flags = flags,
             bridgeVm = bridgeVm,
             communityVm = communityVm,
             snackbarHostState = snackbarHostState,
@@ -160,6 +253,7 @@ internal fun AppNavGraph(
 @Composable
 private fun PadLayout(
     navController: NavHostController,
+    flags: NavGraphFlags,
     bridgeVm: BridgeViewModel,
     communityVm: CommunityViewModel,
     snackbarHostState: SnackbarHostState,
@@ -174,45 +268,24 @@ private fun PadLayout(
     var selectedBlueprintUuid by remember { mutableStateOf<String?>(null) }
     var selectedCommunityPair by remember { mutableStateOf<Pair<CommunitySource, String>?>(null) }
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-
-    val isDetail = currentDestination?.route?.startsWith(NavRoutes.DETAIL) == true
-    val isPreview = currentDestination?.route?.startsWith(NavRoutes.PREVIEW) == true
-    val isSettings = currentDestination?.route == NavRoutes.SETTINGS
-    val isRender = currentDestination?.route?.startsWith(NavRoutes.RENDER) == true
-    val isCommunityDetail = currentDestination?.route?.startsWith(NavRoutes.COMMUNITY_DETAIL) == true
-    val isCommunityLogin = currentDestination?.route == NavRoutes.COMMUNITY_LOGIN
-    val isHome = currentDestination?.route == NavRoutes.HOME
-    val isAbout = currentDestination?.route == NavRoutes.ABOUT
-    val isTerms = currentDestination?.route == NavRoutes.TERMS
-    val isQrScanner = currentDestination?.route == NavRoutes.QR_SCANNER
-    val isCommunitySettings = currentDestination?.route == NavRoutes.COMMUNITY_SETTINGS
-    val showBackButton = isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin || isAbout || isTerms || isQrScanner || isCommunitySettings
-
     val topBarTitle = when {
-        isDetail -> detailTitle
-        currentDestination?.route == NavRoutes.HOME -> stringResource(R.string.nav_title_home)
-        currentDestination?.route == NavRoutes.COMMUNITY -> stringResource(R.string.nav_title_community)
-        currentDestination?.route == NavRoutes.COMMUNITY_SETTINGS -> stringResource(R.string.nav_title_community_settings)
-        currentDestination?.route == NavRoutes.CONNECTION -> stringResource(R.string.nav_title_connection)
-        isCommunityDetail -> stringResource(R.string.nav_title_community_detail)
-        isCommunityLogin -> stringResource(R.string.nav_title_community_login)
-        isRender -> stringResource(R.string.nav_title_render)
-        isPreview -> stringResource(R.string.nav_title_preview)
-        isAbout -> stringResource(R.string.nav_title_about)
-        isTerms -> stringResource(R.string.nav_title_terms)
-        isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
+        flags.isDetail -> detailTitle
+        flags.route == NavRoutes.HOME -> stringResource(R.string.nav_title_home)
+        flags.route == NavRoutes.COMMUNITY -> stringResource(R.string.nav_title_community)
+        flags.route == NavRoutes.COMMUNITY_SETTINGS -> stringResource(R.string.nav_title_community_settings)
+        flags.route == NavRoutes.CONNECTION -> stringResource(R.string.nav_title_connection)
+        flags.isCommunityDetail -> stringResource(R.string.nav_title_community_detail)
+        flags.isCommunityLogin -> stringResource(R.string.nav_title_community_login)
+        flags.isRender -> stringResource(R.string.nav_title_render)
+        flags.isPreview -> stringResource(R.string.nav_title_preview)
+        flags.isAbout -> stringResource(R.string.nav_title_about)
+        flags.isTerms -> stringResource(R.string.nav_title_terms)
+        flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
 
-    val connectionState by bridgeVm.connectionState.collectAsState()
-    val isBridgeConnected = connectionState is ConnectionState.Connected
-    val isBridgeConnecting = connectionState is ConnectionState.Connecting
-
-    val communityState by communityVm.state.collectAsState()
-    val padOnCommunity = currentDestination?.route == NavRoutes.COMMUNITY
-    val padActive = communityState.active
+    val padOnCommunity = flags.isCommunity
+    val padActive = flags.communityState.active
 
     val padFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { onImportSafer(it) }
@@ -221,12 +294,12 @@ private fun PadLayout(
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (!isPreviewFullscreen) {
-                if (currentDestination?.route == NavRoutes.HOME) {
+                if (flags.isHome) {
                     AppTopBar(
                         title = topBarTitle,
-                        showBackButton = showBackButton,
+                        showBackButton = flags.showBackButton,
                         showCommunityActions = padOnCommunity && padActive.ready,
-                        showLogout = communityState.currentSource == CommunitySource.MCS,
+                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
                         onCommunity = padOnCommunity,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
@@ -240,8 +313,8 @@ private fun PadLayout(
                                     modifier = Modifier.size(8.dp).clip(CircleShape)
                                         .background(
                                             when {
-                                                isBridgeConnected -> Color(0xFF4CAF50)
-                                                isBridgeConnecting -> Color(0xFFFFC107)
+                                                flags.isBridgeConnected -> Color(0xFF4CAF50)
+                                                flags.isBridgeConnecting -> Color(0xFFFFC107)
                                                 else -> Color(0xFF9E9E9E)
                                             }
                                         )
@@ -252,9 +325,9 @@ private fun PadLayout(
                 } else {
                     AppTopBar(
                         title = topBarTitle,
-                        showBackButton = showBackButton,
+                        showBackButton = flags.showBackButton,
                         showCommunityActions = padOnCommunity && padActive.ready,
-                        showLogout = communityState.currentSource == CommunitySource.MCS,
+                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
                         onCommunity = padOnCommunity,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
@@ -519,6 +592,7 @@ private fun PadLayout(
 @Composable
 private fun CompactLayout(
     navController: NavHostController,
+    flags: NavGraphFlags,
     bridgeVm: BridgeViewModel,
     communityVm: CommunityViewModel,
     snackbarHostState: SnackbarHostState,
@@ -531,57 +605,36 @@ private fun CompactLayout(
     onDetailTitleChange: (String) -> Unit,
     communityEnabled: Boolean,
 ) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-
-    val isDetail = currentDestination?.route?.startsWith(NavRoutes.DETAIL) == true
-    val isPreview = currentDestination?.route?.startsWith(NavRoutes.PREVIEW) == true
-    val isSettings = currentDestination?.route == NavRoutes.SETTINGS
-    val isRender = currentDestination?.route?.startsWith(NavRoutes.RENDER) == true
-    val isCommunityDetail = currentDestination?.route?.startsWith(NavRoutes.COMMUNITY_DETAIL) == true
-    val isCommunityLogin = currentDestination?.route == NavRoutes.COMMUNITY_LOGIN
-    val isAbout = currentDestination?.route == NavRoutes.ABOUT
-    val isTerms = currentDestination?.route == NavRoutes.TERMS
-    val isQrScanner = currentDestination?.route == NavRoutes.QR_SCANNER
-    val isCommunitySettings = currentDestination?.route == NavRoutes.COMMUNITY_SETTINGS
-    val showBottomBar = !isDetail && !isRender && !isPreview && !isCommunityDetail && !isCommunityLogin && !isAbout && !isTerms && !isQrScanner && !isCommunitySettings
-    val showBackButton = isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin || isAbout || isTerms || isQrScanner || isCommunitySettings
-
     val topBarTitle = when {
-        isDetail -> detailTitle
-        currentDestination?.route == NavRoutes.HOME -> stringResource(R.string.nav_title_home)
-        currentDestination?.route == NavRoutes.COMMUNITY -> stringResource(R.string.nav_title_community)
-        currentDestination?.route == NavRoutes.COMMUNITY_SETTINGS -> stringResource(R.string.nav_title_community_settings)
-        currentDestination?.route == NavRoutes.CONNECTION -> stringResource(R.string.nav_title_connection)
-        isCommunityDetail -> stringResource(R.string.nav_title_community_detail)
-        isCommunityLogin -> stringResource(R.string.nav_title_community_login)
-        isRender -> stringResource(R.string.nav_title_render)
-        isPreview -> stringResource(R.string.nav_title_preview)
-        isAbout -> stringResource(R.string.nav_title_about)
-        isTerms -> stringResource(R.string.nav_title_terms)
-        isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
+        flags.isDetail -> detailTitle
+        flags.route == NavRoutes.HOME -> stringResource(R.string.nav_title_home)
+        flags.route == NavRoutes.COMMUNITY -> stringResource(R.string.nav_title_community)
+        flags.route == NavRoutes.COMMUNITY_SETTINGS -> stringResource(R.string.nav_title_community_settings)
+        flags.route == NavRoutes.CONNECTION -> stringResource(R.string.nav_title_connection)
+        flags.isCommunityDetail -> stringResource(R.string.nav_title_community_detail)
+        flags.isCommunityLogin -> stringResource(R.string.nav_title_community_login)
+        flags.isRender -> stringResource(R.string.nav_title_render)
+        flags.isPreview -> stringResource(R.string.nav_title_preview)
+        flags.isAbout -> stringResource(R.string.nav_title_about)
+        flags.isTerms -> stringResource(R.string.nav_title_terms)
+        flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
-    val showMainTopBar = !isSettings && !isPreviewFullscreen
+    val showMainTopBar = !flags.isSettings && !isPreviewFullscreen
 
-    val connectionState by bridgeVm.connectionState.collectAsState()
-    val isBridgeConnected = connectionState is ConnectionState.Connected
-    val isBridgeConnecting = connectionState is ConnectionState.Connecting
-
-    val communityState by communityVm.state.collectAsState()
-    val onCommunity2 = currentDestination?.route == NavRoutes.COMMUNITY
-    val active2 = communityState.active
+    val onCommunity2 = flags.isCommunity
+    val active2 = flags.communityState.active
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             if (showMainTopBar) {
-                if (currentDestination?.route == NavRoutes.HOME) {
+                if (flags.isHome) {
                     AppTopBar(
                         title = topBarTitle,
-                        showBackButton = showBackButton,
+                        showBackButton = flags.showBackButton,
                         showCommunityActions = onCommunity2 && active2.ready,
-                        showLogout = communityState.currentSource == CommunitySource.MCS,
+                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
                         onCommunity = onCommunity2,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
@@ -597,8 +650,8 @@ private fun CompactLayout(
                                         .clip(CircleShape)
                                         .background(
                                             when {
-                                                isBridgeConnected -> Color(0xFF4CAF50)
-                                                isBridgeConnecting -> Color(0xFFFFC107)
+                                                flags.isBridgeConnected -> Color(0xFF4CAF50)
+                                                flags.isBridgeConnecting -> Color(0xFFFFC107)
                                                 else -> Color(0xFF9E9E9E)
                                             }
                                         )
@@ -609,9 +662,9 @@ private fun CompactLayout(
                 } else {
                     AppTopBar(
                         title = topBarTitle,
-                        showBackButton = showBackButton,
+                        showBackButton = flags.showBackButton,
                         showCommunityActions = onCommunity2 && active2.ready,
-                        showLogout = communityState.currentSource == CommunitySource.MCS,
+                        showLogout = flags.communityState.currentSource == CommunitySource.MCS,
                         onCommunity = onCommunity2,
                         onToggleFilter = { communityVm.toggleFilter() },
                         onToggleHeatSort = { communityVm.toggleHeatSort() },
@@ -635,14 +688,14 @@ private fun CompactLayout(
             }
         },
         bottomBar = {
-            if (showBottomBar) {
+            if (flags.showBottomBar) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ) {
                     bottomNavItems
                         .filter { it.route != NavRoutes.COMMUNITY || communityEnabled }
                         .forEach { item ->
-                            val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                            val selected = flags.route?.let { route -> navController.currentBackStackEntry?.destination?.hierarchy?.any { it.route == item.route } == true } ?: false
                             val label = stringResource(item.labelRes)
                             NavigationBarItem(
                                 icon = {

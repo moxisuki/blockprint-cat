@@ -40,12 +40,14 @@ import io.github.moxisuki.blockprint.cat.data.vanilla.LangManager
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 
 /**
- * Material list row used by the detail screen's Top-10 stats card.
- * Combines the [MaterialIcon] (with on-disk icon-fallback), the localized
- * material name, the registry key, and the block count.
+ * Resolves the singleton [IconIndexResolver] from the application
+ * [DetailScreenEntryPoint] and triggers a one-time load. Call this
+ * ONCE per detail screen (phone or pad) — pass the resolver down to
+ * each [MaterialRow] / [MaterialIcon]. Avoids per-row EntryPoint
+ * lookups and the previous 1-EnsureLoaded-per-row pattern.
  */
 @Composable
-internal fun MaterialRow(name: String, count: Int) {
+internal fun rememberIconIndexResolver(): IconIndexResolver {
     val context = LocalContext.current
     val entryPoint = remember {
         EntryPointAccessors.fromApplication(
@@ -53,17 +55,28 @@ internal fun MaterialRow(name: String, count: Int) {
             DetailScreenEntryPoint::class.java
         )
     }
-    val iconIndexResolver = entryPoint.iconIndexResolver()
+    val resolver = entryPoint.iconIndexResolver()
     LaunchedEffect(Unit) {
-        iconIndexResolver.ensureLoaded()
+        resolver.ensureLoaded()
     }
+    return resolver
+}
+
+/**
+ * Material list row used by the detail screen's Top-10 stats card.
+ * Combines the [MaterialIcon] (with on-disk icon-fallback), the localized
+ * material name, the registry key, and the block count.
+ */
+@Composable
+internal fun MaterialRow(name: String, count: Int, iconIndexResolver: IconIndexResolver) {
+    val context = LocalContext.current
     val langName = remember(name) { LangManager.displayName(context, name) }
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MaterialIcon(name = name)
+        MaterialIcon(name = name, iconIndexResolver = iconIndexResolver)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -94,18 +107,12 @@ internal fun MaterialRow(name: String, count: Int) {
 /**
  * Material icon. Tries up to 3 icon URL variants via Coil and falls back
  * to a stable colour-tinted 2-letter box for vanilla items, or `?` for
- * unknown. Depends on [DetailScreenEntryPoint] for the IconIndexResolver.
+ * unknown. The [iconIndexResolver] is hoisted from the parent screen so
+ * we don't repeat EntryPoint lookups per row.
  */
 @Composable
-internal fun MaterialIcon(name: String) {
+internal fun MaterialIcon(name: String, iconIndexResolver: IconIndexResolver) {
     val context = LocalContext.current
-    val entryPoint = remember {
-        EntryPointAccessors.fromApplication(
-            context.applicationContext,
-            DetailScreenEntryPoint::class.java
-        )
-    }
-    val iconIndexResolver = entryPoint.iconIndexResolver()
     val indexReady by iconIndexResolver.ready.collectAsState()
     val variants = remember(name, indexReady) {
         listOfNotNull(
@@ -126,8 +133,11 @@ internal fun MaterialIcon(name: String) {
             contentDescription = name,
             modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)),
             error = {
+                // Direct state mutation — no LaunchedEffect wrapper needed
+                // (the previous LaunchedEffect in the error slot was redundant
+                // since the state write already triggers recomposition).
                 if (attempt < variants.lastIndex) {
-                    LaunchedEffect(currentUrl) { attempt++ }
+                    attempt++
                 } else {
                     UnknownIcon()
                 }

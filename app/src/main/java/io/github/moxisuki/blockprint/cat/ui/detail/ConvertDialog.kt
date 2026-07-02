@@ -35,6 +35,7 @@ import io.github.moxisuki.blockprint.cat.ui.format.formatLongLabelRes
 internal fun ConvertDialog(
     visible: Boolean,
     currentFormat: io.github.moxisuki.blockprint.core.SchematicFormat,
+    targets: List<io.github.moxisuki.blockprint.cat.ui.format.FormatDisplay>,
     selected: Int,
     onSelectedChange: (Int) -> Unit,
     onDismiss: () -> Unit,
@@ -53,7 +54,7 @@ internal fun ConvertDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
-                FormatCatalog.convertTargetsExcluding(currentFormat).forEachIndexed { idx, display ->
+                targets.forEachIndexed { idx, display ->
                     ConvertTargetRow(
                         label = stringResource(formatLongLabelRes(display.schematicFormat)),
                         selected = selected == idx,

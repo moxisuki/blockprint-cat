@@ -294,7 +294,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             Icons.Default.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = stringResource(R.string.cd_refresh),
                             modifier = Modifier
                                 .size(18.dp)
                                 .rotate(if (refreshing) refreshRotation else 0f),
@@ -309,7 +309,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             Icons.Default.FileUpload,
-                            contentDescription = "导入蓝图",
+                            contentDescription = stringResource(R.string.home_cd_import),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -321,7 +321,7 @@ fun HomeScreen(
                         val filterActive = localFilterQuery.isNotEmpty() || localFilterFormat != FormatFilter.All
                         Icon(
                             Icons.Default.FilterList,
-                            contentDescription = "筛选",
+                            contentDescription = stringResource(R.string.home_cd_filter),
                             modifier = Modifier.size(18.dp),
                             tint = if (localFilterVisible || filterActive) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -381,11 +381,9 @@ fun HomeScreen(
                                         if (bytes != null) {
                                             bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
                                         } else {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    context.getString(R.string.action_sync_failed, bp.fileName)
-                                                )
-                                            }
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.action_sync_failed, bp.fileName)
+                                            )
                                         }
                                     }
                                 }
@@ -509,11 +507,9 @@ fun HomeScreen(
                                 if (bytes != null) {
                                     bridgeVm.requestUpload(newName, bytes, overwrite = true)
                                 } else {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            context.getString(R.string.action_sync_failed, newName)
-                                        )
-                                    }
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(R.string.action_sync_failed, newName)
+                                    )
                                 }
                             }
                         }
@@ -553,11 +549,9 @@ fun HomeScreen(
                                 if (bytes != null) {
                                     bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
                                 } else {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            context.getString(R.string.action_sync_failed, bp.fileName)
-                                        )
-                                    }
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(R.string.action_sync_failed, bp.fileName)
+                                    )
                                 }
                             }
                         },

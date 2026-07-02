@@ -78,6 +78,8 @@ fun BlueprintDetailScreen(
     bridgeViewModel: BridgeViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    // Hoist the IconIndexResolver once per screen — every MaterialRow shares it.
+    val iconIndexResolver = rememberIconIndexResolver()
 
     // 转换 dialog 的 state（与 Pad 端 BlueprintDetailContent 独立但实现一致）
     var showConvertDialog by remember { mutableStateOf(false) }
@@ -88,27 +90,31 @@ fun BlueprintDetailScreen(
         FormatCatalog.convertTargetsExcluding(currentFormat)
     }
     val hasConvertTarget = convertTargets.isNotEmpty()
-    val openConvertDialog = {
+    val openConvertDialog = remember(convertTargets) {
         // BuildingHelper is currently disabled as a convert source — guard
         // here so the user never sees an empty dialog or a crash.
-        if (convertTargets.isNotEmpty()) {
-            convertSelected = 0
-            showConvertDialog = true
+        {
+            if (convertTargets.isNotEmpty()) {
+                convertSelected = 0
+                showConvertDialog = true
+            }
         }
     }
     val convertRunning by bridgeViewModel.convertInFlight.collectAsState()
-    val runConvert = {
-        val targets = convertTargets
-        val display = targets.getOrNull(convertSelected)
-            ?: error("convertSelected $convertSelected out of range for ${targets.size} targets")
-        val target = display.schematicFormat
-        val ext = display.fileExtension
-        showConvertDialog = false
-        val targetUuid = uiState.fullBlueprint?.meta?.uuid
-        if (targetUuid != null) {
-            bridgeViewModel.convertBlueprint(targetUuid, target, ext)
+    val runConvert = remember(convertTargets, convertSelected, uiState.fullBlueprint?.meta?.uuid) {
+        {
+            val targets = convertTargets
+            val display = targets.getOrNull(convertSelected)
+                ?: error("convertSelected $convertSelected out of range for ${targets.size} targets")
+            val target = display.schematicFormat
+            val ext = display.fileExtension
+            showConvertDialog = false
+            val targetUuid = uiState.fullBlueprint?.meta?.uuid
+            if (targetUuid != null) {
+                bridgeViewModel.convertBlueprint(targetUuid, target, ext)
+            }
+            Unit
         }
-        Unit
     }
 
     LaunchedEffect(uuid) {
@@ -142,7 +148,7 @@ fun BlueprintDetailScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = uiState.error ?: "加载失败",
+                    text = uiState.error ?: stringResource(R.string.detail_load_failed),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -262,7 +268,7 @@ fun BlueprintDetailScreen(
                             if (bp.materials.isEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    "无材料数据",
+                                    stringResource(R.string.detail_no_materials),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -273,7 +279,7 @@ fun BlueprintDetailScreen(
 
                 if (bp.materials.isNotEmpty()) {
                     items(bp.materials) { (name, count) ->
-                        MaterialRow(name = name, count = count)
+                        MaterialRow(name = name, count = count, iconIndexResolver = iconIndexResolver)
                     }
                 }
 
@@ -285,6 +291,7 @@ fun BlueprintDetailScreen(
     ConvertDialog(
         visible = showConvertDialog,
         currentFormat = currentFormat,
+        targets = convertTargets,
         selected = convertSelected,
         onSelectedChange = { convertSelected = it },
         onDismiss = { showConvertDialog = false },

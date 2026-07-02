@@ -15,7 +15,7 @@ interface LitematicFileStorage {
      * to `read` / `delete` / `rename`.
      *
      * Use this when the producer is a streaming encoder (e.g.
-     * `BlueprintConverter.convert(Litematic, target, OutputStream)`) so
+     * `BlockPrintConverter.convert(BlockPrintDocument, target, OutputStream)`) so
      * the encoded payload never has to sit in memory as a `ByteArray`.
      */
     suspend fun writeStream(name: String, writer: (OutputStream) -> Unit): String

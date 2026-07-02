@@ -15,7 +15,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 
-import io.github.moxisuki.blockprint.core.Litematic
+import io.github.moxisuki.blockprint.core.model.BlockPrintDocument
 import io.github.moxisuki.blockprint.cat.glb.FileSystemFileAccessor
 import io.github.moxisuki.blockprint.cat.glb.GlbCache
 import io.github.moxisuki.blockprint.cat.glb.GlbGenerator
@@ -68,15 +68,15 @@ object GlbResourceManager {
     private var applicationContext: Context? = null
 
     /** Litematic handed from DetailScreen to PreviewScreen so we don't re-parse NBT. */
-    private var pendingLitematic: Litematic? = null
+    private var pendingLitematic: BlockPrintDocument? = null
     private var pendingLitematicKey: String = ""
 
-    fun transferLitematic(key: String, lit: Litematic) {
+    fun transferLitematic(key: String, lit: BlockPrintDocument) {
         pendingLitematic = lit
         pendingLitematicKey = key
     }
 
-    fun receiveLitematic(key: String): Litematic? {
+    fun receiveLitematic(key: String): BlockPrintDocument? {
         if (pendingLitematicKey == key) {
             val lit = pendingLitematic
             pendingLitematic = null

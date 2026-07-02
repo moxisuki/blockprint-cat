@@ -107,7 +107,7 @@ object FormatCatalog {
      * The writable convert targets (Litematica / Sponge / Structure),
      * excluding the format that matches [current]. PartialNbt and Unknown
      * are NOT valid convert targets — they are read-side categories that
-     * BlueprintConverter rejects — so they never appear here.
+     * BlockPrintConverter rejects — so they never appear here.
      *
      * BuildingHelper(.json) is also currently excluded — bidirectional
      * conversion involving BuildingHelper is temporarily disabled (see

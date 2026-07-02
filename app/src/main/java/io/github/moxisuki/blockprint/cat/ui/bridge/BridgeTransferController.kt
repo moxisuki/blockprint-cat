@@ -143,7 +143,7 @@ class BridgeTransferController(
             }.onFailure { e ->
                 Log.w(TAG, "convertBlueprint: failed", e)
                 val code = when (e) {
-                    is io.github.moxisuki.blockprint.core.exceptions.LitematicException ->
+                    is io.github.moxisuki.blockprint.core.exceptions.BlockPrintException ->
                         e.message ?: "LITEMATIC_ERROR"
                     is IllegalStateException -> e.message ?: "ILLEGAL_STATE"
                     else -> "IO_ERROR"

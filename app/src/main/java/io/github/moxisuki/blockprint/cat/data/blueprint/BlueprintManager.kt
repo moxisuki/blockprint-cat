@@ -6,11 +6,11 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import io.github.moxisuki.blockprint.core.BlueprintConverter
-import io.github.moxisuki.blockprint.core.Litematic
-import io.github.moxisuki.blockprint.core.LitematicReader
+import io.github.moxisuki.blockprint.core.BlockPrintConverter
 import io.github.moxisuki.blockprint.core.MaterialList
 import io.github.moxisuki.blockprint.core.SchematicFormat
+import io.github.moxisuki.blockprint.core.api.BlockPrintReader
+import io.github.moxisuki.blockprint.core.model.BlockPrintDocument
 import io.github.moxisuki.blockprint.cat.data.saf.LitematicFileStorage
 import io.github.moxisuki.blockprint.cat.data.saf.SafPermissionManager
 import io.github.moxisuki.blockprint.cat.data.saf.SafState
@@ -105,7 +105,7 @@ class BlueprintManager @Inject constructor(
     suspend fun ingest(name: String, bytes: ByteArray, onProgress: ((Long, Long) -> Unit)? = null): BlueprintMeta = withContext(Dispatchers.IO) {
         // Write first so progress callback fires immediately (no blocking SAF query before it)
         val docId = storage.write(name, bytes, onProgress)
-        val lit = LitematicReader.readLenient(bytes)
+        val lit = BlockPrintReader.readLenient(bytes)
         val meta = metaFromLit(lit, docId, name)
         metaDao.upsert(meta.toEntity())
         Log.d(TAG, "ingest: $name → ${meta.uuid}")
@@ -127,7 +127,7 @@ class BlueprintManager @Inject constructor(
                     launch {
                         runCatching {
                             val bytes = storage.read(docId)
-                            val lit = LitematicReader.readLenient(bytes)
+                            val lit = BlockPrintReader.readLenient(bytes)
                             val meta = metaFromLit(lit, docId, entry.name)
                             metaDao.upsert(meta.copy(lastScannedAt = now).toEntity())
                             Log.d(TAG, "refresh: upsert ${entry.name}")
@@ -174,7 +174,7 @@ class BlueprintManager @Inject constructor(
         val entity = metaDao.getByUuid(uuid) ?: return@withContext null
         runCatching {
             val bytes = storage.read(entity.fileDocId)
-            val lit = LitematicReader.readLenient(bytes)
+            val lit = BlockPrintReader.readLenient(bytes)
             val materials = MaterialList.from(lit, includeAir = false)
                 .toSortedByCount()
                 .map { (n, c) -> n to c }
@@ -188,14 +188,14 @@ class BlueprintManager @Inject constructor(
      * appear in the local list via the standard `observeAll` flow.
      *
      * If [target] is not Litematica and the source has multiple regions,
-     * only the primary (first) region is written — `BlueprintConverter`
+     * only the primary (first) region is written — `BlockPrintConverter`
      * rejects multi-region inputs for Sponge / Structure / BuildingHelper.
      * Single-region inputs are written verbatim.
      *
      * The output filename is `<stem>_converted.<extension>` with `-1`, `-2`, ...
      * appended on collision (see [resolveUniqueName]).
      *
-     * @throws LitematicException for read-side target formats
+     * @throws BlockPrintException for read-side target formats
      *   (PartialNbt / Unknown) — the UI should never offer these, but we
      *   surface the error rather than silently misbehave.
      * @throws java.io.IOException / [IllegalStateException] from SAF on
@@ -215,11 +215,11 @@ class BlueprintManager @Inject constructor(
             Log.d(TAG, "convert stage[2] storage.read(source, ${srcBytes.size} bytes): ${System.currentTimeMillis() - t} ms")
 
             t = System.currentTimeMillis()
-            val lit = LitematicReader.readLenient(srcBytes)
-            Log.d(TAG, "convert stage[3] LitematicReader.readLenient: ${System.currentTimeMillis() - t} ms")
+            val lit = BlockPrintReader.readLenient(srcBytes)
+            Log.d(TAG, "convert stage[3] BlockPrintReader.readLenient: ${System.currentTimeMillis() - t} ms")
 
             t = System.currentTimeMillis()
-            // For non-Litematica targets, BlueprintConverter rejects multi-region
+            // For non-Litematica targets, BlockPrintConverter rejects multi-region
             // input. Fall back to the primary region so the user still gets a
             // usable file rather than an exception.
             val sourceForConvert = if (target != SchematicFormat.Litematica && lit.regions.size > 1) {
@@ -236,7 +236,7 @@ class BlueprintManager @Inject constructor(
 
             t = System.currentTimeMillis()
             val newDocId = storage.writeStream(finalName) { out ->
-                BlueprintConverter.convert(sourceForConvert, target, out)
+                BlockPrintConverter.convert(sourceForConvert, target, out)
             }
             Log.d(TAG, "convert stage[6] storage.writeStream+convert: ${System.currentTimeMillis() - t} ms")
 
@@ -249,7 +249,7 @@ class BlueprintManager @Inject constructor(
             Log.d(TAG, "convert stage[7] storage.read(target, ${newBytes.size} bytes): ${System.currentTimeMillis() - t} ms")
 
             t = System.currentTimeMillis()
-            val lit2 = LitematicReader.readLenient(newBytes)
+            val lit2 = BlockPrintReader.readLenient(newBytes)
             val meta2 = metaFromLit(lit2, newDocId, finalName)
             val now = System.currentTimeMillis()
             metaDao.upsert(meta2.copy(lastScannedAt = now).toEntity())
@@ -262,7 +262,7 @@ class BlueprintManager @Inject constructor(
 
     // ── helpers ──
 
-    private fun metaFromLit(lit: Litematic, docId: String, fileName: String): BlueprintMetaEntity {
+    private fun metaFromLit(lit: BlockPrintDocument, docId: String, fileName: String): BlueprintMetaEntity {
         val base = fileName.substringBeforeLast('.', fileName)
         val displayName = when {
             lit.name.isNotBlank() -> lit.name

@@ -1,6 +1,6 @@
 package io.github.moxisuki.blockprint.cat.glb
 
-import io.github.moxisuki.blockprint.core.glb.FileAccessor
+import io.github.moxisuki.blockprint.core.glb.platform.FileAccessor
 import java.io.File
 
 /**

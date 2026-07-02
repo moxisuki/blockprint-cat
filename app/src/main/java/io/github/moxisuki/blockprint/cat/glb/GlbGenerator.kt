@@ -1,9 +1,9 @@
 package io.github.moxisuki.blockprint.cat.glb
 
-import io.github.moxisuki.blockprint.core.Litematic
-import io.github.moxisuki.blockprint.core.glb.GlbExportOptions
-import io.github.moxisuki.blockprint.core.glb.ImageBackend
-import io.github.moxisuki.blockprint.core.glb.LitematicToGlb
+import io.github.moxisuki.blockprint.core.api.BlockPrintToGlb
+import io.github.moxisuki.blockprint.core.glb.platform.ImageBackend
+import io.github.moxisuki.blockprint.core.glb.writer.GlbExportOptions
+import io.github.moxisuki.blockprint.core.model.BlockPrintDocument
 import java.io.File
 import java.nio.file.Path
 
@@ -38,7 +38,7 @@ class GlbGenerator(
     }
 
     fun getOrGenerateFile(
-        litematic: Litematic,
+        document: BlockPrintDocument,
         key: Key,
         onProgress: ((Float) -> Unit)? = null,
     ): File {
@@ -52,7 +52,7 @@ class GlbGenerator(
             tmp.parentFile?.mkdirs()
             val opts = if (key.floorHeight > 0) GlbExportOptions(floorHeight = key.floorHeight) else GlbExportOptions()
             tmp.outputStream().use { out ->
-                LitematicToGlb.convert(litematic, assetsDirs, out, key.regionIndex, opts, onProgress)
+                BlockPrintToGlb.convert(document, assetsDirs, out, key.regionIndex, opts, onProgress)
             }
             tmp.renameTo(file)
             val elapsed = System.currentTimeMillis() - t0

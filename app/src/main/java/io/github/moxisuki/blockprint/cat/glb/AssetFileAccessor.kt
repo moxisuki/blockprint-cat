@@ -1,7 +1,7 @@
 package io.github.moxisuki.blockprint.cat.glb
 
 import android.content.res.AssetManager
-import io.github.moxisuki.blockprint.core.glb.FileAccessor
+import io.github.moxisuki.blockprint.core.glb.platform.FileAccessor
 
 class AssetFileAccessor(
     private val assetManager: AssetManager,

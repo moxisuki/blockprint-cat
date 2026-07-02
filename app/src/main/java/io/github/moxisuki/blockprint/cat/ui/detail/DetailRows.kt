@@ -150,7 +150,7 @@ internal fun FormatRow(
 
 /** Region list row — icon + name + dimensions + total blocks. */
 @Composable
-internal fun RegionRow(region: io.github.moxisuki.blockprint.core.LitematicRegion) {
+internal fun RegionRow(region: io.github.moxisuki.blockprint.core.model.BlockPrintRegion) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,

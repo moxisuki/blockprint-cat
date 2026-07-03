@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlockPrint Cat — Android Minecraft 蓝图管理 & 3D 预览工具</title>
+<meta name="description" content="Android 端 Minecraft 蓝图管理与 3D 预览工具。导入 .litematic / .schematic 文件，局域网同步 PC 端，实时 3D 渲染预览。">
+<meta name="theme-color" content="#08080F">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #08080F;
+  --bg-2:      #141420;
+  --bg-3:      #0F0F17;
+  --primary:   #22D3EE;
+  --primary-2: #38BDF8;
+  --gold:      #F59E0B;
+  --muted:     #64748B;
+  --text:      #E2E8F0;
+  --text-dim:  rgba(226, 232, 240, 0.7);
+  --border:    rgba(100, 116, 139, 0.14);
+  --grid-line: rgba(34, 211, 238, 0.05);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'kern';
+  text-rendering: optimizeLegibility;
+}
+
+body { overflow-x: hidden; }
+
+::selection { background: rgba(34, 211, 238, 0.25); color: var(--text); }
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+
+/* ====== Scroll progress bar ====== */
+.scroll-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--gold), var(--primary));
+  z-index: 1000;
+  pointer-events: none;
+  transition: width 0.1s linear;
+}
+
+/* ====== Containers ====== */
+.section {
+  padding: 96px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.section--tight { padding-top: 0; }
+@media (max-width: 640px) {
+  .section { padding: 64px 20px; }
+}
+
+/* ====== Hero ====== */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 88px 24px 56px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.particles-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.block-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 48px);
+  grid-template-rows: repeat(auto-fill, 48px);
+  opacity: 0.1;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 65% 50% at 50% 40%, black 25%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 50% at 50% 40%, black 25%, transparent 70%);
+}
+.block-cell {
+  width: 48px; height: 48px;
+  border: 1px solid var(--grid-line);
+  transition: background-color 2s ease;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 65%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 65%);
+  z-index: 2;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 480px; height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 4;
+  max-width: 720px;
+}
+
+.hero-icon {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 20px;
+  margin-bottom: 32px;
+  image-rendering: pixelated;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  background: transparent;
+  animation: iconFloat 4s ease-in-out infinite;
+}
+.hero-icon::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 23px;
+  background: conic-gradient(from 0deg, var(--primary), #38BDF8, #A78BFA, var(--primary));
+  z-index: -1;
+  opacity: 0.4;
+  filter: blur(10px);
+  animation: iconSpin 6s linear infinite;
+}
+@property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes iconSpin { to { --angle: 360deg; } }
+@keyframes iconFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.hero-title {
+  font-size: clamp(40px, 7vw, 72px);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+  margin-bottom: 16px;
+  text-wrap: balance;
+}
+.hero-title .accent {
+  background: linear-gradient(135deg, #22D3EE 0%, #38BDF8 50%, #A78BFA 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.hero-sub {
+  font-size: clamp(16px, 2.4vw, 19px);
+  color: var(--muted);
+  margin-bottom: 8px;
+  letter-spacing: 0.005em;
+  font-weight: 400;
+}
+.hero-sub-en {
+  font-size: 13px;
+  color: rgba(100, 116, 139, 0.55);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  margin-bottom: 36px;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--muted);
+  background: rgba(100, 116, 139, 0.08);
+  border: 1px solid var(--border);
+}
+.badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #34D399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ====== Buttons ====== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.6s ease;
+}
+.btn-primary:hover::before { left: 100%; }
+.btn-primary:hover {
+  background: #38D9F2;
+  box-shadow: 0 8px 24px rgba(34, 211, 238, 0.35);
+}
+
+.btn-outline {
+  color: var(--text);
+  border-color: rgba(100, 116, 139, 0.3);
+}
+.btn-outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 4px 16px rgba(34, 211, 238, 0.15);
+}
+
+/* ====== Section headers ====== */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--primary);
+  font-family: var(--mono);
+  margin-bottom: 14px;
+}
+.section-title {
+  font-size: clamp(28px, 4.4vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 14px;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.section-desc {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 580px;
+  margin-bottom: 56px;
+  line-height: 1.7;
+}
+.center { text-align: center; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+/* ====== Features ====== */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .features-grid { grid-template-columns: 1fr; max-width: 480px; margin-left: auto; margin-right: auto; }
+}
+
+.feature-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 28px;
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.feature-card:hover {
+  border-color: rgba(34, 211, 238, 0.32);
+  transform: translateY(-3px);
+}
+.feature-icon {
+  width: 44px; height: 44px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px;
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  color: var(--primary);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+.feature-card:hover .feature-icon {
+  transform: scale(1.06) rotate(-4deg);
+  box-shadow: 0 4px 16px rgba(34, 211, 238, 0.2);
+}
+.feature-icon svg { width: 22px; height: 22px; stroke-width: 1.8; }
+.feature-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.feature-card p {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+
+/* ====== Screenshots ====== */
+.screenshots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  perspective: 800px;
+}
+@media (max-width: 900px) {
+  .screenshots-grid {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+    margin-left: auto; margin-right: auto;
+  }
+}
+.screenshot-card {
+  position: relative;
+  border-radius: 18px;
+  padding: 7px;
+  background: linear-gradient(150deg, #2A2A3A, #141420);
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  transform-style: preserve-3d;
+}
+.screenshot-card::before {
+  content: '';
+  position: absolute;
+  top: 11px; left: 50%;
+  transform: translateX(-50%);
+  width: 36px; height: 3px;
+  border-radius: 3px;
+  background: rgba(100, 116, 139, 0.5);
+  z-index: 2;
+}
+.screenshot-card:hover {
+  border-color: rgba(34, 211, 238, 0.4);
+  box-shadow: 0 16px 48px rgba(34, 211, 238, 0.1);
+}
+.screenshot-inner {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+.screenshot-inner img {
+  width: 100%;
+  display: block;
+  aspect-ratio: 9 / 19.5;
+  object-fit: cover;
+}
+.screenshot-label {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: linear-gradient(transparent, rgba(8, 8, 15, 0.92));
+  z-index: 2;
+}
+
+/* ====== Workflow ====== */
+.workflow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  counter-reset: step;
+}
+@media (max-width: 900px) {
+  .workflow { grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+@media (max-width: 540px) {
+  .workflow { grid-template-columns: 1fr; }
+}
+.workflow-step {
+  position: relative;
+  padding: 32px 20px;
+  text-align: center;
+  border-right: 1px dashed rgba(100, 116, 139, 0.18);
+}
+.workflow-step:last-child { border-right: none; }
+@media (max-width: 900px) {
+  .workflow-step {
+    border-right: none;
+    border: 1px solid rgba(100, 116, 139, 0.14);
+    border-radius: 14px;
+    padding: 24px 18px;
+  }
+}
+.workflow-arrow {
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  width: 14px; height: 14px;
+  border-right: 1.5px solid var(--primary);
+  border-top: 1.5px solid var(--primary);
+  transform: translateY(-50%) rotate(45deg);
+  opacity: 0.55;
+  z-index: 2;
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.3; transform: translate(0, -50%) rotate(45deg); }
+  50%      { opacity: 1;   transform: translate(3px, -50%) rotate(45deg); }
+}
+@media (max-width: 900px) { .workflow-arrow { display: none; } }
+
+.step-num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  margin-bottom: 14px;
+  font-family: var(--mono);
+}
+.workflow-step.visible .step-num {
+  animation: stepPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+@keyframes stepPop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.workflow-step h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.workflow-step p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ====== Tech ====== */
+.tech-section {
+  position: relative;
+  background: var(--bg-3);
+  border-top: 1px solid rgba(100, 116, 139, 0.08);
+  border-bottom: 1px solid rgba(100, 116, 139, 0.08);
+  overflow: hidden;
+}
+.tech-section::before,
+.tech-section::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.35;
+}
+.tech-section::before {
+  width: 480px; height: 480px;
+  background: var(--primary);
+  top: -120px; left: -120px;
+  animation: aurora1 16s ease-in-out infinite;
+}
+.tech-section::after {
+  width: 520px; height: 520px;
+  background: #A78BFA;
+  bottom: -160px; right: -160px;
+  animation: aurora2 20s ease-in-out infinite;
+}
+@keyframes aurora1 {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(80px, 60px); }
+}
+@keyframes aurora2 {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-100px, -50px); }
+}
+@media (max-width: 768px) {
+  .tech-section::before, .tech-section::after { width: 320px; height: 320px; }
+}
+.tech-section > * { position: relative; z-index: 1; }
+
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 32px;
+}
+@media (max-width: 900px) {
+  .tech-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 540px) {
+  .tech-grid { grid-template-columns: 1fr; }
+}
+
+.tech-item {
+  --brand: var(--primary);
+  --brand-rgb: 34, 211, 238;
+  position: relative;
+  background: linear-gradient(165deg, rgba(var(--brand-rgb), 0.06) 0%, var(--bg-2) 60%);
+  border: 1px solid rgba(100, 116, 139, 0.14);
+  border-top: 2px solid var(--brand);
+  border-radius: 14px;
+  padding: 24px 22px;
+  overflow: hidden;
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+.tech-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(var(--brand-rgb), 0.22) 0%, transparent 55%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.tech-item:hover {
+  border-color: rgba(var(--brand-rgb), 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(var(--brand-rgb), 0.18);
+}
+.tech-item:hover::before { opacity: 1; }
+
+.tech-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.tech-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px; height: 42px;
+  border-radius: 11px;
+  color: var(--brand);
+  background: rgba(var(--brand-rgb), 0.12);
+  border: 1px solid rgba(var(--brand-rgb), 0.22);
+  transition: transform 0.3s ease;
+}
+.tech-item:hover .tech-icon { transform: scale(1.08) rotate(-3deg); }
+.tech-meta {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand);
+  opacity: 0.85;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(var(--brand-rgb), 0.08);
+  border: 1px solid rgba(var(--brand-rgb), 0.15);
+  font-family: var(--mono);
+}
+.tech-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.tech-role {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+
+.companion-links {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.companion-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--bg-2);
+  border: 1px solid rgba(100, 116, 139, 0.15);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--mono);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.companion-link:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(34, 211, 238, 0.05);
+}
+.companion-link .arrow { transition: transform 0.15s ease; display: inline-block; }
+.companion-link:hover .arrow { transform: translateX(3px); }
+
+.companion-label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 18px;
+  font-family: var(--mono);
+  letter-spacing: 0.05em;
+}
+
+/* ====== Download ====== */
+.download-options {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ====== Footer ====== */
+.footer {
+  text-align: center;
+  padding: 56px 24px 40px;
+  color: rgba(100, 116, 139, 0.5);
+  font-size: 13px;
+  border-top: 1px solid rgba(100, 116, 139, 0.06);
+}
+.footer-links {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.footer a {
+  color: rgba(100, 116, 139, 0.7);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.footer a:hover { color: var(--primary); }
+
+/* ====== Scroll hint ====== */
+.scroll-hint {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.55;
+}
+.scroll-arrow {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(180deg, var(--muted), transparent);
+  position: relative;
+  overflow: hidden;
+}
+.scroll-arrow::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 14px;
+  background: linear-gradient(180deg, var(--primary), transparent);
+  animation: scrollArrow 1.8s ease-in-out infinite;
+}
+@keyframes scrollArrow {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(330%); }
+}
+
+/* ====== Reveal ====== */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.55s ease, transform 0.55s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-stagger > * { opacity: 0; transform: translateY(20px); transition: opacity 0.45s ease, transform 0.45s ease; }
+.reveal-stagger > *.visible { opacity: 1; transform: translateY(0); }
+.reveal-stagger > *:nth-child(1) { transition-delay: 0s; }
+.reveal-stagger > *:nth-child(2) { transition-delay: 0.08s; }
+.reveal-stagger > *:nth-child(3) { transition-delay: 0.16s; }
+.reveal-stagger > *:nth-child(4) { transition-delay: 0.24s; }
+.reveal-stagger > *:nth-child(5) { transition-delay: 0.32s; }
+.reveal-stagger > *:nth-child(6) { transition-delay: 0.40s; }
+
+/* ====== Reduced motion ====== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .hero-glow { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+<!-- ==================== HERO ==================== -->
+<header class="hero">
+  <canvas class="particles-canvas" id="heroParticles" aria-hidden="true"></canvas>
+  <div class="block-grid" id="blockGrid" aria-hidden="true"></div>
+  <div class="hero-glow" id="heroGlow" aria-hidden="true"></div>
+
+  <div class="hero-content">
+    <img src="../icon-source-blue.png" alt="BlockPrint Cat" class="hero-icon" width="84" height="84">
+    <h1 class="hero-title">BlockPrint <span class="accent">Cat</span></h1>
+    <p class="hero-sub">Android 端 Minecraft 蓝图管理与 3D 预览工具</p>
+    <p class="hero-sub-en">Minecraft blueprint manager &amp; 3D preview for Android</p>
+    <div class="badges">
+      <span class="badge"><span class="dot"></span> v1.0.0</span>
+      <span class="badge">Android 9+</span>
+      <span class="badge">开源 / Open Source</span>
+    </div>
+    <div class="hero-actions">
+      <a href="https://github.com/moxisuki/blockprint-cat/releases" class="btn btn-primary" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        下载 Download
+      </a>
+      <a href="https://github.com/moxisuki/blockprint-cat" class="btn btn-outline" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+  </div>
+
+  <div class="scroll-hint" aria-hidden="true">
+    <span>SCROLL</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</header>
+
+<!-- ==================== FEATURES ==================== -->
+<section class="section center">
+  <p class="eyebrow reveal">FEATURES</p>
+  <h2 class="section-title reveal">核心功能</h2>
+  <p class="section-desc mx-auto reveal">一站式管理你的 Minecraft 蓝图——从本地文件到 3D 预览，从 PC 同步到社区探索。</p>
+
+  <div class="features-grid reveal-stagger">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+      </div>
+      <h3>本地蓝图管理</h3>
+      <p>导入 .litematic / .schematic / .nbt / .json 文件，在手机上浏览、搜索、转换、重命名。</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 12h20"/><path d="M7 10v4"/><path d="M17 10v4"/><circle cx="7" cy="12" r="0.5" fill="currentColor"/><circle cx="17" cy="12" r="0.5" fill="currentColor"/></svg>
+      </div>
+      <h3>PC 端桥接同步</h3>
+      <p>局域网实时连接 blockprint-link 模组，支持扫码配对与断点续传，双向同步蓝图。</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8 22 16 12 22 2 16 2 8"/><polyline points="2 8 12 14 22 8"/><line x1="12" y1="14" x2="12" y2="22"/></svg>
+      </div>
+      <h3>实时 3D 预览</h3>
+      <p>基于 Filament 的实时光线追踪渲染，支持镜头切换、光照预设、原版与模组方块。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SCREENSHOTS ==================== -->
+<section class="section center section--tight">
+  <p class="eyebrow reveal">SCREENSHOTS</p>
+  <h2 class="section-title reveal">应用截图</h2>
+  <p class="section-desc mx-auto reveal">直观感知 BlockPrint Cat 在你手机上的样子。</p>
+
+  <div class="screenshots-grid reveal-stagger">
+    <div class="screenshot-card">
+      <div class="screenshot-inner">
+        <img src="screenshots/d4.png" alt="首页" loading="lazy">
+        <span class="screenshot-label">首页 · Home</span>
+      </div>
+    </div>
+    <div class="screenshot-card">
+      <div class="screenshot-inner">
+        <img src="screenshots/d2.png" alt="3D 预览" loading="lazy">
+        <span class="screenshot-label">3D 预览 · Preview</span>
+      </div>
+    </div>
+    <div class="screenshot-card">
+      <div class="screenshot-inner">
+        <img src="screenshots/d5.png" alt="蓝图详情" loading="lazy">
+        <span class="screenshot-label">蓝图详情 · Details</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== WORKFLOW ==================== -->
+<section class="section center section--tight">
+  <p class="eyebrow reveal">WORKFLOW</p>
+  <h2 class="section-title reveal">使用流程</h2>
+  <p class="section-desc mx-auto reveal">四步串联你的建造工作流，从导入到分享一气呵成。</p>
+
+  <div class="workflow reveal-stagger">
+    <div class="workflow-step">
+      <span class="step-num">01</span>
+      <h4>导入蓝图</h4>
+      <p>通过 SAF 文件选择器导入 .litematic / .schematic 等格式的蓝图文件。</p>
+      <span class="workflow-arrow" aria-hidden="true"></span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">02</span>
+      <h4>3D 预览</h4>
+      <p>加载原版或模组资源包，实时渲染方块模型，分层查看与镜头控制。</p>
+      <span class="workflow-arrow" aria-hidden="true"></span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">03</span>
+      <h4>PC 同步</h4>
+      <p>连接 PC 端 blockprint-link 模组，局域网传输蓝图，双向同步建筑方案。</p>
+      <span class="workflow-arrow" aria-hidden="true"></span>
+    </div>
+    <div class="workflow-step">
+      <span class="step-num">04</span>
+      <h4>社区探索</h4>
+      <p>浏览 MCS / CMS 社区作品，按标签与热度搜索，一键下载心仪蓝图。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== TECH ==================== -->
+<div class="tech-section">
+  <section class="section center">
+    <p class="eyebrow reveal">TECH STACK</p>
+    <h2 class="section-title reveal">技术栈 &amp; 配套项目</h2>
+    <p class="section-desc mx-auto reveal">基于最新的 Android 技术栈构建，与两个核心配套项目协同工作。</p>
+
+    <div class="tech-grid reveal-stagger">
+      <div class="tech-item" style="--brand: #7F52FF; --brand-rgb: 127, 82, 255;">
+        <div class="tech-card-head">
+          <div class="tech-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10s2-3 6-3 6 2 8 2 4-1 4-1v8s-2 1-4 1-5-2-8-2-6 3-6 3z"/><path d="M6 7v10"/><path d="M14 9v8"/></svg>
+          </div>
+          <span class="tech-meta">Language</span>
+        </div>
+        <h4 class="tech-name">Kotlin</h4>
+        <p class="tech-role">100% 与 Java 互操作，协程 + Flow 原生支持。</p>
+      </div>
+      <div class="tech-item" style="--brand: #4285F4; --brand-rgb: 66, 133, 244;">
+        <div class="tech-card-head">
+          <div class="tech-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
+          <span class="tech-meta">UI</span>
+        </div>
+        <h4 class="tech-name">Compose</h4>
+        <p class="tech-role">声明式 UI · 状态驱动 · 实时预览。</p>
+      </div>
+      <div class="tech-item" style="--brand: #34D399; --brand-rgb: 52, 211, 153;">
+        <div class="tech-card-head">
+          <div class="tech-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+          </div>
+          <span class="tech-meta">DI</span>
+        </div>
+        <h4 class="tech-name">Hilt</h4>
+        <p class="tech-role">基于 Dagger 的官方 DI，编译时安全。</p>
+      </div>
+      <div class="tech-item" style="--brand: #FF6E40; --brand-rgb: 255, 110, 64;">
+        <div class="tech-card-head">
+          <div class="tech-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/></svg>
+          </div>
+          <span class="tech-meta">Storage</span>
+        </div>
+        <h4 class="tech-name">Room</h4>
+        <p class="tech-role">SQLite 抽象层 · 类型安全 · 协程支持。</p>
+      </div>
+      <div class="tech-item" style="--brand: #A78BFA; --brand-rgb: 167, 139, 250;">
+        <div class="tech-card-head">
+          <div class="tech-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8 22 16 12 22 2 16 2 8"/><polyline points="2 8 12 14 22 8"/><line x1="12" y1="14" x2="12" y2="22"/></svg>
+          </div>
+          <span class="tech-meta">3D Engine</span>
+        </div>
+        <h4 class="tech-name">SceneView</h4>
+        <p class="tech-role">Filament 引擎 · 实时 3D · 模组方块支持。</p>
+      </div>
+      <div class="tech-item" style="--brand: #3DD0D0; --brand-rgb: 61, 208, 208;">
+        <div class="tech-card-head">
+          <div class="tech-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <span class="tech-meta">Network</span>
+        </div>
+        <h4 class="tech-name">OkHttp</h4>
+        <p class="tech-role">HTTP/2 · WebSocket · 拦截器链。</p>
+      </div>
+    </div>
+
+    <p class="companion-label">COMPANION PROJECTS</p>
+    <div class="companion-links reveal-stagger">
+      <a href="https://github.com/moxisuki/blockprint-core" class="companion-link" target="_blank" rel="noopener">
+        blockprint-core <span class="arrow">→</span>
+      </a>
+      <a href="https://github.com/moxisuki/blockprint-link" class="companion-link" target="_blank" rel="noopener">
+        blockprint-link <span class="arrow">→</span>
+      </a>
+    </div>
+  </section>
+</div>
+
+<!-- ==================== DOWNLOAD ==================== -->
+<section class="section center">
+  <p class="eyebrow reveal">GET STARTED</p>
+  <h2 class="section-title reveal">立即开始</h2>
+  <p class="section-desc mx-auto reveal">前往 GitHub Releases 下载最新 APK，或克隆源码自行构建。</p>
+
+  <div class="download-options reveal">
+    <a href="https://github.com/moxisuki/blockprint-cat/releases" class="btn btn-primary" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      下载最新版本 Download Latest
+    </a>
+    <a href="https://github.com/moxisuki/blockprint-cat" class="btn btn-outline" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
+      查看源码 Source
+    </a>
+  </div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+  <div class="footer-links">
+    <a href="https://github.com/moxisuki/blockprint-cat" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/moxisuki/blockprint-cat/releases" target="_blank" rel="noopener">Releases</a>
+    <a href="https://github.com/moxisuki/blockprint-core" target="_blank" rel="noopener">core</a>
+    <a href="https://github.com/moxisuki/blockprint-link" target="_blank" rel="noopener">link</a>
+  </div>
+  <p>&copy; BlockPrint Cat · 仅供学习交流 · For learning and communication only</p>
+</footer>
+
+<script>
+(function() {
+  var mcColors = [
+    '#7C9E4C','#8B6914','#7F7F7F','#B8945C','#3DD0D0','#FCDB58',
+    '#AA0000','#214BA4','#17DD62','#150F24','#3B6BD4','#A2A284',
+    '#C6C6C6','#F27FA5','#E88935','#453226'
+  ];
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ----- Block grid -----
+  var grid = document.getElementById('blockGrid');
+  var cells = [], cols, rows, total;
+
+  function buildGrid() {
+    if (!grid) return;
+    grid.innerHTML = '';
+    cells = [];
+    cols = Math.ceil(window.innerWidth / 48);
+    rows = Math.ceil(window.innerHeight / 48);
+    total = cols * rows;
+    grid.style.gridTemplateColumns = 'repeat(' + cols + ', 48px)';
+    grid.style.gridTemplateRows = 'repeat(' + rows + ', 48px)';
+    for (var i = 0; i < total; i++) {
+      var c = document.createElement('div');
+      c.className = 'block-cell';
+      c.style.backgroundColor = mcColors[Math.floor(Math.random() * mcColors.length)];
+      cells.push(c);
+      grid.appendChild(c);
+    }
+  }
+  buildGrid();
+
+  function updateCell(idx, color) {
+    if (cells[idx]) cells[idx].style.backgroundColor = color || mcColors[Math.floor(Math.random() * mcColors.length)];
+  }
+
+  function waveUpdate() {
+    var cx = Math.floor(Math.random() * cols);
+    var cy = Math.floor(Math.random() * rows);
+    var radius = 2 + Math.floor(Math.random() * 3);
+    var color = mcColors[Math.floor(Math.random() * mcColors.length)];
+    var delay = 0;
+    for (var dy = -radius; dy <= radius; dy++) {
+      for (var dx = -radius; dx <= radius; dx++) {
+        if (dx * dx + dy * dy <= radius * radius) {
+          var x = cx + dx, y = cy + dy;
+          if (x >= 0 && x < cols && y >= 0 && y < rows) {
+            (function(idx, col) {
+              setTimeout(function() { updateCell(idx, col); }, delay);
+            })(y * cols + x, color);
+          }
+        }
+      }
+      delay += 40;
+    }
+  }
+
+  function tick() {
+    if (Math.random() < 0.3) waveUpdate();
+    else updateCell(Math.floor(Math.random() * total));
+    window.__bgTimer = setTimeout(tick, 500 + Math.random() * 1500);
+  }
+  if (!prefersReduced) window.__bgTimer = setTimeout(tick, 800);
+
+  // Parallax
+  function parallax() {
+    if (!grid || prefersReduced) return;
+    var scrollY = window.scrollY || window.pageYOffset;
+    grid.style.transform = 'translateY(' + (scrollY * 0.35) + 'px)';
+  }
+
+  // ----- Mouse glow -----
+  var glow = document.getElementById('heroGlow');
+  var glowTimer;
+  function updateGlow(e) {
+    if (!glow || prefersReduced) return;
+    var x = e.clientX, y = e.clientY;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var inHero = (x >= 0 && x <= vw && y >= 0 && y <= vh);
+    glow.style.opacity = inHero ? '1' : '0';
+    if (inHero) {
+      glow.style.left = x + 'px';
+      glow.style.top = y + 'px';
+    }
+  }
+  document.addEventListener('mousemove', function(e) {
+    if (prefersReduced) return;
+    if (!glowTimer) {
+      glowTimer = requestAnimationFrame(function() {
+        glowTimer = null;
+        updateGlow(e);
+      });
+    }
+  });
+
+  // ----- Screenshot 3D tilt -----
+  var scCards = document.querySelectorAll('.screenshot-card');
+  scCards.forEach(function(card) {
+    card.addEventListener('mousemove', function(e) {
+      if (prefersReduced) return;
+      var rect = card.getBoundingClientRect();
+      var cx = (e.clientX - rect.left) / rect.width - 0.5;
+      var cy = (e.clientY - rect.top) / rect.height - 0.5;
+      card.style.transform = 'perspective(800px) rotateY(' + (cx * 5) + 'deg) rotateX(' + (-cy * 5) + 'deg)';
+    });
+    card.addEventListener('mouseleave', function() { card.style.transform = ''; });
+  });
+
+  // ----- Tech card mouse-follow -----
+  document.querySelectorAll('.tech-item').forEach(function(card) {
+    card.addEventListener('mousemove', function(e) {
+      if (prefersReduced) return;
+      var rect = card.getBoundingClientRect();
+      card.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%');
+      card.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%');
+    });
+  });
+
+  // ----- Scroll reveal -----
+  var revealObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) return;
+      var el = entry.target;
+      if (el.classList.contains('reveal')) {
+        el.classList.add('visible');
+        revealObserver.unobserve(el);
+      }
+      if (el.classList.contains('reveal-stagger')) {
+        var kids = el.children;
+        for (var i = 0; i < kids.length; i++) kids[i].classList.add('visible');
+        revealObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+  document.querySelectorAll('.reveal, .reveal-stagger').forEach(function(el) { revealObserver.observe(el); });
+
+  // ----- Scroll progress + parallax -----
+  var progBar = document.getElementById('scrollProgress');
+  var scrollTicking = false;
+  window.addEventListener('scroll', function() {
+    if (!scrollTicking) {
+      requestAnimationFrame(function() {
+        var st = window.scrollY;
+        var docH = document.documentElement.scrollHeight - window.innerHeight;
+        if (progBar) progBar.style.width = docH > 0 ? (st / docH * 100) + '%' : '0%';
+        parallax();
+        scrollTicking = false;
+      });
+      scrollTicking = true;
+    }
+  }, { passive: true });
+
+  // ----- Resize -----
+  var resizeTimeout;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(function() {
+      buildGrid();
+      if (!prefersReduced) window.__bgTimer = setTimeout(tick, 800);
+    }, 400);
+  });
+
+  // ----- Hero particle canvas -----
+  (function() {
+    var canvas = document.getElementById('heroParticles');
+    if (!canvas || prefersReduced) return;
+    var ctx = canvas.getContext('2d');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = 0, h = 0;
+    var particles = [];
+    var colors = ['#FCDB58', '#F59E0B', '#D9774C', '#7CBE4F', '#22D3EE', '#A78BFA'];
+
+    function resize() {
+      var rect = canvas.parentElement.getBoundingClientRect();
+      w = rect.width; h = rect.height;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+    }
+
+    function makeParticle(sparkle) {
+      return {
+        x: Math.random() * w,
+        y: Math.random() * h,
+        size: sparkle ? 2 + Math.random() * 2 : 1 + Math.random() * 2,
+        speedY: -(0.06 + Math.random() * 0.5),
+        swaySpeed: 0.01 + Math.random() * 0.02,
+        swayAmp: 0.2 + Math.random() * 0.4,
+        phase: Math.random() * Math.PI * 2,
+        opacity: sparkle ? (0.3 + Math.random() * 0.4) : (0.1 + Math.random() * 0.2),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        sparkle: !!sparkle,
+        pulsePhase: Math.random() * Math.PI * 2
+      };
+    }
+
+    resize();
+    for (var i = 0; i < 26; i++) particles.push(makeParticle(i < 6));
+
+    function step() {
+      ctx.clearRect(0, 0, w, h);
+      var now = Date.now() * 0.001;
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i];
+        p.phase += p.swaySpeed;
+        p.y += p.speedY;
+        p.x += Math.sin(p.phase) * p.swayAmp * 0.3;
+        if (p.y < -10) {
+          p.x = Math.random() * w;
+          p.y = h + 10;
+          p.color = colors[Math.floor(Math.random() * colors.length)];
+        }
+        if (p.x < -10) p.x = w + 10;
+        if (p.x > w + 10) p.x = -10;
+
+        var a = p.opacity;
+        if (p.sparkle) a *= (0.4 + 0.6 * Math.sin(now * 1.5 + p.pulsePhase));
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = a;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        if (p.sparkle) {
+          ctx.globalAlpha = a * 0.35;
+          ctx.fillRect(p.x - 1, p.y - 0.5, p.size + 2, p.size + 1);
+          ctx.fillRect(p.x - 0.5, p.y - 1, p.size + 1, p.size + 2);
+        }
+      }
+      requestAnimationFrame(step);
+    }
+    step();
+
+    var lastR = 0;
+    window.addEventListener('resize', function() {
+      var now = Date.now();
+      if (now - lastR < 300) return;
+      lastR = now;
+      resize();
+    });
+  })();
+})();
+</script>
+
+</body>
+</html>

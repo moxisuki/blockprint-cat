@@ -44,8 +44,7 @@ parameters; pre-compute derived data in the parent and pass it down.
 `@EntryPoint` + `EntryPointAccessors.fromApplication(...)` is the escape
 hatch for non-injected composables — prefer a real ViewModel first.
 
-## blockprint-core dependency
+## blockprint-core
 
-Pinned in `gradle/libs.versions.toml`. Bumping versions: check
-`blockprint-core/CHANGELOG.md` for renames; the docs under
-`blockprint-core/docs/` are the canonical API reference.
+API reference lives in `blockprint-core/docs/` (not in this repo).
+Check `blockprint-core/CHANGELOG.md` for renames when bumping.

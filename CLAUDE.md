@@ -46,6 +46,6 @@ hatch for non-injected composables — prefer a real ViewModel first.
 
 ## blockprint-core dependency
 
-Pinned in `gradle/libs.versions.toml`, resolved from `mavenLocal()`.
-Bumping versions: check `blockprint-core/CHANGELOG.md` for renames; the
-docs under `blockprint-core/docs/` are the canonical API reference.
+Pinned in `gradle/libs.versions.toml`. Bumping versions: check
+`blockprint-core/CHANGELOG.md` for renames; the docs under
+`blockprint-core/docs/` are the canonical API reference.

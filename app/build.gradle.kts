@@ -125,3 +125,193 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+// =============================================================================
+// generateChangelog — 把项目根 CHANGELOG.md 解析为结构化 Kotlin 数据
+// 产物：app/build/generated/source/changelog/.../ChangelogContent.kt
+// 触发：依赖 preBuild，每次构建自动运行；若 CHANGELOG.md 未变化则跳过
+// =============================================================================
+
+val changelogMdFile = rootProject.file("CHANGELOG.md")
+val changelogOutDir = layout.buildDirectory.dir("generated/source/changelog")
+
+val generateChangelog = tasks.register("generateChangelog") {
+    inputs.file(changelogMdFile).withPropertyName("changelog")
+    outputs.dir(changelogOutDir)
+    // 解析器/发射器是脚本级私有函数，无法被配置缓存序列化；
+    // 仅这一项任务禁用配置缓存，不影响整体构建缓存策略
+    notCompatibleWithConfigurationCache(
+        "Captures script-level parser/emitter which are not CC-serializable.",
+    )
+    doLast {
+        val target = changelogOutDir.get().asFile
+            .resolve("io/github/moxisuki/blockprint/cat/ui/settings")
+        target.mkdirs()
+        val text = changelogMdFile.readText(Charsets.UTF_8)
+        val entries = parseChangelogMarkdown(text)
+        target.resolve("ChangelogContent.kt")
+            .writeText(emitChangelogKotlin(entries), Charsets.UTF_8)
+    }
+}
+
+tasks.named("preBuild") { dependsOn(generateChangelog) }
+
+// 把生成目录加入主源码集（Kotlin 编译会自动拾取 .kt 文件）
+android.sourceSets["main"].kotlin.srcDir(changelogOutDir.get().asFile)
+
+// -----------------------------------------------------------------------------
+// 解析器与发射器（脚本级 — 仅在 build 阶段执行，不进 APK）
+// -----------------------------------------------------------------------------
+
+private data class PEntry(val title: String, val sections: List<PSection>)
+private data class PSection(val title: String, val bullets: List<PBullet>)
+private data class PBullet(val parts: List<PPart>)
+private sealed interface PPart {
+    data class Text(val text: String) : PPart
+    data class Bold(val text: String) : PPart
+}
+
+private fun parseChangelogMarkdown(text: String): List<PEntry> {
+    val lines = text.lines()
+    val out = mutableListOf<PEntry>()
+    var i = 0
+    while (i < lines.size && !lines[i].startsWith("## ")) i++
+    while (i < lines.size) {
+        val title = lines[i].removePrefix("## ").trim()
+        i++
+        val block = mutableListOf<String>()
+        while (i < lines.size && !lines[i].startsWith("## ")) {
+            block.add(lines[i]); i++
+        }
+        out.add(PEntry(title, parseSections(block)))
+    }
+    return out
+}
+
+private fun parseSections(lines: List<String>): List<PSection> {
+    val sections = mutableListOf<PSection>()
+    val collected = mutableListOf<String>()
+    var i = 0
+    while (i < lines.size && !lines[i].startsWith("### ")) i++
+    while (i < lines.size) {
+        val title = lines[i].removePrefix("### ").trim()
+        i++
+        collected.clear()
+        while (i < lines.size && !lines[i].startsWith("### ") && !lines[i].startsWith("## ")) {
+            collected.add(lines[i]); i++
+        }
+        val bullets = parseBullets(collected)
+        if (bullets.isNotEmpty()) sections.add(PSection(title, bullets))
+    }
+    if (sections.isEmpty()) {
+        val fallback = lines.filter { it.isNotBlank() && !it.startsWith("#") }
+            .map { PBullet(listOf(PPart.Text(it.trim()))) }
+        if (fallback.isNotEmpty()) sections.add(PSection("变更", fallback))
+    }
+    return sections
+}
+
+private fun parseBullets(lines: List<String>): List<PBullet> {
+    val out = mutableListOf<PBullet>()
+    var current: StringBuilder? = null
+    val topRe = Regex("^- (.+)$")
+    val nestedRe = Regex("^\\s{2,}- (.+)$")
+    for (raw in lines) {
+        if (raw.isBlank()) { current = null; continue }
+        val top = topRe.matchEntire(raw)
+        val nested = nestedRe.matchEntire(raw)
+        when {
+            top != null -> {
+                val t = top.groupValues[1]
+                current = StringBuilder(t)
+                out.add(PBullet(parseInline(t)))
+            }
+            nested != null && current != null -> {
+                val t = " " + nested.groupValues[1]
+                current.append(t)
+                out[out.size - 1] = PBullet(parseInline(current.toString()))
+            }
+        }
+    }
+    return out
+}
+
+private fun parseInline(text: String): List<PPart> {
+    val parts = mutableListOf<PPart>()
+    val re = Regex("\\*\\*(.+?)\\*\\*")
+    var last = 0
+    for (m in re.findAll(text)) {
+        if (m.range.first > last) parts.add(PPart.Text(text.substring(last, m.range.first)))
+        parts.add(PPart.Bold(m.groupValues[1]))
+        last = m.range.last + 1
+    }
+    if (last < text.length) parts.add(PPart.Text(text.substring(last)))
+    return parts
+}
+
+private fun kotlinStringEscape(s: String): String {
+    val sb = StringBuilder(s.length + 8)
+    for (c in s) when (c) {
+        '"' -> sb.append("\\\"")
+        '\\' -> sb.append("\\\\")
+        '$' -> sb.append("\\\$")
+        '\n' -> sb.append("\\n")
+        '\r' -> sb.append("\\r")
+        '\t' -> sb.append("\\t")
+        else -> sb.append(c)
+    }
+    return sb.toString()
+}
+
+private fun emitChangelogKotlin(entries: List<PEntry>): String = buildString {
+    appendLine("// Generated by :app:generateChangelog from CHANGELOG.md — do not edit.")
+    appendLine("package io.github.moxisuki.blockprint.cat.ui.settings")
+    appendLine()
+    appendLine("internal data class ChangelogEntry(")
+    appendLine("    val title: String,")
+    appendLine("    val sections: List<ChangelogSection>,")
+    appendLine(")")
+    appendLine()
+    appendLine("internal data class ChangelogSection(")
+    appendLine("    val title: String,")
+    appendLine("    val bullets: List<ChangelogBullet>,")
+    appendLine(")")
+    appendLine()
+    appendLine("internal data class ChangelogBullet(")
+    appendLine("    val parts: List<ChangelogPart>,")
+    appendLine(")")
+    appendLine()
+    appendLine("internal sealed interface ChangelogPart {")
+    appendLine("    data class Text(val text: String) : ChangelogPart")
+    appendLine("    data class Bold(val text: String) : ChangelogPart")
+    appendLine("}")
+    appendLine()
+    appendLine("internal fun changelogEntries(): List<ChangelogEntry> = listOf(")
+    for (entry in entries) {
+        appendLine("    ChangelogEntry(")
+        appendLine("        title = \"${kotlinStringEscape(entry.title)}\",")
+        appendLine("        sections = listOf(")
+        for (sec in entry.sections) {
+            appendLine("            ChangelogSection(")
+            appendLine("                title = \"${kotlinStringEscape(sec.title)}\",")
+            appendLine("                bullets = listOf(")
+            for (b in sec.bullets) {
+                appendLine("                    ChangelogBullet(")
+                appendLine("                        parts = listOf(")
+                for (p in b.parts) {
+                    when (p) {
+                        is PPart.Text -> appendLine("                            ChangelogPart.Text(\"${kotlinStringEscape(p.text)}\"),")
+                        is PPart.Bold -> appendLine("                            ChangelogPart.Bold(\"${kotlinStringEscape(p.text)}\"),")
+                    }
+                }
+                appendLine("                        ),")
+                appendLine("                    ),")
+            }
+            appendLine("                ),")
+            appendLine("            ),")
+        }
+        appendLine("        ),")
+        appendLine("    ),")
+    }
+    appendLine(")")
+}

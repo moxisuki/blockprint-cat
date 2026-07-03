@@ -113,7 +113,6 @@ fun AboutScreen(navController: NavController) {
     var updateChecking by remember { mutableStateOf(false) }
     var updateDialog by remember { mutableStateOf<UpdateInfo?>(null) }
     var showLatestDialog by remember { mutableStateOf(false) }
-    var showCrashTestDialog by remember { mutableStateOf(false) }
     // 彩蛋：点击版本号 5 次 → 长淡出 → 秘密页面
     var eggTaps by remember { mutableIntStateOf(0) }
     var eggPhase by remember { mutableStateOf(EggPhase.NORMAL) }
@@ -285,36 +284,14 @@ fun AboutScreen(navController: NavController) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            LinkItem(
+                text = stringResource(R.string.about_view_changelog),
+                onClick = { navController.navigate(NavRoutes.CHANGELOG) },
+            )
         }
 
         Spacer(Modifier.height(12.dp))
-
-        // Bugly 崩溃测试 — 仅在配置了 AppID 时显示
-        if (BuildConfig.BUGLY_APP_ID.isNotEmpty()) {
-            InfoCard(title = stringResource(R.string.about_section_bugly)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        // 二次确认
-                        showCrashTestDialog = true
-                    }.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Filled.Code,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(22.dp),
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        stringResource(R.string.about_test_crash),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
 
         // 更新对话框
         updateDialog?.let { info ->
@@ -357,29 +334,6 @@ fun AboutScreen(navController: NavController) {
                 confirmButton = {
                     TextButton(onClick = { showLatestDialog = false }) {
                         Text(stringResource(R.string.action_confirm))
-                    }
-                },
-            )
-        }
-
-        // Bugly 崩溃测试确认对话框
-        if (showCrashTestDialog) {
-            AlertDialog(
-                onDismissRequest = { showCrashTestDialog = false },
-                title = { Text(stringResource(R.string.about_test_crash_title)) },
-                text = { Text(stringResource(R.string.about_test_crash_msg)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showCrashTestDialog = false
-                        // 主动抛出一个未捕获异常 — Bugly 会捕获并上报
-                        throw RuntimeException("Manual crash test from AboutScreen")
-                    }) {
-                        Text(stringResource(R.string.about_test_crash_confirm), color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showCrashTestDialog = false }) {
-                        Text(stringResource(R.string.action_cancel))
                     }
                 },
             )

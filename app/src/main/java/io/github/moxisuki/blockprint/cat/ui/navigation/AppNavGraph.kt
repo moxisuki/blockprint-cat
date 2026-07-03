@@ -80,6 +80,7 @@ import io.github.moxisuki.blockprint.cat.ui.preview.PreviewScreen
 import io.github.moxisuki.blockprint.cat.ui.qr.QrScannerScreen
 import io.github.moxisuki.blockprint.cat.ui.render.RenderManagerScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.AboutScreen
+import io.github.moxisuki.blockprint.cat.ui.settings.ChangelogScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.CommunitySettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.SettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.TermsScreen
@@ -111,6 +112,7 @@ internal data class NavGraphFlags(
     val isCommunityDetail: Boolean,
     val isCommunityLogin: Boolean,
     val isAbout: Boolean,
+    val isChangelog: Boolean,
     val isTerms: Boolean,
     val isQrScanner: Boolean,
     val isCommunitySettings: Boolean,
@@ -133,11 +135,11 @@ internal data class NavGraphFlags(
 
     val showBottomBar: Boolean =
         !isDetail && !isRender && !isPreview && !isCommunityDetail &&
-            !isCommunityLogin && !isAbout && !isTerms && !isQrScanner && !isCommunitySettings
+            !isCommunityLogin && !isAbout && !isChangelog && !isTerms && !isQrScanner && !isCommunitySettings
 
     val showBackButton: Boolean =
         isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin ||
-            isAbout || isTerms || isQrScanner || isCommunitySettings
+            isAbout || isChangelog || isTerms || isQrScanner || isCommunitySettings
 }
 
 /**
@@ -175,6 +177,7 @@ private fun rememberNavGraphFlags(
             isCommunityDetail = route?.startsWith(NavRoutes.COMMUNITY_DETAIL) == true,
             isCommunityLogin = route == NavRoutes.COMMUNITY_LOGIN,
             isAbout = route == NavRoutes.ABOUT,
+            isChangelog = route == NavRoutes.CHANGELOG,
             isTerms = route == NavRoutes.TERMS,
             isQrScanner = route == NavRoutes.QR_SCANNER,
             isCommunitySettings = route == NavRoutes.COMMUNITY_SETTINGS,
@@ -294,6 +297,7 @@ private fun PadLayout(
         flags.isRender -> stringResource(R.string.nav_title_render)
         flags.isPreview -> stringResource(R.string.nav_title_preview)
         flags.isAbout -> stringResource(R.string.nav_title_about)
+        flags.isChangelog -> stringResource(R.string.nav_title_changelog)
         flags.isTerms -> stringResource(R.string.nav_title_terms)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
@@ -520,6 +524,15 @@ private fun PadLayout(
                         AboutScreen(navController = navController)
                     }
                     composable(
+                        route = NavRoutes.CHANGELOG,
+                        enterTransition = { fadeIn(AnimSpec.padFade) },
+                        exitTransition = { fadeOut(AnimSpec.padFadeOut) },
+                        popEnterTransition = { fadeIn(AnimSpec.padFade) },
+                        popExitTransition = { fadeOut(AnimSpec.padFadeOut) },
+                    ) {
+                        ChangelogScreen(navController = navController)
+                    }
+                    composable(
                         route = NavRoutes.TERMS,
                         enterTransition = { fadeIn(AnimSpec.padFade) },
                         exitTransition = { fadeOut(AnimSpec.padFadeOut) },
@@ -632,6 +645,7 @@ private fun CompactLayout(
         flags.isRender -> stringResource(R.string.nav_title_render)
         flags.isPreview -> stringResource(R.string.nav_title_preview)
         flags.isAbout -> stringResource(R.string.nav_title_about)
+        flags.isChangelog -> stringResource(R.string.nav_title_changelog)
         flags.isTerms -> stringResource(R.string.nav_title_terms)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
@@ -837,6 +851,7 @@ private fun CompactLayout(
                     SettingsScreen(navController = navController)
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }
+                composable(route = NavRoutes.CHANGELOG) { ChangelogScreen(navController = navController) }
                 composable(route = NavRoutes.TERMS) { TermsScreen(navController = navController) }
                 composable(route = NavRoutes.COMMUNITY_SETTINGS) { CommunitySettingsScreen() }
                 composable(

@@ -14,6 +14,7 @@ object NavRoutes {
     const val DETAIL = "detail"
     const val PREVIEW = "preview"
     const val ABOUT = "about"
+    const val CHANGELOG = "changelog"
     const val TERMS = "terms"
     const val COMMUNITY_SETTINGS = "community-settings"
 

@@ -47,4 +47,3 @@ hatch for non-injected composables — prefer a real ViewModel first.
 ## blockprint-core
 
 API reference lives in `blockprint-core/docs/` (not in this repo).
-Check `blockprint-core/CHANGELOG.md` for renames when bumping.

@@ -41,8 +41,8 @@ android {
         applicationId = "io.github.moxisuki.blockprint.cat"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -64,13 +64,39 @@ android {
         manifestPlaceholders["BUGLY_APP_ID"] = buglyAppId
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = localProps.getProperty("RELEASE_STORE_FILE")?.let { file(it) }
+            storePassword = localProps.getProperty("RELEASE_STORE_PASSWORD")
+            keyAlias = localProps.getProperty("RELEASE_KEY_ALIAS")
+            keyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD")
+            // APK 直分发签名：v1(JAR) + v2 + v3 全开
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // GitHub 直分发：每个 ABI 各出一个独立 APK，用户按机型下载对应包。
+    // x86/x86_64 仅模拟器需要；如需一并产出可加入 include。
+    // isUniversalApk = true 时额外产出一个含全部 ABI 的通用包。
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
         }
     }
     compileOptions {

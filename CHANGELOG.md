@@ -2,7 +2,7 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
-## [未发布] · 开发中
+## [1.0.1] · 2026-07-04
 
 ### 新增
 

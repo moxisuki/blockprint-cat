@@ -28,7 +28,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -733,28 +739,83 @@ private fun CompactLayout(
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ) {
-                    bottomNavItems
-                        .filter { it.route != NavRoutes.COMMUNITY || communityEnabled }
-                        .forEach { item ->
-                            val selected = flags.route?.let { route -> navController.currentBackStackEntry?.destination?.hierarchy?.any { it.route == item.route } == true } ?: false
-                            val label = stringResource(item.labelRes)
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                        contentDescription = label,
-                                    )
-                                },
-                                label = { Text(label) },
-                                selected = selected,
-                                onClick = {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id)
-                                        launchSingleTop = true
-                                    }
-                                },
+                    // Home + Tools — flat NavigationBarItem slots
+                    bottomNavItems.forEach { item ->
+                        val selected = flags.route?.let { route -> navController.currentBackStackEntry?.destination?.hierarchy?.any { it.route == item.route } == true } ?: false
+                        val label = stringResource(item.labelRes)
+                        NavigationBarItem(
+                            icon = {
+                                Icon(
+                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = label,
+                                )
+                            },
+                            label = { Text(label) },
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id)
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+
+                    // Connection — elevated circular button (always shown)
+                    ElevatedNavBarItem(
+                        selected = flags.isConnection,
+                        onClick = {
+                            navController.navigate(NavRoutes.CONNECTION) {
+                                popUpTo(navController.graph.findStartDestination().id)
+                                launchSingleTop = true
+                            }
+                        },
+                        icon = Icons.Outlined.Computer,
+                        selectedIcon = Icons.Filled.Computer,
+                        label = stringResource(R.string.bottom_nav_connection),
+                    )
+
+                    // Community — flat slot, gated by communityEnabled
+                    if (communityEnabled) {
+                        val communitySelected = flags.route?.let { route -> navController.currentBackStackEntry?.destination?.hierarchy?.any { it.route == NavRoutes.COMMUNITY } == true } ?: false
+                        val communityLabel = stringResource(R.string.bottom_nav_community)
+                        NavigationBarItem(
+                            icon = {
+                                Icon(
+                                    imageVector = if (communitySelected) Icons.Filled.People else Icons.Outlined.People,
+                                    contentDescription = communityLabel,
+                                )
+                            },
+                            label = { Text(communityLabel) },
+                            selected = communitySelected,
+                            onClick = {
+                                navController.navigate(NavRoutes.COMMUNITY) {
+                                    popUpTo(navController.graph.findStartDestination().id)
+                                    launchSingleTop = true
+                                }
+                            },
+                        )
+                    }
+
+                    // Settings — always shown
+                    val settingsSelected = flags.route?.let { route -> navController.currentBackStackEntry?.destination?.hierarchy?.any { it.route == NavRoutes.SETTINGS } == true } ?: false
+                    val settingsLabel = stringResource(R.string.bottom_nav_settings)
+                    NavigationBarItem(
+                        icon = {
+                            Icon(
+                                imageVector = if (settingsSelected) Icons.Filled.Settings else Icons.Outlined.Settings,
+                                contentDescription = settingsLabel,
                             )
-                        }
+                        },
+                        label = { Text(settingsLabel) },
+                        selected = settingsSelected,
+                        onClick = {
+                            navController.navigate(NavRoutes.SETTINGS) {
+                                popUpTo(navController.graph.findStartDestination().id)
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 }
             }
         },

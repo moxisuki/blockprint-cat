@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
-internal sealed interface ToolClickResult {
+sealed interface ToolClickResult {
     data object NotImplemented : ToolClickResult
 }
 
 @HiltViewModel
-internal class ToolsViewModel @Inject constructor() : ViewModel() {
+class ToolsViewModel @Inject constructor() : ViewModel() {
     private val _tools = MutableStateFlow(ToolCatalog.entries)
     val tools: StateFlow<List<ToolEntry>> = _tools.asStateFlow()
 

@@ -12,9 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.github.moxisuki.blockprint.cat.R
 
-internal enum class ToolKind { Hero, ListItem }
+enum class ToolKind { Hero, ListItem }
 
-internal data class ToolEntry(
+data class ToolEntry(
     val id: String,
     @StringRes val titleRes: Int,
     @StringRes val subtitleRes: Int?,

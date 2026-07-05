@@ -3,13 +3,13 @@ package io.github.moxisuki.blockprint.cat.ui.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,10 +18,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /**
- * Connection tab — circular FAB-style button at the standard NavigationBarItem
- * slot position. Distinguished from flat siblings by circular shape, primary
- * color, and strong shadow — but does NOT extend above the bar (would be
- * clipped by the bar's bounded content area).
+ * Connection tab — promoted primary action rendered as a Material 3
+ * FilledIconButton (40.dp, the M3 standard "icon button" size). Sits inside
+ * the standard NavigationBarItem slot. Distinguished from flat siblings by:
+ * - circular filled background (primary / primaryContainer)
+ * - solid icon contrast against the bar's flat icons
+ * No oversized FAB, no jarring shadow.
  */
 @Composable
 internal fun ElevatedNavBarItem(
@@ -36,35 +38,36 @@ internal fun ElevatedNavBarItem(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Surface(
+        FilledIconButton(
             onClick = onClick,
+            modifier = Modifier.size(40.dp),
             shape = CircleShape,
-            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
-            tonalElevation = if (selected) 8.dp else 4.dp,
-            shadowElevation = if (selected) 12.dp else 8.dp,
-            modifier = Modifier.size(56.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.primaryContainer,
+                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = if (selected) selectedIcon else icon,
-                    contentDescription = label,
-                    tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
+            Icon(
+                imageVector = if (selected) selectedIcon else icon,
+                contentDescription = label,
+                modifier = Modifier.size(20.dp),
+            )
         }
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),
         )
     }
 }
 
 /**
- * Pad (NavigationRail) variant — circular button protruding 12.dp to the
- * LEFT of the rail column. Label sits to the right of the button.
+ * Pad (NavigationRail) variant — same FilledIconButton approach, but
+ * arranged in a row with the label to the right (rail items are vertical).
  */
 @Composable
 internal fun ElevatedNavRailItem(
@@ -79,32 +82,28 @@ internal fun ElevatedNavRailItem(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier.offset(x = (-12).dp),
-            contentAlignment = Alignment.Center,
+        FilledIconButton(
+            onClick = onClick,
+            modifier = Modifier.size(40.dp),
+            shape = CircleShape,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.primaryContainer,
+                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
         ) {
-            Surface(
-                onClick = onClick,
-                shape = CircleShape,
-                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
-                tonalElevation = if (selected) 6.dp else 2.dp,
-                shadowElevation = if (selected) 8.dp else 4.dp,
-                modifier = Modifier.size(56.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = if (selected) selectedIcon else icon,
-                        contentDescription = label,
-                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
+            Icon(
+                imageVector = if (selected) selectedIcon else icon,
+                contentDescription = label,
+                modifier = Modifier.size(20.dp),
+            )
         }
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 12.dp),
         )
     }

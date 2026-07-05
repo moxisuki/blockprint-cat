@@ -84,6 +84,7 @@ import io.github.moxisuki.blockprint.cat.ui.settings.ChangelogScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.CommunitySettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.SettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.TermsScreen
+import io.github.moxisuki.blockprint.cat.ui.tools.ToolsScreen
 
 /**
  * Derived state shared between Pad and Compact layout branches.
@@ -303,6 +304,7 @@ private fun PadLayout(
         flags.isAbout -> stringResource(R.string.nav_title_about)
         flags.isChangelog -> stringResource(R.string.nav_title_changelog)
         flags.isTerms -> stringResource(R.string.nav_title_terms)
+        flags.isTools -> stringResource(R.string.nav_title_tools)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
@@ -518,6 +520,9 @@ private fun PadLayout(
                     ) {
                         SettingsScreen(navController = navController)
                     }
+                    composable(NavRoutes.TOOLS) {
+                        ToolsScreen(snackbarHostState = snackbarHostState)
+                    }
                     composable(
                         route = NavRoutes.ABOUT,
                         enterTransition = { fadeIn(AnimSpec.padFade) },
@@ -651,6 +656,7 @@ private fun CompactLayout(
         flags.isAbout -> stringResource(R.string.nav_title_about)
         flags.isChangelog -> stringResource(R.string.nav_title_changelog)
         flags.isTerms -> stringResource(R.string.nav_title_terms)
+        flags.isTools -> stringResource(R.string.nav_title_tools)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
@@ -853,6 +859,9 @@ private fun CompactLayout(
                     route = NavRoutes.SETTINGS,
                 ) {
                     SettingsScreen(navController = navController)
+                }
+                composable(NavRoutes.TOOLS) {
+                    ToolsScreen(snackbarHostState = snackbarHostState)
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }
                 composable(route = NavRoutes.CHANGELOG) { ChangelogScreen(navController = navController) }

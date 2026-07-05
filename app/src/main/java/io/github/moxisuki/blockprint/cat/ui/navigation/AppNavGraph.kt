@@ -116,6 +116,8 @@ internal data class NavGraphFlags(
     val isTerms: Boolean,
     val isQrScanner: Boolean,
     val isCommunitySettings: Boolean,
+    val isTools: Boolean,
+    val isConnection: Boolean,
     val connectionState: ConnectionState,
     // Community fields are flattened to stable primitives so this data class
     // stays Stable. The previous single `communityState: CommunityListState`
@@ -181,6 +183,8 @@ private fun rememberNavGraphFlags(
             isTerms = route == NavRoutes.TERMS,
             isQrScanner = route == NavRoutes.QR_SCANNER,
             isCommunitySettings = route == NavRoutes.COMMUNITY_SETTINGS,
+            isTools = route == NavRoutes.TOOLS,
+            isConnection = route == NavRoutes.CONNECTION,
             connectionState = connectionState,
             communityCurrentSource = communityState.currentSource,
             communityReady = active.ready,

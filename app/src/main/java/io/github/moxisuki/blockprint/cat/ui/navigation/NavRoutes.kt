@@ -8,6 +8,7 @@ object NavRoutes {
     const val COMMUNITY_LOGIN = "community/login"
     const val COMMUNITY_DETAIL = "community/detail"
     const val SETTINGS = "settings"
+    const val TOOLS = "tools"
     const val CONNECTION = "connection"
     const val QR_SCANNER = "qr-scanner"
     const val RENDER = "render"

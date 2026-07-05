@@ -69,6 +69,16 @@
     <string name="bottom_nav_community">Community</string>
     <string name="bottom_nav_settings">Settings</string>
     <string name="bottom_nav_connection">Connection</string>
+    <string name="bottom_nav_tools">Tools</string>
+    <string name="nav_title_tools">Tools</string>
+    <string name="tool_image_to_blueprint">Image to Blueprint</string>
+    <string name="tool_image_to_blueprint_subtitle">Convert any image into a stackable Minecraft block blueprint</string>
+    <string name="tool_pixel_art">Pixel Art Generator</string>
+    <string name="tool_color_palette">Color Palette</string>
+    <string name="tool_qr_scan">Scan to Connect</string>
+    <string name="tool_backup_restore">Backup / Restore</string>
+    <string name="tool_cache_clear">Clear Cache</string>
+    <string name="tool_not_implemented">This feature is under development</string>
 
     <!-- HomeScreen -->
     <string name="home_empty_title">No blueprints yet</string>

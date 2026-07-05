@@ -53,6 +53,16 @@
     <string name="bottom_nav_community">社区</string>
     <string name="bottom_nav_settings">设置</string>
     <string name="bottom_nav_connection">连接</string>
+    <string name="bottom_nav_tools">工具</string>
+    <string name="nav_title_tools">工具</string>
+    <string name="tool_image_to_blueprint">图片转蓝图画</string>
+    <string name="tool_image_to_blueprint_subtitle">把任意图片转换为可堆叠的 Minecraft 方块蓝图</string>
+    <string name="tool_pixel_art">像素画生成</string>
+    <string name="tool_color_palette">颜色调色板</string>
+    <string name="tool_qr_scan">扫码连接</string>
+    <string name="tool_backup_restore">备份/恢复</string>
+    <string name="tool_cache_clear">缓存清理</string>
+    <string name="tool_not_implemented">该功能正在开发中</string>
     <string name="nav_title_connection">设备连接</string>
     <string name="bridge_section_paired">已配对</string>
     <string name="bridge_section_paired_empty">暂无已配对设备，扫码或手动连接后会自动保存</string>

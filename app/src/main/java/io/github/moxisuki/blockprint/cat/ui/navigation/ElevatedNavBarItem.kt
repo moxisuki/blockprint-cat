@@ -18,9 +18,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /**
- * Connection tab — circular FAB-style button protruding 12.dp above the
- * NavigationBar top edge. Label sits on the standard label baseline and does
- * not participate in the elevation offset.
+ * Connection tab — circular FAB-style button at the standard NavigationBarItem
+ * slot position. Distinguished from flat siblings by circular shape, primary
+ * color, and strong shadow — but does NOT extend above the bar (would be
+ * clipped by the bar's bounded content area).
  */
 @Composable
 internal fun ElevatedNavBarItem(
@@ -35,26 +36,21 @@ internal fun ElevatedNavBarItem(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier.offset(y = (-12).dp),
-            contentAlignment = Alignment.Center,
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
+            tonalElevation = if (selected) 8.dp else 4.dp,
+            shadowElevation = if (selected) 12.dp else 8.dp,
+            modifier = Modifier.size(56.dp),
         ) {
-            Surface(
-                onClick = onClick,
-                shape = CircleShape,
-                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
-                tonalElevation = if (selected) 6.dp else 2.dp,
-                shadowElevation = if (selected) 8.dp else 4.dp,
-                modifier = Modifier.size(56.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = if (selected) selectedIcon else icon,
-                        contentDescription = label,
-                        tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (selected) selectedIcon else icon,
+                    contentDescription = label,
+                    tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp),
+                )
             }
         }
         Text(

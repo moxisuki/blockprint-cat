@@ -31,11 +31,8 @@ internal data class BottomNavItem(
 
 internal val bottomNavItems = listOf(
     BottomNavItem(NavRoutes.HOME, R.string.bottom_nav_home, Icons.Filled.Home, Icons.Outlined.Home),
+    BottomNavItem(NavRoutes.CONNECTION, R.string.bottom_nav_connection, Icons.Filled.Computer, Icons.Outlined.Computer),
+    BottomNavItem(NavRoutes.COMMUNITY, R.string.bottom_nav_community, Icons.Filled.People, Icons.Outlined.People),
+    BottomNavItem(NavRoutes.SETTINGS, R.string.bottom_nav_settings, Icons.Filled.Settings, Icons.Outlined.Settings),
     BottomNavItem(NavRoutes.TOOLS, R.string.bottom_nav_tools, Icons.Filled.Construction, Icons.Outlined.Construction),
 )
-
-/**
- * Connection is rendered as an elevated circular button (see ElevatedNavBarItem)
- * rather than a flat BottomNavItem, so it lives outside the bottomNavItems list.
- */
-internal const val CONNECTION_TAB_ROUTE = NavRoutes.CONNECTION

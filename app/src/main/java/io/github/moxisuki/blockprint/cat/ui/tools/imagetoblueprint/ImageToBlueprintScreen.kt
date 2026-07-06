@@ -255,22 +255,11 @@ CollapsibleSection(
 
         Spacer(Modifier.height(20.dp))
 
-        Button(
-            onClick = { viewModel.startConvert() },
-            enabled = state.imageUri != null && !state.isUpdating,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            if (state.isUpdating) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp,
-                )
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(stringResource(R.string.itb_convert))
-        }
+        ExportButton(
+            enabled = state.imageUri != null && state.resultBitmap != null,
+            isUpdating = state.isUpdating,
+            onClick = { viewModel.startConvert() },  // T21 will replace with onExport
+        )
 
         Spacer(Modifier.height(24.dp))
     }

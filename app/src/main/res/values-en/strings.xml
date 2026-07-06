@@ -137,6 +137,7 @@
     <string name="itb_enlarge_dismiss">Tap anywhere to close</string>
     <string name="itb_reselect">Reselect</string>
     <string name="itb_updating">Updating…</string>
+    <string name="itb_export">Export</string>
 
     <!-- HomeScreen -->
     <string name="home_empty_title">No blueprints yet</string>

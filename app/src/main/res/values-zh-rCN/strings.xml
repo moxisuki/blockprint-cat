@@ -121,6 +121,7 @@
     <string name="itb_enlarge_dismiss">点击任意位置关闭</string>
     <string name="itb_reselect">重新选择</string>
     <string name="itb_updating">更新中…</string>
+    <string name="itb_export">导出</string>
     <string name="nav_title_connection">设备连接</string>
     <string name="bridge_section_paired">已配对</string>
     <string name="bridge_section_paired_empty">暂无已配对设备，扫码或手动连接后会自动保存</string>

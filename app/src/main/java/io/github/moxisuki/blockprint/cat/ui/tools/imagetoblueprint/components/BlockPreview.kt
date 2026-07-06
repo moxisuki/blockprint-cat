@@ -71,7 +71,10 @@ private fun rememberPixelArt(@DrawableRes resId: Int): ImageBitmap {
                 bitmap
             }
             ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        val scale = 8
+        // scale 4 = 32x32 for 8x8 source, 64x64 for 16x16 source
+        // Display size is 28dp (~56-84px on 2x-3x density), so 4x is enough
+        // and reduces first-time allocation cost ~4x per group
+        val scale = 4
         val scaled = Bitmap.createScaledBitmap(original, original.width * scale, original.height * scale, false)
         scaled.asImageBitmap()
     }

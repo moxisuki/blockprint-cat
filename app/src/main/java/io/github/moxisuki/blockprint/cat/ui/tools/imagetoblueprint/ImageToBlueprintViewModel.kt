@@ -38,6 +38,18 @@ class ImageToBlueprintViewModel @Inject constructor(
     private val _state = MutableStateFlow(ImageToBlueprintState())
     val state: StateFlow<ImageToBlueprintState> = _state.asStateFlow()
 
+    /**
+     * 有图片时：更新 state（设 isUpdating=true）并推 debounce 信号。
+     * 无图片时：只更新参数（保留滑块位置等），不推信号、不翻 isUpdating。
+     * 这样用户调参数时没有图就不会显示"更新中"假状态。
+     */
+    private fun updateAndMaybeSchedule(transform: (ImageToBlueprintState) -> ImageToBlueprintState) {
+        _state.update(transform)
+        if (_state.value.imageUri != null) {
+            dirtySignal.push()
+        }
+    }
+
     private val dirtySignal = PreviewDebounce(viewModelScope, debounceMs = 200L)
 
     init {
@@ -63,80 +75,72 @@ class ImageToBlueprintViewModel @Inject constructor(
                 isUpdating = true,
             )
         }
-        dirtySignal.push()
+        if (width > 0 && height > 0) dirtySignal.push()
     }
 
     fun setTargetWidth(width: Int) {
-        _state.update {
+        updateAndMaybeSchedule {
             it.copy(
                 targetWidth = width.coerceIn(ImageToBlueprintState.MIN_WIDTH, ImageToBlueprintState.MAX_WIDTH),
                 isUpdating = true,
             )
         }
-        dirtySignal.push()
     }
 
     fun setDitherMethod(method: DitherMethod) {
-        _state.update { it.copy(ditherMethod = method, isUpdating = true) }
-        dirtySignal.push()
+        updateAndMaybeSchedule { it.copy(ditherMethod = method, isUpdating = true) }
     }
 
     fun setBrightness(value: Int) {
-        _state.update {
+        updateAndMaybeSchedule {
             it.copy(
                 brightness = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
                 isUpdating = true,
             )
         }
-        dirtySignal.push()
     }
 
     fun setContrast(value: Int) {
-        _state.update {
+        updateAndMaybeSchedule {
             it.copy(
                 contrast = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
                 isUpdating = true,
             )
         }
-        dirtySignal.push()
     }
 
     fun setSaturation(value: Int) {
-        _state.update {
+        updateAndMaybeSchedule {
             it.copy(
                 saturation = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
                 isUpdating = true,
             )
         }
-        dirtySignal.push()
     }
 
     fun setTransparencyEnabled(enabled: Boolean) {
-        _state.update { it.copy(transparencyEnabled = enabled, isUpdating = true) }
-        dirtySignal.push()
+        updateAndMaybeSchedule { it.copy(transparencyEnabled = enabled, isUpdating = true) }
     }
 
     fun setTransparencyTolerance(value: Int) {
-        _state.update {
+        updateAndMaybeSchedule {
             it.copy(
                 transparencyTolerance = value.coerceIn(ImageToBlueprintState.MIN_TOLERANCE, ImageToBlueprintState.MAX_TOLERANCE),
                 isUpdating = true,
             )
         }
-        dirtySignal.push()
     }
 
     fun toggleGroup(group: BlockGroup) {
-        _state.update { s ->
+        updateAndMaybeSchedule { s ->
             val selected = s.selectedGroups.toMutableSet()
             if (selected.contains(group)) selected.remove(group) else selected.add(group)
             s.copy(selectedGroups = selected, isUpdating = true)
         }
-        dirtySignal.push()
     }
 
     fun resetAdjustments() {
-        _state.update {
+        updateAndMaybeSchedule {
             it.copy(
                 brightness = ImageToBlueprintState.DEFAULT_ADJUST,
                 contrast = ImageToBlueprintState.DEFAULT_ADJUST,
@@ -144,7 +148,6 @@ class ImageToBlueprintViewModel @Inject constructor(
                 isUpdating = true,
             )
         }
-        dirtySignal.push()
     }
 
     /**
@@ -152,7 +155,7 @@ class ImageToBlueprintViewModel @Inject constructor(
      * 现在转换由 setter 防抖自动触发；显式点击等价于立即 push 一次信号。
      */
     fun startConvert() {
-        dirtySignal.push()
+        if (_state.value.imageUri != null) dirtySignal.push()
     }
 
     private fun requestConvert() {

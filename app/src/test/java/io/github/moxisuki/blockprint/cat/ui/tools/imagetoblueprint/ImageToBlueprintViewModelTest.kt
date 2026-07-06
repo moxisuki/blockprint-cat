@@ -38,11 +38,23 @@ class ImageToBlueprintViewModelTest {
 
     @Test fun `setBrightness marks isUpdating true during debounce window`() = runTest(testDispatcher) {
         val vm = ImageToBlueprintViewModel()
-        // 不调用 setImage 避免触发 loadBitmap 路径
+        // 选图后才标记 isUpdating
+        vm.setImage(Uri.parse("file:///tmp/test.png"), 100, 100)
+        advanceTimeBy(220)
+        advanceUntilIdle()
         vm.setBrightness(150)
         // 200ms 之内：正在 debounce，isUpdating 应该是 true
         advanceTimeBy(50)
         assertThat(vm.state.value.isUpdating).isTrue()
+    }
+
+    @Test fun `setBrightness without image does not set isUpdating`() = runTest(testDispatcher) {
+        val vm = ImageToBlueprintViewModel()
+        // 未选图：参数仍然更新，但不推信号、不翻 isUpdating
+        vm.setBrightness(150)
+        advanceTimeBy(50)
+        assertThat(vm.state.value.brightness).isEqualTo(150)
+        assertThat(vm.state.value.isUpdating).isFalse()
     }
 
     @Test fun `encodeForExport returns null when resultBitmap is null`() = runTest(testDispatcher) {

@@ -25,14 +25,33 @@ class BlueprintPreviewViewModelTest {
         assertThat(vm.state.value.materials).containsEntry("white_wool", 4)
     }
 
-    @Test fun `changing format does not lose materials`() {
+    @Test fun `changing export type does not lose materials`() {
         val bmp: Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         val encoded = ExportPayloadCodec.encode(bmp, 1, 1, 1, mapOf("red_wool" to 1))
         val vm = BlueprintPreviewViewModel(
             java.net.URLDecoder.decode(java.net.URLEncoder.encode(encoded, "UTF-8"), "UTF-8"),
         )
-        vm.setFormat(ExportFormat.SCHEMATIC)
-        assertThat(vm.state.value.format).isEqualTo(ExportFormat.SCHEMATIC)
+        vm.setExportType(ExportType.BLUEPRINT_SPONGE)
+        assertThat(vm.state.value.exportType).isEqualTo(ExportType.BLUEPRINT_SPONGE)
         assertThat(vm.state.value.materials).containsEntry("red_wool", 1)
+    }
+
+    @Test fun `changing blueprint mode does not lose materials`() {
+        val bmp: Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        val encoded = ExportPayloadCodec.encode(bmp, 1, 1, 1, mapOf("blue_wool" to 1))
+        val vm = BlueprintPreviewViewModel(
+            java.net.URLDecoder.decode(java.net.URLEncoder.encode(encoded, "UTF-8"), "UTF-8"),
+        )
+        vm.setBlueprintMode(BlueprintMode.FLAT)
+        assertThat(vm.state.value.blueprintMode).isEqualTo(BlueprintMode.FLAT)
+        assertThat(vm.state.value.materials).containsEntry("blue_wool", 1)
+    }
+
+    @Test fun `default export type is litematica and mode is wall`() {
+        val bmp: Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        val encoded = ExportPayloadCodec.encode(bmp, 1, 1, 1, mapOf("stone" to 1))
+        val vm = BlueprintPreviewViewModel(encoded)
+        assertThat(vm.state.value.exportType).isEqualTo(ExportType.BLUEPRINT_LITEMATICA)
+        assertThat(vm.state.value.blueprintMode).isEqualTo(BlueprintMode.WALL)
     }
 }

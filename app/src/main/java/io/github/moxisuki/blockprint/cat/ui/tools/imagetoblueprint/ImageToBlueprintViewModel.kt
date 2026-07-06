@@ -165,6 +165,23 @@ class ImageToBlueprintViewModel @Inject constructor(
     private fun requestConvert() {
         val s = _state.value
         val uri = s.imageUri ?: return
+        val groupKeys = s.selectedGroups.map { it.key }.toSet()
+        // 没选任何方块组：直接清空结果，不让 engine 抛 "No Block Available"
+        if (groupKeys.isEmpty()) {
+            _state.update {
+                it.copy(
+                    isUpdating = false,
+                    resultBitmap = null,
+                    resultWidth = 0,
+                    resultHeight = 0,
+                    resultTotalBlocks = 0,
+                    resultMaterialCounts = emptyMap(),
+                    errorMessage = null,
+                    previewMode = PreviewMode.Source,
+                )
+            }
+            return
+        }
         viewModelScope.launch {
             try {
                 val result = withContext(Dispatchers.Default) {
@@ -175,23 +192,6 @@ class ImageToBlueprintViewModel @Inject constructor(
                     val bitmap = if (s.transparencyEnabled) {
                         makeBackgroundTransparent(rawBitmap, s.transparencyTolerance)
                     } else rawBitmap
-                    val groupKeys = s.selectedGroups.map { it.key }.toSet()
-                    if (groupKeys.isEmpty()) {
-                        // 没选任何方块组：清空结果，不让 engine 抛 "No Block Available"
-                        _state.update {
-                            it.copy(
-                                isUpdating = false,
-                                resultBitmap = null,
-                                resultWidth = 0,
-                                resultHeight = 0,
-                                resultTotalBlocks = 0,
-                                resultMaterialCounts = emptyMap(),
-                                errorMessage = null,
-                                previewMode = PreviewMode.Source,
-                            )
-                        }
-                        return@launch
-                    }
                     val options = ConversionOptions(
                         targetWidth = s.targetWidth,
                         ditherMethod = mapDither(s.ditherMethod),

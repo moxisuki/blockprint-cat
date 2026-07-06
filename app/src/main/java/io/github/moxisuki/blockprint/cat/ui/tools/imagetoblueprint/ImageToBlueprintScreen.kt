@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -170,7 +171,7 @@ fun ImageToBlueprintScreen(
             expanded = expanded,
             onToggle = { expanded = expanded.toggle(it) },
         ) {
-            DitherDropdown(state.ditherMethod) { viewModel.setDitherMethod(it) }
+            DitherDropdown(state.ditherMethod, viewModel::setDitherMethod)
         }
 
         CollapsibleSection(

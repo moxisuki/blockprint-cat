@@ -10,7 +10,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.moxisuki.pixelart.BlockSelector
 import com.github.moxisuki.pixelart.ConversionOptions
 import com.github.moxisuki.pixelart.DitherMethod as EngineDitherMethod
-import com.github.moxisuki.pixelart.BlockFilter as EngineBlockFilter
 import com.github.moxisuki.pixelart.PixelArtConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -136,15 +135,6 @@ class ImageToBlueprintViewModel @Inject constructor(
         dirtySignal.push()
     }
 
-    fun toggleFilter(filter: BlockFilter) {
-        _state.update { s ->
-            val active = s.activeFilters.toMutableSet()
-            if (active.contains(filter)) active.remove(filter) else active.add(filter)
-            s.copy(activeFilters = active, isUpdating = true)
-        }
-        dirtySignal.push()
-    }
-
     fun resetAdjustments() {
         _state.update {
             it.copy(
@@ -171,8 +161,13 @@ class ImageToBlueprintViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val result = withContext(Dispatchers.Default) {
-                    val bitmap = loadBitmap(uri)
+                    val rawBitmap = loadBitmap(uri)
                         ?: throw IllegalStateException("Failed to load image")
+                    // 透明开关打开时，先做"白底去除"预处理：把较亮的像素改成 alpha=0，
+                    // engine 再用 alpha < tolerance 把它们识别为空气方块。
+                    val bitmap = if (s.transparencyEnabled) {
+                        makeBackgroundTransparent(rawBitmap, s.transparencyTolerance)
+                    } else rawBitmap
                     val groupKeys = s.selectedGroups.map { it.key }.toSet()
                     val options = ConversionOptions(
                         targetWidth = s.targetWidth,
@@ -184,8 +179,7 @@ class ImageToBlueprintViewModel @Inject constructor(
                         transparencyEnabled = s.transparencyEnabled,
                         transparencyTolerance = s.transparencyTolerance,
                     )
-                    var selector = BlockSelector().selectGroups(groupKeys)
-                    s.activeFilters.forEach { f -> selector = selector.applyFilter(mapBlockFilter(f), true) }
+                    val selector = BlockSelector().selectGroups(groupKeys)
                     PixelArtConverter.convert(bitmap, options, selector)
                 }
                 _state.update {
@@ -207,6 +201,33 @@ class ImageToBlueprintViewModel @Inject constructor(
 
     private fun loadBitmap(uri: Uri): Bitmap? =
         context?.contentResolver?.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+
+    /**
+     * 把"较亮"的像素（max(R,G,B) > 255 - tolerance）改成 alpha=0，
+     * engine 的 transparency 逻辑就会把它们识别为空气方块。
+     * tolerance=0 不去除任何像素；tolerance=255 除纯黑以外都变透明。
+     */
+    private fun makeBackgroundTransparent(src: Bitmap, tolerance: Int): Bitmap {
+        val w = src.width
+        val h = src.height
+        val pixels = IntArray(w * h)
+        src.getPixels(pixels, 0, w, 0, 0, w, h)
+        val cutoff = 255 - tolerance.coerceIn(0, 255)
+        for (i in pixels.indices) {
+            val p = pixels[i]
+            val r = (p shr 16) and 0xFF
+            val g = (p shr 8) and 0xFF
+            val b = p and 0xFF
+            val max = maxOf(r, g, b)
+            if (max > cutoff) {
+                // 清掉 alpha 通道，RGB 保留
+                pixels[i] = p and 0x00FFFFFF
+            }
+        }
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        out.setPixels(pixels, 0, w, 0, 0, w, h)
+        return out
+    }
 
     /**
      * 编码当前结果为可导航传输的字符串。resultBitmap 为 null 时返回 null，UI 端应禁用按钮。
@@ -234,13 +255,5 @@ class ImageToBlueprintViewModel @Inject constructor(
         DitherMethod.SIERRA_LITE -> EngineDitherMethod.SIERRA_LITE
         DitherMethod.STUCKI -> EngineDitherMethod.STUCKI
         DitherMethod.ATKINSON -> EngineDitherMethod.ATKINSON
-    }
-
-    private fun mapBlockFilter(filter: BlockFilter): EngineBlockFilter = when (filter) {
-        BlockFilter.EXCLUDE_FALLING -> EngineBlockFilter.FALLING
-        BlockFilter.TRANSPARENT_ONLY -> EngineBlockFilter.TRANSPARENT
-        BlockFilter.SURVIVAL_ONLY -> EngineBlockFilter.SURVIVAL
-        BlockFilter.LUMINANCE_ONLY -> EngineBlockFilter.LUMINANCE
-        BlockFilter.REDSTONE_ONLY -> EngineBlockFilter.REDSTONE
     }
 }

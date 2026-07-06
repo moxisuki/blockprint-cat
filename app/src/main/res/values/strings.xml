@@ -104,7 +104,6 @@
     <string name="itb_section_adjust">图像调整</string>
     <string name="itb_section_transparency">透明度</string>
     <string name="itb_section_blocks">方块选择</string>
-    <string name="itb_section_block_filters">方块筛选器</string>
     <string name="itb_brightness">亮度</string>
     <string name="itb_contrast">对比度</string>
     <string name="itb_saturation">饱和度</string>
@@ -134,11 +133,6 @@
     <string name="itb_group_glazed">釉陶</string>
     <string name="itb_group_light">光源</string>
     <string name="itb_group_ore">矿石</string>
-    <string name="itb_filter_exclude_falling">排除重力方块</string>
-    <string name="itb_filter_transparent_only">仅透明方块</string>
-    <string name="itb_filter_survival_only">仅生存可获得</string>
-    <string name="itb_filter_luminance_only">仅发光方块</string>
-    <string name="itb_filter_redstone_only">仅红石组件</string>
     <string name="itb_section_result">预览结果</string>
     <string name="itb_result_size">%1$d × %2$d 方块</string>
     <string name="itb_result_total">共 %1$d 个方块</string>

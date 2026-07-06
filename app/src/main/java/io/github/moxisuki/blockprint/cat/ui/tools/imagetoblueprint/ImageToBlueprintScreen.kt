@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockFilterChips
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockGroupSection
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.PreviewHero
@@ -95,7 +94,6 @@ private const val SEC_OUTPUT = "output"
 private const val SEC_ADJUST = "adjust"
 private const val SEC_TRANSPARENCY = "transparency"
 private const val SEC_BLOCKS = "blocks"
-private const val SEC_FILTERS = "filters"
 private const val SEC_RESULT = "result"
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -227,18 +225,6 @@ fun ImageToBlueprintScreen(
             onToggle = { expanded = expanded.toggle(it) },
         ) {
             BlockGroupSection(selectedGroups = state.selectedGroups, onToggleGroup = viewModel::toggleGroup)
-        }
-
-        CollapsibleSection(
-            id = SEC_FILTERS,
-            title = stringResource(R.string.itb_section_block_filters),
-            expanded = expanded,
-            onToggle = { expanded = expanded.toggle(it) },
-        ) {
-            BlockFilterChips(
-                activeFilters = state.activeFilters,
-                onToggleFilter = viewModel::toggleFilter,
-            )
         }
 
 CollapsibleSection(

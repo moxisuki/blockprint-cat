@@ -35,14 +35,6 @@ enum class BlockGroup(val key: String, val labelRes: Int) {
     ORE("ore", io.github.moxisuki.blockprint.cat.R.string.itb_group_ore);
 }
 
-enum class BlockFilter(val key: String, val labelRes: Int) {
-    EXCLUDE_FALLING("excludeFalling", io.github.moxisuki.blockprint.cat.R.string.itb_filter_exclude_falling),
-    TRANSPARENT_ONLY("transparentOnly", io.github.moxisuki.blockprint.cat.R.string.itb_filter_transparent_only),
-    SURVIVAL_ONLY("survivalOnly", io.github.moxisuki.blockprint.cat.R.string.itb_filter_survival_only),
-    LUMINANCE_ONLY("luminanceOnly", io.github.moxisuki.blockprint.cat.R.string.itb_filter_luminance_only),
-    REDSTONE_ONLY("redstoneOnly", io.github.moxisuki.blockprint.cat.R.string.itb_filter_redstone_only);
-}
-
 data class BlockEntry(
     val id: String,
     val group: BlockGroup,
@@ -235,7 +227,6 @@ data class ImageToBlueprintState(
     val transparencyEnabled: Boolean = false,
     val transparencyTolerance: Int = 128,
     val selectedGroups: Set<BlockGroup> = setOf(BlockGroup.WOOL, BlockGroup.CONCRETE, BlockGroup.TERRACOTTA, BlockGroup.STONE, BlockGroup.WOOD),
-    val activeFilters: Set<BlockFilter> = emptySet(),
     val previewMode: PreviewMode = PreviewMode.Source,
     val isUpdating: Boolean = false,
     val lastUpdatedAt: Long = 0L,

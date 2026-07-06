@@ -92,7 +92,6 @@
     <string name="itb_section_adjust">Image Adjustments</string>
     <string name="itb_section_transparency">Transparency</string>
     <string name="itb_section_blocks">Block Selection</string>
-    <string name="itb_section_block_filters">Block Filters</string>
     <string name="itb_brightness">Brightness</string>
     <string name="itb_contrast">Contrast</string>
     <string name="itb_saturation">Saturation</string>
@@ -122,11 +121,6 @@
     <string name="itb_group_glazed">Glazed</string>
     <string name="itb_group_light">Light</string>
     <string name="itb_group_ore">Ore</string>
-    <string name="itb_filter_exclude_falling">Exclude falling blocks</string>
-    <string name="itb_filter_transparent_only">Transparent only</string>
-    <string name="itb_filter_survival_only">Survival obtainable only</string>
-    <string name="itb_filter_luminance_only">Glowing blocks only</string>
-    <string name="itb_filter_redstone_only">Redstone only</string>
     <string name="itb_section_result">Preview Result</string>
     <string name="itb_result_size">%1$d × %2$d blocks</string>
     <string name="itb_result_total">%1$d blocks total</string>

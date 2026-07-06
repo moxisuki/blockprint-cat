@@ -9,6 +9,7 @@ object NavRoutes {
     const val COMMUNITY_DETAIL = "community/detail"
     const val SETTINGS = "settings"
     const val TOOLS = "tools"
+    const val IMAGE_TO_BLUEPRINT = "tools/image_to_blueprint"
     const val CONNECTION = "connection"
     const val QR_SCANNER = "qr-scanner"
     const val RENDER = "render"
@@ -18,6 +19,8 @@ object NavRoutes {
     const val CHANGELOG = "changelog"
     const val TERMS = "terms"
     const val COMMUNITY_SETTINGS = "community-settings"
+    const val BLUEPRINT_PREVIEW = "blueprintPreview"
+    const val BLUEPRINT_PREVIEW_ROUTE = "$BLUEPRINT_PREVIEW/{result}"
 
     fun detailRoute(uuid: String): String = "$DETAIL/$uuid"
     fun previewRoute(uuid: String): String = "$PREVIEW/$uuid"
@@ -27,4 +30,7 @@ object NavRoutes {
         "$COMMUNITY_DETAIL/${source.name}/$id"
 
     fun renderWithMod(slug: String): String = "$RENDER?mod=$slug"
+
+    fun blueprintPreviewRoute(encodedResult: String): String =
+        "$BLUEPRINT_PREVIEW/${java.net.URLEncoder.encode(encodedResult, "UTF-8")}"
 }

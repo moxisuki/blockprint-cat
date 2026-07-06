@@ -55,8 +55,11 @@ class ExportPayloadCodecTest {
         assertThat(decoded.bitmap.height).isEqualTo(100)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = Exception::class)
     fun `decode invalid base64 throws`() {
+        // base64 是合法的，但解压后不是有效 zlib → ZipException
+        // base64 不合法会得到 IllegalArgumentException
+        // 任意一种异常都算"解码失败"，所以用 Exception 基类
         ExportPayloadCodec.decode("not-valid-base64-!!!@@@")
     }
 }

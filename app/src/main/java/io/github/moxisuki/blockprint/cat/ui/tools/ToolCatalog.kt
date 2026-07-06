@@ -3,7 +3,6 @@ package io.github.moxisuki.blockprint.cat.ui.tools
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,14 +35,6 @@ internal object ToolCatalog {
             subtitleRes = R.string.tool_text_to_blueprint_subtitle,
             icon = Icons.Outlined.TextFields,
             accent = Color(0xFF42A5F5),
-            kind = ToolKind.ListItem,
-        ),
-        ToolEntry(
-            id = "qr_scan",
-            titleRes = R.string.tool_qr_scan,
-            subtitleRes = null,
-            icon = Icons.Outlined.QrCodeScanner,
-            accent = Color(0xFF26A69A),
             kind = ToolKind.ListItem,
         ),
     )

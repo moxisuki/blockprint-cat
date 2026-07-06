@@ -142,7 +142,7 @@ internal data class NavGraphFlags(
     val showBottomBar: Boolean =
         !isDetail && !isRender && !isPreview && !isCommunityDetail &&
             !isCommunityLogin && !isAbout && !isChangelog && !isTerms && !isQrScanner && !isCommunitySettings &&
-            !isImageToBlueprint
+            !isImageToBlueprint && !isTextToBlueprint
 
     val showBackButton: Boolean =
         isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin ||

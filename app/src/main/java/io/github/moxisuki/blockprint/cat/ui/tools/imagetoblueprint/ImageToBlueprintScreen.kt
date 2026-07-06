@@ -22,6 +22,7 @@ import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.Ad
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockFilterChips
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockGroupSection
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.PreviewHero
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.ResultMaterialsPanel
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.TransparencySection
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
@@ -144,13 +145,16 @@ fun ImageToBlueprintScreen(
     ) {
         Spacer(Modifier.height(12.dp))
 
-        ImagePreviewSection(
+        PreviewHero(
             sourceUri = state.imageUri,
             sourceWidth = state.imageWidth,
             sourceHeight = state.imageHeight,
             resultBitmap = state.resultBitmap,
             resultWidth = state.resultWidth,
             resultHeight = state.resultHeight,
+            previewMode = state.previewMode,
+            isUpdating = state.isUpdating,
+            lastUpdatedAt = state.lastUpdatedAt,
             onReselect = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             onEnlarge = { enlargedPreview = true },
         )

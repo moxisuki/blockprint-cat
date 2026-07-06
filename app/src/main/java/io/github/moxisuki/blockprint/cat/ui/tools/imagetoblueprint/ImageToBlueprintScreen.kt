@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -188,9 +190,9 @@ fun ImageToBlueprintScreen(
                 }
             },
         ) {
-            AdjustSlider(stringResource(R.string.itb_brightness), state.brightness) { viewModel.setBrightness(it) }
-            AdjustSlider(stringResource(R.string.itb_contrast), state.contrast) { viewModel.setContrast(it) }
-            AdjustSlider(stringResource(R.string.itb_saturation), state.saturation) { viewModel.setSaturation(it) }
+            AdjustSlider(stringResource(R.string.itb_brightness), state.brightness, viewModel::setBrightness)
+            AdjustSlider(stringResource(R.string.itb_contrast), state.contrast, viewModel::setContrast)
+            AdjustSlider(stringResource(R.string.itb_saturation), state.saturation, viewModel::setSaturation)
         }
 
         CollapsibleSection(
@@ -820,33 +822,5 @@ private fun DitherDropdown(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun AdjustSlider(
-    label: String,
-    value: Int,
-    onValueChange: (Int) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                value.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.toInt()) },
-            valueRange = ImageToBlueprintState.MIN_ADJUST.toFloat()..ImageToBlueprintState.MAX_ADJUST.toFloat(),
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }

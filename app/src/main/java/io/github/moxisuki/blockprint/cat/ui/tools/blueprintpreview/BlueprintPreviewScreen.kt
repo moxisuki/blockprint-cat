@@ -13,18 +13,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -88,44 +92,26 @@ fun BlueprintPreviewContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Spacer(Modifier.height(12.dp))
-        // 3D 占位预览区
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                stringResource(R.string.bp_placeholder),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        // 导出类型（5 选 1）
+        // 导出类型（FilterChip + FlowRow 自动换行，不会被裁切）
         Text(
             stringResource(R.string.bp_export_type),
             style = MaterialTheme.typography.titleSmall,
         )
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            val types = ExportType.entries
-            types.forEachIndexed { index, type ->
-                SegmentedButton(
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            ExportType.entries.forEach { type ->
+                FilterChip(
                     selected = state.exportType == type,
                     onClick = { viewModel.setExportType(type) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
-                ) {
-                    Text(
-                        text = stringResource(type.labelRes()),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                    label = { Text(stringResource(type.labelRes())) },
+                )
             }
         }
 
-        // 分支 1: MC 命令 → 6 方向选择 + 命令预览
+        // 分支 1: MC 命令 → 6 方向选择 + 命令预览 + 复制/分享
         if (state.exportType == ExportType.MC_COMMANDS) {
             McCommandBranch(
                 direction = state.commandDirection,
@@ -206,10 +192,15 @@ private fun McCommandBranch(
             Text(stringResource(R.string.itb_export_generate))
         }
         if (commandsText.isNotEmpty()) {
+            val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+            var copied by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 320.dp)
+                    .heightIn(max = 280.dp)
                     .clip(RoundedCornerShape(8.dp)),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
@@ -221,6 +212,66 @@ private fun McCommandBranch(
                         .verticalScroll(rememberScrollState())
                         .padding(8.dp),
                 )
+            }
+            // 复制 + 分享为 .mcfunction
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilledTonalButton(
+                    onClick = {
+                        clipboard.setText(androidx.compose.ui.text.AnnotatedString(commandsText))
+                        copied = true
+                    },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                ) {
+                    androidx.compose.material3.Icon(
+                        androidx.compose.material.icons.Icons.Outlined.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(end = 6.dp)
+                            .size(16.dp),
+                    )
+                    Text(stringResource(R.string.bp_action_copy))
+                }
+                FilledTonalButton(
+                    onClick = {
+                        // 把命令写入 cache 目录，以 .mcfunction 分享
+                        val file = java.io.File(context.cacheDir, "mc_commands_${System.currentTimeMillis()}.mcfunction")
+                        file.writeText(commandsText)
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file,
+                        )
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/*"
+                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, "MC Commands")
+                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(
+                            android.content.Intent.createChooser(intent, "分享 MC 命令")
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                ) {
+                    androidx.compose.material3.Icon(
+                        androidx.compose.material.icons.Icons.Outlined.Share,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(end = 6.dp)
+                            .size(16.dp),
+                    )
+                    Text(stringResource(R.string.bp_action_share))
+                }
+            }
+            LaunchedEffect(copied) {
+                if (copied) {
+                    kotlinx.coroutines.delay(1200)
+                    copied = false
+                }
             }
         }
     }

@@ -1,0 +1,852 @@
+package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint
+
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.AddPhotoAlternate
+import androidx.compose.material.icons.outlined.Brightness5
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Grid4x4
+import androidx.compose.material.icons.outlined.Opacity
+import androidx.compose.material.icons.outlined.WidthNormal
+import androidx.compose.material.icons.sharp.CheckCircle
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import io.github.moxisuki.blockprint.cat.R
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
+
+private const val SEC_DITHER = "dither"
+private const val SEC_OUTPUT = "output"
+private const val SEC_ADJUST = "adjust"
+private const val SEC_TRANSPARENCY = "transparency"
+private const val SEC_BLOCKS = "blocks"
+private const val SEC_FILTERS = "filters"
+private const val SEC_RESULT = "result"
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun ImageToBlueprintScreen(
+    viewModel: ImageToBlueprintViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri: Uri? ->
+        uri?.let { resolved ->
+            val (w, h) = readImageDimensions(context, resolved)
+            viewModel.setImage(resolved, w, h)
+        }
+    }
+
+    var expanded by remember { mutableStateOf(setOf(SEC_DITHER)) }
+    var enlargedPreview by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.resultBitmap) {
+        if (state.resultBitmap != null) expanded = expanded + SEC_RESULT
+    }
+
+    LaunchedEffect(state.errorMessage) {
+        if (state.errorMessage != null) expanded = expanded + SEC_RESULT
+    }
+
+    val enlarged = state.resultBitmap
+    if (enlarged != null && enlargedPreview) {
+        EnlargedPreviewDialog(
+            bitmap = enlarged,
+            width = state.resultWidth,
+            height = state.resultHeight,
+            totalBlocks = state.resultTotalBlocks,
+            onDismiss = { enlargedPreview = false },
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+    ) {
+        Spacer(Modifier.height(12.dp))
+
+        ImagePreviewSection(
+            sourceUri = state.imageUri,
+            sourceWidth = state.imageWidth,
+            sourceHeight = state.imageHeight,
+            resultBitmap = state.resultBitmap,
+            resultWidth = state.resultWidth,
+            resultHeight = state.resultHeight,
+            onReselect = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            onEnlarge = { enlargedPreview = true },
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        CollapsibleSection(
+            id = SEC_OUTPUT,
+            icon = Icons.Outlined.WidthNormal,
+            title = stringResource(R.string.itb_section_output),
+            expanded = expanded,
+            onToggle = { expanded = expanded.toggle(it) },
+        ) {
+            WidthInput(state.targetWidth, viewModel::setTargetWidth)
+        }
+
+        CollapsibleSection(
+            id = SEC_DITHER,
+            icon = Icons.Outlined.Grid4x4,
+            title = stringResource(R.string.itb_section_dither),
+            expanded = expanded,
+            onToggle = { expanded = expanded.toggle(it) },
+        ) {
+            DitherDropdown(state.ditherMethod) { viewModel.setDitherMethod(it) }
+        }
+
+        CollapsibleSection(
+            id = SEC_ADJUST,
+            icon = Icons.Outlined.Brightness5,
+            title = stringResource(R.string.itb_section_adjust),
+            expanded = expanded,
+            onToggle = { expanded = expanded.toggle(it) },
+            trailing = {
+                if (SEC_ADJUST in expanded) {
+                    Text(
+                        stringResource(R.string.itb_reset),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 14.sp,
+                        modifier = Modifier.clickable { viewModel.resetAdjustments() },
+                    )
+                }
+            },
+        ) {
+            AdjustSlider(stringResource(R.string.itb_brightness), state.brightness) { viewModel.setBrightness(it) }
+            AdjustSlider(stringResource(R.string.itb_contrast), state.contrast) { viewModel.setContrast(it) }
+            AdjustSlider(stringResource(R.string.itb_saturation), state.saturation) { viewModel.setSaturation(it) }
+        }
+
+        CollapsibleSection(
+            id = SEC_TRANSPARENCY,
+            icon = Icons.Outlined.Opacity,
+            title = stringResource(R.string.itb_section_transparency),
+            expanded = expanded,
+            onToggle = { expanded = expanded.toggle(it) },
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.itb_transparency_enable), style = MaterialTheme.typography.bodyLarge)
+                Switch(state.transparencyEnabled, onCheckedChange = { viewModel.setTransparencyEnabled(it) })
+            }
+            if (state.transparencyEnabled) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.itb_transparency_tolerance, state.transparencyTolerance),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = state.transparencyTolerance.toFloat(),
+                    onValueChange = { viewModel.setTransparencyTolerance(it.toInt()) },
+                    valueRange = ImageToBlueprintState.MIN_TOLERANCE.toFloat()..ImageToBlueprintState.MAX_TOLERANCE.toFloat(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    stringResource(R.string.itb_transparency_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+        }
+
+        CollapsibleSection(
+            id = SEC_BLOCKS,
+            icon = Icons.Outlined.FilterList,
+            title = stringResource(R.string.itb_section_blocks),
+            expanded = expanded,
+            onToggle = { expanded = expanded.toggle(it) },
+        ) {
+            CategoryGrid(selectedGroups = state.selectedGroups, onToggleGroup = viewModel::toggleGroup)
+        }
+
+        CollapsibleSection(
+            id = SEC_FILTERS,
+            title = stringResource(R.string.itb_section_block_filters),
+            expanded = expanded,
+            onToggle = { expanded = expanded.toggle(it) },
+        ) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                BlockFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = state.activeFilters.contains(filter),
+                        onClick = { viewModel.toggleFilter(filter) },
+                        label = { Text(stringResource(filter.labelRes)) },
+                    )
+                }
+            }
+        }
+
+CollapsibleSection(
+            id = SEC_RESULT,
+            title = stringResource(R.string.itb_section_result),
+            expanded = expanded,
+            onToggle = { expanded = expanded.toggle(it) },
+        ) {
+            ResultMaterials(
+                totalBlocks = state.resultTotalBlocks,
+                materialCounts = state.resultMaterialCounts,
+                errorMessage = state.errorMessage,
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        Button(
+            onClick = { viewModel.startConvert() },
+            enabled = state.imageUri != null && !state.isConverting,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            if (state.isConverting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp,
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(stringResource(R.string.itb_convert))
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+private fun <T> Set<T>.toggle(item: T): Set<T> = if (item in this) this - item else this + item
+
+@Composable
+private fun CollapsibleSection(
+    id: String,
+    title: String,
+    expanded: Set<String>,
+    onToggle: (String) -> Unit,
+    icon: ImageVector? = null,
+    trailing: @Composable (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val isExpanded = id in expanded
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onToggle(id) }
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.weight(1f))
+            trailing?.invoke()
+            val rotation by animateFloatAsState(targetValue = if (isExpanded) 90f else 0f, label = "chevron")
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp).rotate(rotation),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column(modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
+                content()
+            }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+    }
+}
+
+@Composable
+private fun ResultPreview(
+    bitmap: android.graphics.Bitmap?,
+    width: Int,
+    height: Int,
+    totalBlocks: Int,
+    materialCounts: Map<String, Int>,
+    errorMessage: String?,
+    onEnlarge: () -> Unit,
+) {
+    when {
+        errorMessage != null -> {
+            Text(
+                stringResource(R.string.itb_result_error, errorMessage),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        bitmap != null -> {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val shape = RoundedCornerShape(12.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp, max = 320.dp)
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        .border(
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            shape,
+                        )
+                        .clickable { onEnlarge() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = stringResource(R.string.itb_enlarge_hint),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp).padding(8.dp),
+                        contentScale = ContentScale.Fit,
+                        filterQuality = FilterQuality.None,
+                    )
+                }
+                Text(
+                    stringResource(R.string.itb_result_size, width, height) +
+                        "  ·  " +
+                        stringResource(R.string.itb_result_total, totalBlocks),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (materialCounts.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.itb_result_materials),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                    )
+                    val sorted = materialCounts.entries.sortedByDescending { it.value }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        sorted.take(10).forEach { (name, count) ->
+                            val displayName = name.replace('_', ' ')
+                                .split(' ').joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(displayName, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "× $count",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        if (sorted.size > 10) {
+                            Text(
+                                "+ ${sorted.size - 10} more",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        else -> {
+            Text(
+                stringResource(R.string.itb_no_result),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ResultMaterials(
+    totalBlocks: Int,
+    materialCounts: Map<String, Int>,
+    errorMessage: String?,
+) {
+    when {
+        errorMessage != null -> {
+            Text(
+                stringResource(R.string.itb_result_error, errorMessage),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        totalBlocks > 0 && materialCounts.isNotEmpty() -> {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.itb_result_total, totalBlocks),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    stringResource(R.string.itb_result_materials),
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                )
+                val sorted = materialCounts.entries.sortedByDescending { it.value }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    sorted.take(10).forEach { (name, count) ->
+                        val displayName = name.replace('_', ' ')
+                            .split(' ').joinToString(" ") { it.replaceFirstChar { c -> c.uppercaseChar() } }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(displayName, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "× $count",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    if (sorted.size > 10) {
+                        Text(
+                            "+ ${sorted.size - 10} more",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                    }
+                }
+            }
+        }
+        else -> {
+            Text(
+                stringResource(R.string.itb_no_result),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EnlargedPreviewDialog(
+    bitmap: android.graphics.Bitmap,
+    width: Int,
+    height: Int,
+    totalBlocks: Int,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.95f))
+                .clickable { onDismiss() },
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxSize()
+                    .padding(top = 56.dp, bottom = 80.dp, start = 16.dp, end = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    filterQuality = FilterQuality.None,
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    stringResource(R.string.itb_result_size, width, height) +
+                        "  ·  " +
+                        stringResource(R.string.itb_result_total, totalBlocks),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.itb_enlarge_dismiss),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryGrid(
+    selectedGroups: Set<BlockGroup>,
+    onToggleGroup: (BlockGroup) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        BlockGroup.entries.forEach { group ->
+            val blocks = BlockCatalog.byGroup[group] ?: return@forEach
+            val selected = group in selectedGroups
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onToggleGroup(group) }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(group.labelRes),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        ),
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "(${blocks.size})",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    if (selected) {
+                        Icon(
+                            Icons.Sharp.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    blocks.forEach { block ->
+                        BlockPreview(block = block, dimmed = !selected)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlockPreview(
+    block: BlockEntry,
+    dimmed: Boolean,
+) {
+    val shape = RoundedCornerShape(6.dp)
+    val pixelBitmap = rememberPixelArt(block.drawableResId)
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (dimmed) 0.3f else 0.5f))
+            .border(
+                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (dimmed) 0.2f else 0.5f)),
+                shape,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            bitmap = pixelBitmap,
+            contentDescription = block.displayName,
+            modifier = Modifier
+                .size(40.dp)
+                .alpha(if (dimmed) 0.35f else 1f),
+            contentScale = ContentScale.Fit,
+            filterQuality = FilterQuality.None,
+        )
+    }
+}
+
+@Composable
+private fun rememberPixelArt(@androidx.annotation.DrawableRes resId: Int): androidx.compose.ui.graphics.ImageBitmap {
+    val context = LocalContext.current
+    return remember(resId) {
+        val original = androidx.core.content.ContextCompat.getDrawable(context, resId)
+            ?.let { drawable ->
+                val bitmap = android.graphics.Bitmap.createBitmap(
+                    drawable.intrinsicWidth.coerceAtLeast(1),
+                    drawable.intrinsicHeight.coerceAtLeast(1),
+                    android.graphics.Bitmap.Config.ARGB_8888,
+                )
+                val canvas = android.graphics.Canvas(bitmap)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                bitmap
+            }
+            ?: android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
+        val scale = 8
+        val scaled = android.graphics.Bitmap.createScaledBitmap(original, original.width * scale, original.height * scale, false)
+        scaled.asImageBitmap()
+    }
+}
+
+private fun readImageDimensions(
+    context: android.content.Context,
+    uri: Uri,
+): Pair<Int, Int> {
+    return try {
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeStream(stream, null, opts)
+            (opts.outWidth to opts.outHeight).takeIf { it.first > 0 && it.second > 0 } ?: (0 to 0)
+        } ?: (0 to 0)
+    } catch (_: Exception) {
+        0 to 0
+    }
+}
+
+@Composable
+private fun ImagePreviewSection(
+    sourceUri: Uri?,
+    sourceWidth: Int,
+    sourceHeight: Int,
+    resultBitmap: android.graphics.Bitmap?,
+    resultWidth: Int,
+    resultHeight: Int,
+    onReselect: () -> Unit,
+    onEnlarge: () -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    val bitmapToShow = resultBitmap
+    val labelToShow: String? = if (resultBitmap != null) {
+        stringResource(R.string.itb_result_size, resultWidth, resultHeight)
+    } else if (sourceWidth > 0 && sourceHeight > 0) {
+        stringResource(R.string.itb_image_size, sourceWidth, sourceHeight)
+    } else null
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp, max = 280.dp)
+                .clip(shape)
+                .then(
+                    if (sourceUri == null && resultBitmap == null) {
+                        Modifier.border(BorderStroke(2.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)), shape)
+                            .clickable { onReselect() }
+                    } else {
+                        Modifier.clickable { onEnlarge() }
+                    }
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                bitmapToShow != null -> {
+                    Image(
+                        bitmap = bitmapToShow.asImageBitmap(),
+                        contentDescription = stringResource(R.string.itb_enlarge_hint),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
+                        contentScale = ContentScale.Fit,
+                        filterQuality = FilterQuality.None,
+                    )
+                }
+                sourceUri != null -> {
+                    AsyncImage(
+                        model = sourceUri,
+                        contentDescription = stringResource(R.string.itb_select_image),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+                else -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Outlined.AddPhotoAlternate,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.itb_select_image_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                }
+            }
+            if (labelToShow != null) {
+                Text(
+                    labelToShow,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        if (sourceUri != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                androidx.compose.material3.TextButton(onClick = onReselect) {
+                    Icon(
+                        Icons.Outlined.AddPhotoAlternate,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.itb_reselect))
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION")
+@Composable
+private fun DitherDropdown(
+    selected: DitherMethod,
+    onSelect: (DitherMethod) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = stringResource(selected.labelRes),
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor(),
+            shape = RoundedCornerShape(12.dp),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DitherMethod.entries.forEach { method ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(method.labelRes)) },
+                    onClick = {
+                        onSelect(method)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdjustSlider(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                value.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            valueRange = ImageToBlueprintState.MIN_ADJUST.toFloat()..ImageToBlueprintState.MAX_ADJUST.toFloat(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}

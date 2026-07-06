@@ -657,10 +657,26 @@
     <string name="bp_title">Blueprint preview</string>
     <string name="bp_placeholder">Blueprint preview · coming soon</string>
     <string name="bp_export_format">Export format</string>
+    <string name="bp_export_type">Export type</string>
+    <string name="bp_type_mc_commands">MC Commands</string>
+    <string name="bp_type_litematica">Litematica</string>
+    <string name="bp_type_schematic">Schematic</string>
+    <string name="bp_type_structure">Structure</string>
+    <string name="bp_type_buildinghelper">BuildingHelper</string>
+    <string name="bp_mode_wall">Wall</string>
+    <string name="bp_mode_flat">Floor</string>
     <string name="bp_format_litematic">Litematic</string>
     <string name="bp_format_schematic">Schematic</string>
     <string name="bp_format_nbt">NBT</string>
     <string name="bp_save">Save locally</string>
     <string name="bp_share">Share</string>
+    <string name="bp_build">Build blueprint</string>
+    <string name="bp_save_dialog_title">Save as…</string>
+    <string name="bp_save_dialog_hint">Enter blueprint name</string>
+    <string name="bp_save_ok">Saved: %1$s</string>
+    <string name="bp_save_fail">Save failed: %1$s</string>
+    <string name="bp_build_ok">Built (%1$d bytes)</string>
+    <string name="bp_build_fail">Build failed: %1$s</string>
+    <string name="bp_default_name">Blueprint_%1$s</string>
     <string name="bp_coming_soon">Export feature coming soon</string>
 </resources>

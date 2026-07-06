@@ -742,10 +742,26 @@ You may clear all locally stored data at any time via Settings → Storage → C
     <string name="bp_title">蓝图预览</string>
     <string name="bp_placeholder">蓝图预览 · 即将支持</string>
     <string name="bp_export_format">导出格式</string>
+    <string name="bp_export_type">导出类型</string>
+    <string name="bp_type_mc_commands">MC 命令</string>
+    <string name="bp_type_litematica">Litematica</string>
+    <string name="bp_type_schematic">Schematic</string>
+    <string name="bp_type_structure">Structure</string>
+    <string name="bp_type_buildinghelper">BuildingHelper</string>
+    <string name="bp_mode_wall">墙面</string>
+    <string name="bp_mode_flat">地面</string>
     <string name="bp_format_litematic">Litematic</string>
     <string name="bp_format_schematic">Schematic</string>
     <string name="bp_format_nbt">NBT</string>
     <string name="bp_save">保存到本地</string>
     <string name="bp_share">分享</string>
+    <string name="bp_build">生成蓝图</string>
+    <string name="bp_save_dialog_title">保存为…</string>
+    <string name="bp_save_dialog_hint">输入蓝图名称</string>
+    <string name="bp_save_ok">已保存：%1$s</string>
+    <string name="bp_save_fail">保存失败：%1$s</string>
+    <string name="bp_build_ok">已生成 (%1$d 字节)</string>
+    <string name="bp_build_fail">生成失败：%1$s</string>
+    <string name="bp_default_name">蓝图_%1$s</string>
     <string name="bp_coming_soon">导出功能即将支持</string>
 </resources>

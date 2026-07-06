@@ -65,7 +65,7 @@ class BlueprintManager @Inject constructor(
     private val metaDao: BlueprintMetaDao,
     private val storage: LitematicFileStorage,
     private val safPermissionManager: SafPermissionManager,
-) {
+) : BlueprintSink {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _scanning = MutableStateFlow(false)
@@ -102,7 +102,7 @@ class BlueprintManager @Inject constructor(
 
     // ── 数据入口 ──
 
-    suspend fun ingest(name: String, bytes: ByteArray, onProgress: ((Long, Long) -> Unit)? = null): BlueprintMeta = withContext(Dispatchers.IO) {
+    suspend override fun ingest(name: String, bytes: ByteArray, onProgress: ((Long, Long) -> Unit)?): BlueprintMeta = withContext(Dispatchers.IO) {
         // Write first so progress callback fires immediately (no blocking SAF query before it)
         val docId = storage.write(name, bytes, onProgress)
         val lit = BlockPrintReader.readLenient(bytes)

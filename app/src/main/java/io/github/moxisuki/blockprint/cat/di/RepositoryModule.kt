@@ -1,5 +1,7 @@
 package io.github.moxisuki.blockprint.cat.di
 
+import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintManager
+import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintSink
 import io.github.moxisuki.blockprint.cat.data.bridge.BridgeClient
 import io.github.moxisuki.blockprint.cat.data.bridge.BridgeClientImpl
 import io.github.moxisuki.blockprint.cat.data.saf.LitematicFileStorage
@@ -18,4 +20,7 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindBridgeClient(impl: BridgeClientImpl): BridgeClient
+
+    @Binds @Singleton
+    abstract fun bindBlueprintSink(impl: BlueprintManager): BlueprintSink
 }

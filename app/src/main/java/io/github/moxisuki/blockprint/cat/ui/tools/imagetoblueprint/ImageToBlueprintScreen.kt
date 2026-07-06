@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockGroupSection
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.CommandExportPanel
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.prewarmPixelArt
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.PreviewHero
@@ -97,7 +96,6 @@ private const val SEC_ADJUST = "adjust"
 private const val SEC_TRANSPARENCY = "transparency"
 private const val SEC_BLOCKS = "blocks"
 private const val SEC_RESULT = "result"
-private const val SEC_COMMANDS = "commands"
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -255,20 +253,7 @@ CollapsibleSection(
             )
         }
 
-        // MC 命令导出：6 方向选择 + 命令预览（折叠在结果里）
-        CollapsibleSection(
-            id = SEC_COMMANDS,
-            title = stringResource(R.string.itb_section_commands),
-            expanded = expanded,
-            onToggle = { expanded = expanded.toggle(it) },
-        ) {
-            CommandExportPanel(
-                state = state,
-                onDirectionChange = viewModel::setCommandDirection,
-                onGenerate = { viewModel.generateCommands() },
-            )
-        }
-
+        // MC 命令导出已合并到 BlueprintPreviewScreen 独立分支（命令导出 → 选方向 → 预览）
         Spacer(Modifier.height(20.dp))
 
         ExportButton(

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockFilterChips
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockGroupSection
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.TransparencySection
@@ -229,18 +230,10 @@ fun ImageToBlueprintScreen(
             expanded = expanded,
             onToggle = { expanded = expanded.toggle(it) },
         ) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                BlockFilter.entries.forEach { filter ->
-                    FilterChip(
-                        selected = state.activeFilters.contains(filter),
-                        onClick = { viewModel.toggleFilter(filter) },
-                        label = { Text(stringResource(filter.labelRes)) },
-                    )
-                }
-            }
+            BlockFilterChips(
+                activeFilters = state.activeFilters,
+                onToggleFilter = viewModel::toggleFilter,
+            )
         }
 
 CollapsibleSection(

@@ -176,6 +176,22 @@ class ImageToBlueprintViewModel @Inject constructor(
                         makeBackgroundTransparent(rawBitmap, s.transparencyTolerance)
                     } else rawBitmap
                     val groupKeys = s.selectedGroups.map { it.key }.toSet()
+                    if (groupKeys.isEmpty()) {
+                        // 没选任何方块组：清空结果，不让 engine 抛 "No Block Available"
+                        _state.update {
+                            it.copy(
+                                isUpdating = false,
+                                resultBitmap = null,
+                                resultWidth = 0,
+                                resultHeight = 0,
+                                resultTotalBlocks = 0,
+                                resultMaterialCounts = emptyMap(),
+                                errorMessage = null,
+                                previewMode = PreviewMode.Source,
+                            )
+                        }
+                        return@launch
+                    }
                     val options = ConversionOptions(
                         targetWidth = s.targetWidth,
                         ditherMethod = mapDither(s.ditherMethod),
@@ -198,10 +214,24 @@ class ImageToBlueprintViewModel @Inject constructor(
                         resultTotalBlocks = result.width * result.height,
                         resultMaterialCounts = PixelArtConverter.getMaterialList(result),
                         previewMode = PreviewMode.Result,
+                        // 成功转换时清掉上次的错误（之前选错参数 / 空 groups 等残留）
+                        errorMessage = null,
                     )
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(isUpdating = false, errorMessage = e.message ?: "Conversion failed") }
+                // 失败时清掉 result 字段，避免旧图继续显示在 Hero 里
+                _state.update {
+                    it.copy(
+                        isUpdating = false,
+                        resultBitmap = null,
+                        resultWidth = 0,
+                        resultHeight = 0,
+                        resultTotalBlocks = 0,
+                        resultMaterialCounts = emptyMap(),
+                        errorMessage = e.message ?: "Conversion failed",
+                        previewMode = PreviewMode.Source,
+                    )
+                }
             }
         }
     }

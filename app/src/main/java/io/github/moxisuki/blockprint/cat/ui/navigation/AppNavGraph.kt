@@ -85,6 +85,7 @@ import io.github.moxisuki.blockprint.cat.ui.settings.CommunitySettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.SettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.TermsScreen
 import io.github.moxisuki.blockprint.cat.ui.tools.ToolsScreen
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintpreview.BlueprintPreviewScreen
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.ImageToBlueprintScreen
 
 /**
@@ -539,6 +540,16 @@ private fun PadLayout(
                         )
                     }
                     composable(
+                        route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
+                        arguments = listOf(navArgument("result") { type = NavType.StringType }),
+                    ) { backStackEntry ->
+                        val encoded = backStackEntry.arguments?.getString("result").orEmpty()
+                        BlueprintPreviewScreen(
+                            encodedResult = java.net.URLDecoder.decode(encoded, "UTF-8"),
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
+                    composable(
                         route = NavRoutes.ABOUT,
                         enterTransition = { fadeIn(AnimSpec.padFade) },
                         exitTransition = { fadeOut(AnimSpec.padFadeOut) },
@@ -887,6 +898,16 @@ private fun CompactLayout(
                         onExport = { encoded ->
                             navController.navigate(NavRoutes.blueprintPreviewRoute(encoded))
                         },
+                    )
+                }
+                composable(
+                    route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
+                    arguments = listOf(navArgument("result") { type = NavType.StringType }),
+                ) { backStackEntry ->
+                    val encoded = backStackEntry.arguments?.getString("result").orEmpty()
+                    BlueprintPreviewScreen(
+                        encodedResult = java.net.URLDecoder.decode(encoded, "UTF-8"),
+                        onBack = { navController.popBackStack() },
                     )
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }

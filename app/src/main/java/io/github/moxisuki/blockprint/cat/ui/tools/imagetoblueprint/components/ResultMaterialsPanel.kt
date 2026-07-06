@@ -64,7 +64,9 @@ internal fun ResultMaterialsPanel(
                 val sorted = materialCounts.entries.sortedByDescending { it.value }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     sorted.take(10).forEach { (name, count) ->
-                        val displayName = LangManager.displayName(context, name)
+                        // engine 给的 key 是 "white_wool" 这种无命名空间形式
+                        // lang 文件的键是 "block.minecraft.white_wool"，需加 minecraft: 前缀
+                        val displayName = LangManager.displayName(context, "minecraft:$name")
                         val resId = idToResId[name]
                         Row(
                             modifier = Modifier.fillMaxWidth(),

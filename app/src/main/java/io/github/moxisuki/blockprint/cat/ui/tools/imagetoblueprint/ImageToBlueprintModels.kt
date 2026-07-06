@@ -236,6 +236,8 @@ data class ImageToBlueprintState(
     val resultTotalBlocks: Int = 0,
     val resultMaterialCounts: Map<String, Int> = emptyMap(),
     val errorMessage: String? = null,
+    val commandDirection: io.github.moxisuki.pixelart.api.ExportApi.CommandDirection = io.github.moxisuki.pixelart.api.ExportApi.CommandDirection.ES,
+    val commandsText: String = "",
 ) {
     companion object {
         const val MIN_ADJUST = 0

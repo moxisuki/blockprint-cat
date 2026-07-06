@@ -1,9 +1,9 @@
 package io.github.moxisuki.blockprint.cat.ui.tools.blueprintpreview
 
 import android.graphics.Bitmap
-import com.github.moxisuki.pixelart.Block
-import com.github.moxisuki.pixelart.BlockPalette
-import com.github.moxisuki.pixelart.ColorUtils
+import io.github.moxisuki.pixelart.Block
+import io.github.moxisuki.pixelart.BlockPalette
+import io.github.moxisuki.pixelart.ColorUtils
 import io.github.moxisuki.blockprint.core.BlockPalette as CoreBlockPalette
 import io.github.moxisuki.blockprint.core.BlockPrintConverter
 import io.github.moxisuki.blockprint.core.BlockState as CoreBlockState
@@ -38,7 +38,7 @@ internal data class FillRegion(
  * rawBlocks 布局遵循 `index = y * W * D + z * W + x`（y-major）。
  *
  * 因为源图跨 VM 不可访问，grid 由 [bitmapToGrid] 从 result bitmap 采样还原
- * —— 这与 [com.github.moxisuki.pixelart.PixelArtConverter] 在最后一次转换里
+ * —— 这与 [io.github.moxisuki.pixelart.PixelArtConverter] 在最后一次转换里
  * 给每个像素找最近色块是同一组运算，效果等价。
  */
 internal object BlueprintBuilder {

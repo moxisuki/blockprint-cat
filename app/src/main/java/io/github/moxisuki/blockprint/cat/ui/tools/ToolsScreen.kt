@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ToolsScreen(
     snackbarHostState: SnackbarHostState,
+    onNavigateToImageToBlueprint: () -> Unit,
     viewModel: ToolsViewModel = hiltViewModel(),
 ) {
     val tools by viewModel.tools.collectAsStateWithLifecycle()
@@ -22,9 +23,10 @@ fun ToolsScreen(
 
     val onToolClick = remember(viewModel, notImplMsg) {
         { entry: ToolEntry ->
-            if (viewModel.onToolClick(entry) == ToolClickResult.NotImplemented) {
-                scope.launch { snackbarHostState.showSnackbar(notImplMsg) }
-            }
+            when (viewModel.onToolClick(entry)) {
+                ToolClickResult.NavigateToImageToBlueprint -> onNavigateToImageToBlueprint()
+                ToolClickResult.NotImplemented -> scope.launch { snackbarHostState.showSnackbar(notImplMsg) }
+            }.let { /* discard Job or Unit */ }
         }
     }
 

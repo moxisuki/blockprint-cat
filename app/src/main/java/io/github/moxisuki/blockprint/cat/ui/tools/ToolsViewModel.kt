@@ -9,6 +9,7 @@ import javax.inject.Inject
 
 sealed interface ToolClickResult {
     data object NotImplemented : ToolClickResult
+    data object NavigateToImageToBlueprint : ToolClickResult
 }
 
 @HiltViewModel
@@ -17,6 +18,9 @@ class ToolsViewModel @Inject constructor() : ViewModel() {
     val tools: StateFlow<List<ToolEntry>> = _tools.asStateFlow()
 
     fun onToolClick(entry: ToolEntry): ToolClickResult {
-        return ToolClickResult.NotImplemented
+        return when (entry.id) {
+            "image_to_blueprint" -> ToolClickResult.NavigateToImageToBlueprint
+            else -> ToolClickResult.NotImplemented
+        }
     }
 }

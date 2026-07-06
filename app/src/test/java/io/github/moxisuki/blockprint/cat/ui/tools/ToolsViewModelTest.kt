@@ -20,9 +20,16 @@ class ToolsViewModelTest {
     }
 
     @Test
-    fun `onToolClick returns NotImplemented for any entry`() {
+    fun `onToolClick navigates for image_to_blueprint`() {
         val vm = ToolsViewModel()
-        ToolCatalog.entries.forEach { entry ->
+        val entry = ToolCatalog.entries.first { it.id == "image_to_blueprint" }
+        assertThat(vm.onToolClick(entry)).isEqualTo(ToolClickResult.NavigateToImageToBlueprint)
+    }
+
+    @Test
+    fun `onToolClick returns NotImplemented for unimplemented tools`() {
+        val vm = ToolsViewModel()
+        ToolCatalog.entries.filter { it.id != "image_to_blueprint" }.forEach { entry ->
             assertThat(vm.onToolClick(entry)).isEqualTo(ToolClickResult.NotImplemented)
         }
     }

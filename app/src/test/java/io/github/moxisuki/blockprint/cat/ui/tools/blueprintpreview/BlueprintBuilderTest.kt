@@ -1,6 +1,6 @@
 package io.github.moxisuki.blockprint.cat.ui.tools.blueprintpreview
 
-import com.github.moxisuki.pixelart.Block
+import io.github.moxisuki.pixelart.Block
 import com.google.common.truth.Truth.assertThat
 import io.github.moxisuki.blockprint.core.SchematicFormat
 import io.github.moxisuki.blockprint.core.model.BlockPrintDocument

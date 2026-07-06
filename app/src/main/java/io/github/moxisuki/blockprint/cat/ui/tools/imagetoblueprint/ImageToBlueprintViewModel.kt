@@ -7,11 +7,11 @@ import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.moxisuki.pixelart.api.ExportApi
-import com.github.moxisuki.pixelart.BlockSelector
-import com.github.moxisuki.pixelart.ConversionOptions
-import com.github.moxisuki.pixelart.DitherMethod as EngineDitherMethod
-import com.github.moxisuki.pixelart.PixelArtConverter
+import io.github.moxisuki.pixelart.api.ExportApi
+import io.github.moxisuki.pixelart.BlockSelector
+import io.github.moxisuki.pixelart.ConversionOptions
+import io.github.moxisuki.pixelart.DitherMethod as EngineDitherMethod
+import io.github.moxisuki.pixelart.PixelArtConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.flow.PreviewDebounce
@@ -187,7 +187,7 @@ class ImageToBlueprintViewModel @Inject constructor(
         return text
     }
 
-    private var _cachedResultGrid: Array<Array<com.github.moxisuki.pixelart.Block?>>? = null
+    private var _cachedResultGrid: Array<Array<io.github.moxisuki.pixelart.Block?>>? = null
 
     private fun requestConvert() {
         val s = _state.value

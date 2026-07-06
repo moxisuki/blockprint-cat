@@ -55,7 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.github.moxisuki.pixelart.api.ExportApi
+import io.github.moxisuki.pixelart.api.ExportApi
 import io.github.moxisuki.blockprint.cat.R
 
 @OptIn(ExperimentalMaterial3Api::class)

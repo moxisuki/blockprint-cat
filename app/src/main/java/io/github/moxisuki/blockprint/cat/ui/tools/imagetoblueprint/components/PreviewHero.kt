@@ -185,8 +185,8 @@ private fun ResultContent(
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = stringResource(R.string.itb_enlarge_hint),
-            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
-            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
             filterQuality = FilterQuality.None,
         )
         if (resultWidth > 0 && resultHeight > 0) {

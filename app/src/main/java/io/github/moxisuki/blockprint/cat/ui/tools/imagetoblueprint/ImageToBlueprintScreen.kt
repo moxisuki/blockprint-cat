@@ -442,7 +442,7 @@ private fun EnlargedPreviewDialog(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
+                    contentScale = ContentScale.Crop,
                     filterQuality = FilterQuality.None,
                 )
             }

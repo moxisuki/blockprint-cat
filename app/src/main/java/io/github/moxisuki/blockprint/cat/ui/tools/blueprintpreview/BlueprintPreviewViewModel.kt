@@ -42,6 +42,7 @@ data class BlueprintPreviewState(
     val materials: Map<String, Int> = emptyMap(),
     val exportType: ExportType = ExportType.BLUEPRINT_LITEMATICA,
     val blueprintMode: BlueprintMode = BlueprintMode.WALL,
+    val commandDirection: ExportApi.CommandDirection = ExportApi.CommandDirection.ES,
     val blueprintBytes: ByteArray? = null,
     val commandsText: String = "",
     val isBuilding: Boolean = false,
@@ -91,6 +92,10 @@ class BlueprintPreviewViewModel @Inject constructor(
         _state.update { it.copy(blueprintMode = mode, saveMessage = null) }
     }
 
+    fun setCommandDirection(direction: ExportApi.CommandDirection) {
+        _state.update { it.copy(commandDirection = direction, saveMessage = null) }
+    }
+
     fun consumeSaveMessage() {
         _state.update { it.copy(saveMessage = null) }
     }
@@ -117,7 +122,7 @@ class BlueprintPreviewViewModel @Inject constructor(
                                 blocks = grid,
                                 width = s.width,
                                 height = s.height,
-                                mode = ExportApi.CommandDirection.ES,
+                                mode = s.commandDirection,
                             )
                             null to ExportApi.commandsToString(set)
                         }

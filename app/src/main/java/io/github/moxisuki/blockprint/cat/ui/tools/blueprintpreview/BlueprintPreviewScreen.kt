@@ -4,17 +4,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -27,6 +35,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -40,11 +49,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.moxisuki.pixelart.api.ExportApi
 import io.github.moxisuki.blockprint.cat.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -129,48 +140,26 @@ fun BlueprintPreviewScreen(
                     }
                 }
             }
-            // 蓝图模式（WALL / FLAT，仅在不是 MC_COMMANDS 时显示）
-            if (state.exportType != ExportType.MC_COMMANDS) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(R.string.bp_export_type) + " · mode",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    val modes = BlueprintMode.entries
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        modes.forEachIndexed { index, mode ->
-                            SegmentedButton(
-                                selected = state.blueprintMode == mode,
-                                onClick = { viewModel.setBlueprintMode(mode) },
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                            ) {
-                                Text(stringResource(mode.labelRes()))
-                            }
-                        }
-                    }
-                }
-            }
-            // 操作按钮：build + save
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilledTonalButton(
-                    onClick = {
-                        viewModel.buildBlueprint()
-                    },
-                    modifier = Modifier.height(48.dp),
-                ) {
-                    Text(stringResource(R.string.bp_build))
-                }
-                FilledTonalButton(
-                    onClick = { showSaveDialog = true },
-                    enabled = state.blueprintBytes != null || state.exportType == ExportType.MC_COMMANDS,
-                    modifier = Modifier.height(48.dp),
-                ) {
-                    Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-                    Text(stringResource(R.string.bp_save))
-                }
+
+            // 分支 1: MC 命令 → 6 方向选择 + 命令预览（专用区域）
+            if (state.exportType == ExportType.MC_COMMANDS) {
+                McCommandBranch(
+                    direction = state.commandDirection,
+                    onDirectionChange = viewModel::setCommandDirection,
+                    commandsText = state.commandsText,
+                    isBuilding = state.isBuilding,
+                    onGenerate = viewModel::buildBlueprint,
+                )
+            } else {
+                // 分支 2: 蓝图 → WALL/FLAT + 名称 + 保存
+                BlueprintSaveBranch(
+                    mode = state.blueprintMode,
+                    onModeChange = viewModel::setBlueprintMode,
+                    blueprintBytes = state.blueprintBytes,
+                    isBuilding = state.isBuilding,
+                    onBuild = viewModel::buildBlueprint,
+                    onSaveClick = { showSaveDialog = true },
+                )
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -185,6 +174,123 @@ fun BlueprintPreviewScreen(
             },
         )
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun McCommandBranch(
+    direction: ExportApi.CommandDirection,
+    onDirectionChange: (ExportApi.CommandDirection) -> Unit,
+    commandsText: String,
+    isBuilding: Boolean,
+    onGenerate: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.itb_export_direction_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            ExportApi.CommandDirection.entries.forEach { dir ->
+                AssistChip(
+                    onClick = { onDirectionChange(dir) },
+                    label = { Text(dir.shortLabel()) },
+                    colors = if (direction == dir) {
+                        AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    } else {
+                        AssistChipDefaults.assistChipColors()
+                    },
+                )
+            }
+        }
+        FilledTonalButton(
+            onClick = onGenerate,
+            enabled = !isBuilding,
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+        ) {
+            Text(stringResource(R.string.itb_export_generate))
+        }
+        if (commandsText.isNotEmpty()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Text(
+                    text = commandsText,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(8.dp),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BlueprintSaveBranch(
+    mode: BlueprintMode,
+    onModeChange: (BlueprintMode) -> Unit,
+    blueprintBytes: ByteArray?,
+    isBuilding: Boolean,
+    onBuild: () -> Unit,
+    onSaveClick: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // 模式选择
+        val modes = BlueprintMode.entries
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            modes.forEachIndexed { index, m ->
+                SegmentedButton(
+                    selected = mode == m,
+                    onClick = { onModeChange(m) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                ) {
+                    Text(stringResource(m.labelRes()))
+                }
+            }
+        }
+        // 构建 + 保存
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(
+                onClick = onBuild,
+                enabled = !isBuilding,
+                modifier = Modifier.weight(1f).height(48.dp),
+            ) {
+                Text(stringResource(R.string.bp_build))
+            }
+            FilledTonalButton(
+                onClick = onSaveClick,
+                enabled = blueprintBytes != null,
+                modifier = Modifier.weight(1f).height(48.dp),
+            ) {
+                Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
+                Text(stringResource(R.string.bp_save))
+            }
+        }
+    }
+}
+
+/** 简短标签，便于在 chip 里展示 */
+private fun ExportApi.CommandDirection.shortLabel(): String = when (this) {
+    ExportApi.CommandDirection.ES -> "ES · 东南"
+    ExportApi.CommandDirection.WS -> "WS · 西南"
+    ExportApi.CommandDirection.EN -> "EN · 东北"
+    ExportApi.CommandDirection.WN -> "WN · 西北"
+    ExportApi.CommandDirection.EU -> "EU · 东上"
+    ExportApi.CommandDirection.NU -> "NU · 北上"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

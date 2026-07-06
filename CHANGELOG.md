@@ -2,6 +2,36 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
+## [1.1.0] · 2026-07-07
+
+### 新增
+
+- **图片转蓝图画 UI 重做**：引入 M3 表达型设计，顶部 Hero 区支持原图/结果 Crossfade 切换，参数调整后 200ms 防抖自动重算，结果出现时边框高亮动画
+  - 875 行单文件拆分为 8 个 `components/` + `flow/PreviewDebounce`
+  - 新增底部弹出框导出：MC 命令（6 方向 + 复制/分享 .mcfunction）与 4 种蓝图格式（投影/创世神/NBT/建筑小帮手）+ 墙/平铺模式
+  - 保存接入 `BlueprintManager.ingest`，保存后按钮变为「查看 + 跳转详情页」
+  - 材料清单复用蓝图列表同源 i18n（`LangManager.displayName`）
+- **文字转蓝图画**：新增工具入口，Canvas 渲染文字为像素风位图后传入 ITB 管线，支持 12-48sp 字号调整
+- 工具页精简：移除 4 个占位工具，列表剩 3 个实际工具
+- 方块缩略图模块级 cache + IO 线程预热
+
+### 修复
+
+- 参数 200ms 防抖 + 无图时不显示"更新中"
+- 空方块组不再抛异常，重新选组可恢复
+- WALL 模式蓝图上下颠倒修复
+- 导出截图铺满容器
+- 底部弹窗 Snackbar 占位问题修复
+- 导航层 base64 双重解码崩溃修复
+- `.gitattributes` 统一 LF 行尾
+
+### 重构
+
+- pixelart 包 `com.github.moxisuki` → `io.github.moxisuki`
+- 移除方块筛选器模块
+- 透明度预处理 `makeBackgroundTransparent`
+- 统一进度条 `GenerationProgressBar`（400ms 缓冲）
+
 ## [1.0.1] · 2026-07-04
 
 ### 新增

@@ -7,6 +7,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -296,8 +297,8 @@ private fun CollapsibleSection(
         }
         AnimatedVisibility(
             visible = isExpanded,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = expandVertically(animationSpec = tween(PreviewAnimations.SHORT, easing = PreviewAnimations.EasingStandard)),
+            exit = shrinkVertically(animationSpec = tween(PreviewAnimations.SHORT, easing = PreviewAnimations.EasingStandard)),
         ) {
             Column(modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
                 content()

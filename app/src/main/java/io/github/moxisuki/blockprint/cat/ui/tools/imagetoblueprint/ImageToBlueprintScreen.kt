@@ -7,7 +7,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -21,6 +20,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockGroupSection
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.prewarmPixelArt
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.PreviewHero
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.ResultMaterialsPanel
@@ -105,6 +105,18 @@ fun ImageToBlueprintScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+
+    // 预热方块缩略图 cache：在 IO 线程把 140 个方块都 decode 一次，
+    // 之后展开任何方块组都是 0 延迟。
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            prewarmPixelArt(
+                context = context,
+                resIds = io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.BlockCatalog.all
+                    .map { it.drawableResId },
+            )
+        }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -297,8 +309,8 @@ private fun CollapsibleSection(
         }
         AnimatedVisibility(
             visible = isExpanded,
-            enter = expandVertically(animationSpec = tween(PreviewAnimations.SHORT, easing = PreviewAnimations.EasingStandard)),
-            exit = shrinkVertically(animationSpec = tween(PreviewAnimations.SHORT, easing = PreviewAnimations.EasingStandard)),
+            enter = expandVertically(),
+            exit = shrinkVertically(),
         ) {
             Column(modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
                 content()

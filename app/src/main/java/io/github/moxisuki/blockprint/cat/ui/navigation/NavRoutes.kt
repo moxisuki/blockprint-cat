@@ -34,4 +34,8 @@ object NavRoutes {
 
     fun blueprintPreviewRoute(encodedResult: String): String =
         "$BLUEPRINT_PREVIEW/${java.net.URLEncoder.encode(encodedResult, "UTF-8")}"
+
+    fun imageToBlueprintRoute(imageUri: String? = null): String =
+        if (imageUri.isNullOrBlank()) IMAGE_TO_BLUEPRINT
+        else "$IMAGE_TO_BLUEPRINT?imageUri=${java.net.URLEncoder.encode(imageUri, "UTF-8")}"
 }

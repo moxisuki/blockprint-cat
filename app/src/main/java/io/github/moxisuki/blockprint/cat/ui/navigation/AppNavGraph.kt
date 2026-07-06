@@ -146,7 +146,8 @@ internal data class NavGraphFlags(
 
     val showBackButton: Boolean =
         isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin ||
-            isAbout || isChangelog || isTerms || isQrScanner || isCommunitySettings || isImageToBlueprint
+            isAbout || isChangelog || isTerms || isQrScanner || isCommunitySettings ||
+            isImageToBlueprint || isTextToBlueprint
 }
 
 /**
@@ -190,7 +191,7 @@ private fun rememberNavGraphFlags(
             isQrScanner = route == NavRoutes.QR_SCANNER,
             isCommunitySettings = route == NavRoutes.COMMUNITY_SETTINGS,
             isTools = route == NavRoutes.TOOLS,
-            isImageToBlueprint = route == NavRoutes.IMAGE_TO_BLUEPRINT,
+            isImageToBlueprint = route?.startsWith(NavRoutes.IMAGE_TO_BLUEPRINT) == true,
             isConnection = route == NavRoutes.CONNECTION,
             connectionState = connectionState,
             communityCurrentSource = communityState.currentSource,
@@ -531,16 +532,30 @@ private fun PadLayout(
                     composable(NavRoutes.TOOLS) {
                         ToolsScreen(
                             snackbarHostState = snackbarHostState,
-                            onNavigateToImageToBlueprint = { navController.navigate(NavRoutes.IMAGE_TO_BLUEPRINT) },
+                            onNavigateToImageToBlueprint = { uri ->
+                                val route = if (uri != null) {
+                                    "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri=${java.net.URLEncoder.encode(uri.toString(), "UTF-8")}"
+                                } else {
+                                    NavRoutes.IMAGE_TO_BLUEPRINT
+                                }
+                                navController.navigate(route)
+                            },
                             onNavigateToTextToBlueprint = { navController.navigate(NavRoutes.TEXT_TO_BLUEPRINT) },
                         )
                     }
-                    composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
-                        ImageToBlueprintScreen(navController = navController)
+                    composable(
+                        route = "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri={imageUri}",
+                        arguments = listOf(navArgument("imageUri") { type = NavType.StringType; defaultValue = "" }),
+                    ) { entry ->
+                        val imageUri = entry.arguments?.getString("imageUri")?.takeIf { it.isNotBlank() }
+                        ImageToBlueprintScreen(navController = navController, initialImageUri = imageUri)
                     }
                     composable(NavRoutes.TEXT_TO_BLUEPRINT) {
                         io.github.moxisuki.blockprint.cat.ui.tools.texttoblueprint.TextToBlueprintScreen(
-                            onBack = { navController.popBackStack() },
+                            onNavigateToImageToBlueprint = { uri ->
+                                val route = "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri=${java.net.URLEncoder.encode(uri.toString(), "UTF-8")}"
+                                navController.navigate(route)
+                            },
                         )
                     }
                     composable(
@@ -885,16 +900,30 @@ private fun CompactLayout(
                 composable(NavRoutes.TOOLS) {
                     ToolsScreen(
                         snackbarHostState = snackbarHostState,
-                        onNavigateToImageToBlueprint = { navController.navigate(NavRoutes.IMAGE_TO_BLUEPRINT) },
+                        onNavigateToImageToBlueprint = { uri ->
+                            val route = if (uri != null) {
+                                "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri=${java.net.URLEncoder.encode(uri.toString(), "UTF-8")}"
+                            } else {
+                                NavRoutes.IMAGE_TO_BLUEPRINT
+                            }
+                            navController.navigate(route)
+                        },
                         onNavigateToTextToBlueprint = { navController.navigate(NavRoutes.TEXT_TO_BLUEPRINT) },
                     )
                 }
-                composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
-                    ImageToBlueprintScreen(navController = navController)
+                composable(
+                    route = "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri={imageUri}",
+                    arguments = listOf(navArgument("imageUri") { type = NavType.StringType; defaultValue = "" }),
+                ) { entry ->
+                    val imageUri = entry.arguments?.getString("imageUri")?.takeIf { it.isNotBlank() }
+                    ImageToBlueprintScreen(navController = navController, initialImageUri = imageUri)
                 }
                 composable(NavRoutes.TEXT_TO_BLUEPRINT) {
                     io.github.moxisuki.blockprint.cat.ui.tools.texttoblueprint.TextToBlueprintScreen(
-                        onBack = { navController.popBackStack() },
+                        onNavigateToImageToBlueprint = { uri ->
+                            val route = "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri=${java.net.URLEncoder.encode(uri.toString(), "UTF-8")}"
+                            navController.navigate(route)
+                        },
                     )
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }

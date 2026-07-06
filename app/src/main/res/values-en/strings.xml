@@ -78,6 +78,7 @@
     <string name="ttb_input_hint">Paste NBT/JSON text or a description…</string>
     <string name="ttb_input_supporting">Supports Sponge Schematic v3 NBT / BuildingHelper JSON / natural language</string>
     <string name="ttb_generate">Generate blueprint</string>
+    <string name="ttb_font_size">Font size</string>
     <string name="tool_qr_scan">Scan to Connect</string>
     <string name="tool_not_implemented">This feature is under development</string>
 

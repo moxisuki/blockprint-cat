@@ -90,6 +90,7 @@
     <string name="ttb_input_hint">粘贴 NBT/JSON 文本或描述…</string>
     <string name="ttb_input_supporting">支持 Sponge Schematic v3 NBT / BuildingHelper JSON / 自然语言描述</string>
     <string name="ttb_generate">生成蓝图</string>
+    <string name="ttb_font_size">字体大小</string>
     <string name="tool_qr_scan">扫码连接</string>
     <string name="tool_not_implemented">该功能正在开发中</string>
 

@@ -112,6 +112,7 @@ private const val SEC_RESULT = "result"
 fun ImageToBlueprintScreen(
     navController: androidx.navigation.NavController,
     viewModel: ImageToBlueprintViewModel = hiltViewModel(),
+    initialImageUri: String? = null,
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -128,6 +129,15 @@ fun ImageToBlueprintScreen(
                 resIds = io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.BlockCatalog.all
                     .map { it.drawableResId },
             )
+        }
+    }
+
+    // Auto-load image from TTB or other sources that pass a URI
+    LaunchedEffect(initialImageUri) {
+        if (initialImageUri != null) {
+            val uri = Uri.parse(initialImageUri)
+            val (w, h) = readImageDimensions(context, uri)
+            viewModel.setImage(uri, w, h)
         }
     }
 

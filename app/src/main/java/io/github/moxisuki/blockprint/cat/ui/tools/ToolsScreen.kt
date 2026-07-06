@@ -1,5 +1,6 @@
 package io.github.moxisuki.blockprint.cat.ui.tools
 
+import android.net.Uri
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ToolsScreen(
     snackbarHostState: SnackbarHostState,
-    onNavigateToImageToBlueprint: () -> Unit,
+    onNavigateToImageToBlueprint: (Uri?) -> Unit,
     onNavigateToTextToBlueprint: () -> Unit,
     viewModel: ToolsViewModel = hiltViewModel(),
 ) {
@@ -25,7 +26,7 @@ fun ToolsScreen(
     val onToolClick = remember(viewModel, notImplMsg) {
         { entry: ToolEntry ->
             when (viewModel.onToolClick(entry)) {
-                ToolClickResult.NavigateToImageToBlueprint -> onNavigateToImageToBlueprint()
+                ToolClickResult.NavigateToImageToBlueprint -> onNavigateToImageToBlueprint(null)
                 ToolClickResult.NavigateToTextToBlueprint -> onNavigateToTextToBlueprint()
                 ToolClickResult.NotImplemented -> scope.launch { snackbarHostState.showSnackbar(notImplMsg) }
             }.let { /* discard Job or Unit */ }

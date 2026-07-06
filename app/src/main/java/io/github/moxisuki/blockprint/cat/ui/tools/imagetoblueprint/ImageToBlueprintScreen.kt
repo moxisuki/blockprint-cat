@@ -88,7 +88,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import io.github.moxisuki.blockprint.cat.R
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
 
 private const val SEC_DITHER = "dither"
 private const val SEC_OUTPUT = "output"
@@ -416,7 +415,6 @@ private fun ResultPreview(
             )
         }
     }
-}
 }
 
 @Composable

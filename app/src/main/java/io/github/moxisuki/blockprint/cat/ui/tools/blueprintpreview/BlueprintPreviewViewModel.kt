@@ -46,6 +46,7 @@ data class BlueprintPreviewState(
     val blueprintBytes: ByteArray? = null,
     val commandsText: String = "",
     val isBuilding: Boolean = false,
+    val buildProgress: Float = 0f,
     val saveMessage: String? = null,
 )
 
@@ -111,12 +112,23 @@ class BlueprintPreviewViewModel @Inject constructor(
         val s = _state.value
         val img: ImageBitmap = s.resultImage ?: return
         val bitmap = img.asAndroidBitmap()
-        _state.update { it.copy(isBuilding = true, saveMessage = null, blueprintBytes = null, commandsText = "") }
+        _state.update {
+            it.copy(
+                isBuilding = true,
+                buildProgress = 0f,
+                saveMessage = null,
+                blueprintBytes = null,
+                commandsText = "",
+            )
+        }
         viewModelScope.launch {
             try {
                 val (bytes, cmds) = withContext(Dispatchers.Default) {
+                    // 阶段 1: bitmap → 调色板 grid（~50%）
                     val grid = BlueprintBuilder.bitmapToGrid(bitmap)
-                    when (val type = s.exportType) {
+                    _state.update { it.copy(buildProgress = 0.5f) }
+
+                    val result = when (val type = s.exportType) {
                         ExportType.MC_COMMANDS -> {
                             val set = ExportApi.generateCommandsWithDirection(
                                 blocks = grid,
@@ -140,10 +152,14 @@ class BlueprintPreviewViewModel @Inject constructor(
                             BlueprintBuilder.encode(doc) to ""
                         }
                     }
+                    // 阶段 2 完成
+                    _state.update { it.copy(buildProgress = 1f) }
+                    result
                 }
                 _state.update {
                     it.copy(
                         isBuilding = false,
+                        buildProgress = 0f,
                         blueprintBytes = bytes,
                         commandsText = cmds,
                         saveMessage = null,
@@ -153,7 +169,7 @@ class BlueprintPreviewViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isBuilding = false,
-                        blueprintBytes = null,
+                        buildProgress = 0f,
                         saveMessage = "build failed: ${e.message ?: e.javaClass.simpleName}",
                     )
                 }

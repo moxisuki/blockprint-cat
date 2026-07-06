@@ -118,6 +118,7 @@ fun BlueprintPreviewContent(
                 onDirectionChange = viewModel::setCommandDirection,
                 commandsText = state.commandsText,
                 isBuilding = state.isBuilding,
+                progress = state.buildProgress,
                 onGenerate = viewModel::buildBlueprint,
             )
         } else {
@@ -127,6 +128,7 @@ fun BlueprintPreviewContent(
                 onModeChange = viewModel::setBlueprintMode,
                 blueprintBytes = state.blueprintBytes,
                 isBuilding = state.isBuilding,
+                progress = state.buildProgress,
                 onBuild = viewModel::buildBlueprint,
                 onSaveClick = { showSaveDialog = true },
             )
@@ -157,6 +159,7 @@ private fun McCommandBranch(
     onDirectionChange: (ExportApi.CommandDirection) -> Unit,
     commandsText: String,
     isBuilding: Boolean,
+    progress: Float,
     onGenerate: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -191,6 +194,8 @@ private fun McCommandBranch(
         ) {
             Text(stringResource(R.string.itb_export_generate))
         }
+        // 进度条（统一组件，两个分支都用）
+        GenerationProgressBar(progress = progress, isBuilding = isBuilding)
         if (commandsText.isNotEmpty()) {
             val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
             val context = androidx.compose.ui.platform.LocalContext.current
@@ -284,6 +289,7 @@ private fun BlueprintSaveBranch(
     onModeChange: (BlueprintMode) -> Unit,
     blueprintBytes: ByteArray?,
     isBuilding: Boolean,
+    progress: Float,
     onBuild: () -> Unit,
     onSaveClick: () -> Unit,
 ) {
@@ -310,6 +316,8 @@ private fun BlueprintSaveBranch(
             ) {
                 Text(stringResource(R.string.bp_build))
             }
+            // 进度条（统一组件，两个分支都用）
+            GenerationProgressBar(progress = progress, isBuilding = isBuilding)
             FilledTonalButton(
                 onClick = onSaveClick,
                 enabled = blueprintBytes != null,
@@ -376,4 +384,28 @@ private fun ExportType.labelRes(): Int = when (this) {
 private fun BlueprintMode.labelRes(): Int = when (this) {
     BlueprintMode.WALL -> R.string.bp_mode_wall
     BlueprintMode.FLAT -> R.string.bp_mode_flat
+}
+
+/**
+ * 统一的生成进度条。MC 命令分支和蓝图分支都用。
+ *
+ * - 未在生成：bar 高度保留 4dp（占位），不显示文字
+ * - 生成中：determinate 进度 0→1，从 VM 的 buildProgress 推
+ * - 生成完毕：progress 回到 0f，bar 仍占位但视觉上是空的，等下次
+ */
+@Composable
+private fun GenerationProgressBar(
+    progress: Float,
+    isBuilding: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isBuilding) progress else 0f,
+        animationSpec = androidx.compose.animation.core.tween<Float>(durationMillis = 200),
+        label = "build-progress",
+    )
+    androidx.compose.material3.LinearProgressIndicator(
+        progress = { animatedProgress.coerceIn(0f, 1f) },
+        modifier = modifier.fillMaxWidth(),
+    )
 }

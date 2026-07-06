@@ -197,12 +197,12 @@ private fun ResultContent(
                     .align(Alignment.TopStart)
                     .padding(8.dp)
                     .background(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                         RoundedCornerShape(6.dp),
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }

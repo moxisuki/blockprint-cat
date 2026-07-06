@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.Construction
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
@@ -31,9 +33,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
-import io.github.moxisuki.blockprint.cat.R
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
+import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 
 private data class RailItem(
@@ -47,6 +49,7 @@ private val railItems = listOf(
     RailItem(NavRoutes.HOME, R.string.bottom_nav_home, Icons.Filled.Home, Icons.Outlined.Home),
     RailItem(NavRoutes.CONNECTION, R.string.bottom_nav_connection, Icons.Filled.Computer, Icons.Outlined.Computer),
     RailItem(NavRoutes.COMMUNITY, R.string.bottom_nav_community, Icons.Filled.People, Icons.Outlined.People),
+    RailItem(NavRoutes.TOOLS, R.string.bottom_nav_tools, Icons.Filled.Construction, Icons.Outlined.Construction),
     RailItem(NavRoutes.SETTINGS, R.string.bottom_nav_settings, Icons.Filled.Settings, Icons.Outlined.Settings),
 )
 
@@ -67,30 +70,30 @@ fun AdaptiveNavRail(
         railItems
             .filter { it.route != NavRoutes.COMMUNITY || communityEnabled }
             .forEach { item ->
-            val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-            val iconTint by animateColorAsState(
-                targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                animationSpec = spring(stiffness = 350f, dampingRatio = Spring.DampingRatioNoBouncy),
-                label = "navIconTint",
-            )
-            NavigationRailItem(
-                icon = {
-                    Icon(
-                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = stringResource(item.labelRes),
-                        tint = iconTint,
-                    )
-                },
-                label = { Text(stringResource(item.labelRes), style = MaterialTheme.typography.labelSmall, color = iconTint) },
-                selected = selected,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id)
-                        launchSingleTop = true
-                    }
-                },
-            )
-        }
+                val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                val iconTint by animateColorAsState(
+                    targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    animationSpec = spring(stiffness = 350f, dampingRatio = Spring.DampingRatioNoBouncy),
+                    label = "navIconTint",
+                )
+                NavigationRailItem(
+                    icon = {
+                        Icon(
+                            imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = stringResource(item.labelRes),
+                            tint = iconTint,
+                        )
+                    },
+                    label = { Text(stringResource(item.labelRes), style = MaterialTheme.typography.labelSmall, color = iconTint) },
+                    selected = selected,
+                    onClick = {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id)
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
         Spacer(Modifier.weight(1f))
     }
 }

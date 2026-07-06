@@ -84,6 +84,9 @@ import io.github.moxisuki.blockprint.cat.ui.settings.ChangelogScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.CommunitySettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.SettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.TermsScreen
+import io.github.moxisuki.blockprint.cat.ui.tools.ToolsScreen
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintpreview.BlueprintPreviewScreen
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.ImageToBlueprintScreen
 
 /**
  * Derived state shared between Pad and Compact layout branches.
@@ -116,6 +119,9 @@ internal data class NavGraphFlags(
     val isTerms: Boolean,
     val isQrScanner: Boolean,
     val isCommunitySettings: Boolean,
+    val isTools: Boolean,
+    val isImageToBlueprint: Boolean,
+    val isConnection: Boolean,
     val connectionState: ConnectionState,
     // Community fields are flattened to stable primitives so this data class
     // stays Stable. The previous single `communityState: CommunityListState`
@@ -135,11 +141,12 @@ internal data class NavGraphFlags(
 
     val showBottomBar: Boolean =
         !isDetail && !isRender && !isPreview && !isCommunityDetail &&
-            !isCommunityLogin && !isAbout && !isChangelog && !isTerms && !isQrScanner && !isCommunitySettings
+            !isCommunityLogin && !isAbout && !isChangelog && !isTerms && !isQrScanner && !isCommunitySettings &&
+            !isImageToBlueprint
 
     val showBackButton: Boolean =
         isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin ||
-            isAbout || isChangelog || isTerms || isQrScanner || isCommunitySettings
+            isAbout || isChangelog || isTerms || isQrScanner || isCommunitySettings || isImageToBlueprint
 }
 
 /**
@@ -181,6 +188,9 @@ private fun rememberNavGraphFlags(
             isTerms = route == NavRoutes.TERMS,
             isQrScanner = route == NavRoutes.QR_SCANNER,
             isCommunitySettings = route == NavRoutes.COMMUNITY_SETTINGS,
+            isTools = route == NavRoutes.TOOLS,
+            isImageToBlueprint = route == NavRoutes.IMAGE_TO_BLUEPRINT,
+            isConnection = route == NavRoutes.CONNECTION,
             connectionState = connectionState,
             communityCurrentSource = communityState.currentSource,
             communityReady = active.ready,
@@ -299,6 +309,8 @@ private fun PadLayout(
         flags.isAbout -> stringResource(R.string.nav_title_about)
         flags.isChangelog -> stringResource(R.string.nav_title_changelog)
         flags.isTerms -> stringResource(R.string.nav_title_terms)
+        flags.isTools -> stringResource(R.string.nav_title_tools)
+        flags.isImageToBlueprint -> stringResource(R.string.itb_title)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
@@ -514,6 +526,29 @@ private fun PadLayout(
                     ) {
                         SettingsScreen(navController = navController)
                     }
+                    composable(NavRoutes.TOOLS) {
+                        ToolsScreen(
+                            snackbarHostState = snackbarHostState,
+                            onNavigateToImageToBlueprint = { navController.navigate(NavRoutes.IMAGE_TO_BLUEPRINT) },
+                        )
+                    }
+                    composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
+                        ImageToBlueprintScreen(
+                            onExport = { encoded ->
+                                navController.navigate(NavRoutes.blueprintPreviewRoute(encoded))
+                            },
+                        )
+                    }
+                    composable(
+                        route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
+                        arguments = listOf(navArgument("result") { type = NavType.StringType }),
+                    ) { backStackEntry ->
+                        val encoded = backStackEntry.arguments?.getString("result").orEmpty()
+                        BlueprintPreviewScreen(
+                            encodedResult = java.net.URLDecoder.decode(encoded, "UTF-8"),
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
                     composable(
                         route = NavRoutes.ABOUT,
                         enterTransition = { fadeIn(AnimSpec.padFade) },
@@ -647,6 +682,8 @@ private fun CompactLayout(
         flags.isAbout -> stringResource(R.string.nav_title_about)
         flags.isChangelog -> stringResource(R.string.nav_title_changelog)
         flags.isTerms -> stringResource(R.string.nav_title_terms)
+        flags.isTools -> stringResource(R.string.nav_title_tools)
+        flags.isImageToBlueprint -> stringResource(R.string.itb_title)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
@@ -849,6 +886,29 @@ private fun CompactLayout(
                     route = NavRoutes.SETTINGS,
                 ) {
                     SettingsScreen(navController = navController)
+                }
+                composable(NavRoutes.TOOLS) {
+                    ToolsScreen(
+                        snackbarHostState = snackbarHostState,
+                        onNavigateToImageToBlueprint = { navController.navigate(NavRoutes.IMAGE_TO_BLUEPRINT) },
+                    )
+                }
+                composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
+                    ImageToBlueprintScreen(
+                        onExport = { encoded ->
+                            navController.navigate(NavRoutes.blueprintPreviewRoute(encoded))
+                        },
+                    )
+                }
+                composable(
+                    route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
+                    arguments = listOf(navArgument("result") { type = NavType.StringType }),
+                ) { backStackEntry ->
+                    val encoded = backStackEntry.arguments?.getString("result").orEmpty()
+                    BlueprintPreviewScreen(
+                        encodedResult = java.net.URLDecoder.decode(encoded, "UTF-8"),
+                        onBack = { navController.popBackStack() },
+                    )
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }
                 composable(route = NavRoutes.CHANGELOG) { ChangelogScreen(navController = navController) }

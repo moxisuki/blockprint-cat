@@ -69,6 +69,75 @@
     <string name="bottom_nav_community">Community</string>
     <string name="bottom_nav_settings">Settings</string>
     <string name="bottom_nav_connection">Connection</string>
+    <string name="bottom_nav_tools">Tools</string>
+    <string name="nav_title_tools">Tools</string>
+    <string name="tool_image_to_blueprint">Image to Blueprint</string>
+    <string name="tool_image_to_blueprint_subtitle">Convert any image into a stackable Minecraft block blueprint</string>
+    <string name="tool_pixel_art">Pixel Art Generator</string>
+    <string name="tool_color_palette">Color Palette</string>
+    <string name="tool_qr_scan">Scan to Connect</string>
+    <string name="tool_backup_restore">Backup / Restore</string>
+    <string name="tool_cache_clear">Clear Cache</string>
+    <string name="tool_not_implemented">This feature is under development</string>
+
+    <!-- Image to Blueprint -->
+    <string name="itb_title">Image to Blueprint</string>
+    <string name="itb_select_image">Select Image</string>
+    <string name="itb_select_image_hint">Tap to select an image</string>
+    <string name="itb_image_size">%1$d × %2$d</string>
+    <string name="itb_section_output">Output Width</string>
+    <string name="itb_width">Width (blocks)</string>
+    <string name="itb_width_range">Range %1$d ~ %2$d, default 128</string>
+    <string name="itb_section_dither">Dithering Algorithm</string>
+    <string name="itb_section_adjust">Image Adjustments</string>
+    <string name="itb_section_transparency">Transparency</string>
+    <string name="itb_section_blocks">Block Selection</string>
+    <string name="itb_section_block_filters">Block Filters</string>
+    <string name="itb_brightness">Brightness</string>
+    <string name="itb_contrast">Contrast</string>
+    <string name="itb_saturation">Saturation</string>
+    <string name="itb_reset">Reset</string>
+    <string name="itb_transparency_enable">Enable transparency</string>
+    <string name="itb_transparency_tolerance">Tolerance: %1$d</string>
+    <string name="itb_transparency_hint">Pixels with alpha below this value become air</string>
+    <string name="itb_convert">Convert</string>
+    <string name="itb_dither_none">None — Nearest color, blocky</string>
+    <string name="itb_dither_floyd_steinberg">Floyd-Steinberg — Error diffusion, smooth</string>
+    <string name="itb_dither_bayer_4x4">Bayer 4×4 — Ordered dither, regular dots</string>
+    <string name="itb_dither_bayer_2x2">Bayer 2×2 — Simplified, larger dots</string>
+    <string name="itb_dither_ordered_3x3">Ordered 3×3 — Ordered threshold</string>
+    <string name="itb_dither_min_avg_err">MinAvgErr — Minimum average error</string>
+    <string name="itb_dither_burkes">Burkes — Error diffusion (7 neighbors)</string>
+    <string name="itb_dither_sierra_lite">Sierra Lite — Lightweight (3 neighbors)</string>
+    <string name="itb_dither_stucki">Stucki — Error diffusion (12 neighbors)</string>
+    <string name="itb_dither_atkinson">Atkinson — Error diffusion (6 neighbors), artistic</string>
+    <string name="itb_group_wool">Wool</string>
+    <string name="itb_group_concrete">Concrete</string>
+    <string name="itb_group_terracotta">Terracotta</string>
+    <string name="itb_group_stone">Stone</string>
+    <string name="itb_group_soil">Soil</string>
+    <string name="itb_group_wood">Wood</string>
+    <string name="itb_group_jewel">Jewel</string>
+    <string name="itb_group_glass">Glass</string>
+    <string name="itb_group_glazed">Glazed</string>
+    <string name="itb_group_light">Light</string>
+    <string name="itb_group_ore">Ore</string>
+    <string name="itb_filter_exclude_falling">Exclude falling blocks</string>
+    <string name="itb_filter_transparent_only">Transparent only</string>
+    <string name="itb_filter_survival_only">Survival obtainable only</string>
+    <string name="itb_filter_luminance_only">Glowing blocks only</string>
+    <string name="itb_filter_redstone_only">Redstone only</string>
+    <string name="itb_section_result">Preview Result</string>
+    <string name="itb_result_size">%1$d × %2$d blocks</string>
+    <string name="itb_result_total">%1$d blocks total</string>
+    <string name="itb_result_materials">Material list</string>
+    <string name="itb_result_error">Conversion failed: %1$s</string>
+    <string name="itb_no_result">No preview yet. Tap the button below to generate.</string>
+    <string name="itb_enlarge_hint">Tap to enlarge</string>
+    <string name="itb_enlarge_dismiss">Tap anywhere to close</string>
+    <string name="itb_reselect">Reselect</string>
+    <string name="itb_updating">Updating…</string>
+    <string name="itb_export">Export</string>
 
     <!-- HomeScreen -->
     <string name="home_empty_title">No blueprints yet</string>
@@ -586,4 +655,15 @@
     <string name="icon_variant_v3">v3</string>
     <string name="icon_variant_v4">v4</string>
     <string name="cd_icon_selected">Selected</string>
+
+    <!-- BlueprintPreviewScreen -->
+    <string name="bp_title">Blueprint preview</string>
+    <string name="bp_placeholder">Blueprint preview · coming soon</string>
+    <string name="bp_export_format">Export format</string>
+    <string name="bp_format_litematic">Litematic</string>
+    <string name="bp_format_schematic">Schematic</string>
+    <string name="bp_format_nbt">NBT</string>
+    <string name="bp_save">Save locally</string>
+    <string name="bp_share">Share</string>
+    <string name="bp_coming_soon">Export feature coming soon</string>
 </resources>

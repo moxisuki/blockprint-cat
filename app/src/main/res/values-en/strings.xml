@@ -123,7 +123,7 @@
     <string name="itb_group_ore">Ore</string>
     <string name="itb_section_result">Preview Result</string>
     <string name="itb_result_size">%1$d × %2$d blocks</string>
-    <string name="itb_result_total">%1$d blocks total</string>
+    <string name="itb_result_total">%1$s blocks total</string>
     <string name="itb_result_materials">Material list</string>
     <string name="itb_result_error">Conversion failed: %1$s</string>
     <string name="itb_no_result">No preview yet. Tap the button below to generate.</string>

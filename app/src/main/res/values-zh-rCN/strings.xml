@@ -107,7 +107,7 @@
     <string name="itb_group_ore">矿石</string>
     <string name="itb_section_result">预览结果</string>
     <string name="itb_result_size">%1$d × %2$d 方块</string>
-    <string name="itb_result_total">共 %1$d 个方块</string>
+    <string name="itb_result_total">共 %1$s 个方块</string>
     <string name="itb_result_materials">材料清单</string>
     <string name="itb_result_error">转换失败: %1$s</string>
     <string name="itb_no_result">尚未转换。点击下方按钮生成预览。</string>

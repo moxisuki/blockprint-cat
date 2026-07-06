@@ -543,7 +543,6 @@ private fun EnlargedPreviewDialog(
         }
     }
 }
-}
 
 private fun readImageDimensions(
     context: android.content.Context,

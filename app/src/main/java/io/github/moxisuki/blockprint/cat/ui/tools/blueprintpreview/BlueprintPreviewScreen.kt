@@ -41,8 +41,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -77,83 +75,74 @@ fun BlueprintPreviewContent(
     viewModel: BlueprintPreviewViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(encodedResult) {
         viewModel.init(encodedResult)
     }
 
-    LaunchedEffect(state.saveMessage) {
-        val msg = state.saveMessage
-        if (msg != null) {
-            snackbarHostState.showSnackbar(msg)
-            viewModel.consumeSaveMessage()
-        }
-    }
-
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Spacer(Modifier.height(12.dp))
-            // 导出类型（FilterChip + FlowRow 自动换行，不会被裁切）
-            Text(
-                stringResource(R.string.bp_export_type),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                ExportType.entries.forEach { type ->
-                    FilterChip(
-                        selected = state.exportType == type,
-                        onClick = { viewModel.setExportType(type) },
-                        label = { Text(stringResource(type.labelRes())) },
-                    )
-                }
-            }
-
-            // 分支 1: MC 命令 → 6 方向选择 + 命令预览 + 复制/分享
-            if (state.exportType == ExportType.MC_COMMANDS) {
-                McCommandBranch(
-                    direction = state.commandDirection,
-                    onDirectionChange = viewModel::setCommandDirection,
-                    commandsText = state.commandsText,
-                    isBuilding = state.isBuilding,
-                    progress = state.buildProgress,
-                    onGenerate = viewModel::buildBlueprint,
-                )
-            } else {
-                // 分支 2: 蓝图 → WALL/FLAT + 名称 + 保存
-                BlueprintSaveBranch(
-                    mode = state.blueprintMode,
-                    onModeChange = viewModel::setBlueprintMode,
-                    blueprintBytes = state.blueprintBytes,
-                    isBuilding = state.isBuilding,
-                    progress = state.buildProgress,
-                    savedUuid = state.savedUuid,
-                    onBuild = viewModel::buildBlueprint,
-                    onSaveClick = { showSaveDialog = true },
-                    onViewBlueprint = onViewBlueprint,
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-        // Snackbar 浮在底部，overlay 在内容之上（不占 Column 布局空间）
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(androidx.compose.ui.Alignment.BottomCenter)
-                .fillMaxWidth(),
+        Spacer(Modifier.height(12.dp))
+        // 导出类型（FilterChip + FlowRow 自动换行，不会被裁切）
+        Text(
+            stringResource(R.string.bp_export_type),
+            style = MaterialTheme.typography.titleSmall,
         )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            ExportType.entries.forEach { type ->
+                FilterChip(
+                    selected = state.exportType == type,
+                    onClick = { viewModel.setExportType(type) },
+                    label = { Text(stringResource(type.labelRes())) },
+                )
+            }
+        }
+
+        // 分支 1: MC 命令 → 6 方向选择 + 命令预览 + 复制/分享
+        if (state.exportType == ExportType.MC_COMMANDS) {
+            McCommandBranch(
+                direction = state.commandDirection,
+                onDirectionChange = viewModel::setCommandDirection,
+                commandsText = state.commandsText,
+                isBuilding = state.isBuilding,
+                progress = state.buildProgress,
+                onGenerate = viewModel::buildBlueprint,
+            )
+        } else {
+            // 分支 2: 蓝图 → WALL/FLAT + 名称 + 保存
+            BlueprintSaveBranch(
+                mode = state.blueprintMode,
+                onModeChange = viewModel::setBlueprintMode,
+                blueprintBytes = state.blueprintBytes,
+                isBuilding = state.isBuilding,
+                progress = state.buildProgress,
+                savedUuid = state.savedUuid,
+                onBuild = viewModel::buildBlueprint,
+                onSaveClick = { showSaveDialog = true },
+                onViewBlueprint = onViewBlueprint,
+            )
+        }
+
+        // 保存反馈内联在内容底部（不弹 Snackbar，避免遮挡按钮）：
+        // 成功时右按钮变 "查看" 已足够暗示；只有失败需要显式提示
+        val errMsg = state.saveMessage
+        if (errMsg != null && errMsg.startsWith("save failed", ignoreCase = true)) {
+            Text(
+                text = errMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 
     if (showSaveDialog) {

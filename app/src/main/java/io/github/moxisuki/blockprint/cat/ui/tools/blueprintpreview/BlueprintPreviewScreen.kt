@@ -394,9 +394,9 @@ private fun BlueprintMode.labelRes(): Int = when (this) {
 /**
  * 统一的生成进度条。MC 命令分支和蓝图分支都用。
  *
- * - 未在生成：bar 高度保留 4dp（占位），不显示文字
+ * - 未在生成：完全不渲染（不占空间），下方的按钮/预览贴上来
  * - 生成中：determinate 进度 0→1，从 VM 的 buildProgress 推
- * - 生成完毕：progress 回到 0f，bar 仍占位但视觉上是空的，等下次
+ * - 生成完毕：progress 淡回 0f 后消失
  */
 @Composable
 private fun GenerationProgressBar(
@@ -404,8 +404,9 @@ private fun GenerationProgressBar(
     isBuilding: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    if (!isBuilding) return  // idle 时不渲染、不占位
     val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isBuilding) progress else 0f,
+        targetValue = progress,
         animationSpec = androidx.compose.animation.core.tween<Float>(durationMillis = 200),
         label = "build-progress",
     )

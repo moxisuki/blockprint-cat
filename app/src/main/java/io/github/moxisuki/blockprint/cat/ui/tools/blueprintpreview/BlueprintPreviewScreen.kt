@@ -20,8 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
@@ -69,6 +72,7 @@ import io.github.moxisuki.blockprint.core.SchematicFormat
 @Composable
 fun BlueprintPreviewContent(
     encodedResult: String,
+    onViewBlueprint: (uuid: String) -> Unit,
     onDismiss: () -> Unit,
     viewModel: BlueprintPreviewViewModel = hiltViewModel(),
 ) {
@@ -132,8 +136,10 @@ fun BlueprintPreviewContent(
                 blueprintBytes = state.blueprintBytes,
                 isBuilding = state.isBuilding,
                 progress = state.buildProgress,
+                savedUuid = state.savedUuid,
                 onBuild = viewModel::buildBlueprint,
                 onSaveClick = { showSaveDialog = true },
+                onViewBlueprint = onViewBlueprint,
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -293,8 +299,10 @@ private fun BlueprintSaveBranch(
     blueprintBytes: ByteArray?,
     isBuilding: Boolean,
     progress: Float,
+    savedUuid: String?,
     onBuild: () -> Unit,
     onSaveClick: () -> Unit,
+    onViewBlueprint: (uuid: String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // 模式选择
@@ -310,25 +318,27 @@ private fun BlueprintSaveBranch(
                 }
             }
         }
-        // 构建 + 保存
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(
-                onClick = onBuild,
-                enabled = !isBuilding,
-                modifier = Modifier.weight(1f).height(48.dp),
-            ) {
-                Text(stringResource(R.string.bp_build))
+        // 进度条（idle 时不渲染，不挤按钮）
+        GenerationProgressBar(progress = progress, isBuilding = isBuilding)
+        // 单一主操作按钮：根据 state 切换
+        //   - 无 bytes:  "生成蓝图"  → onBuild
+        //   - 有 bytes 未保存: "重新生成"  → onBuild（同一个动作）
+        //   - 已保存:  "查看" + 跳详情  → onViewBlueprint(savedUuid)
+        val hasBytes = blueprintBytes != null
+        val isSaved = savedUuid != null
+        FilledTonalButton(
+            onClick = if (isSaved) ({ onViewBlueprint(savedUuid!!) }) else onBuild,
+            enabled = !isBuilding,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+        ) {
+            // 按钮内容：图标 + 文字，按 state 切换
+            val (icon, labelRes) = when {
+                isSaved -> Icons.Outlined.OpenInNew to R.string.bp_action_view
+                hasBytes -> Icons.Outlined.Refresh to R.string.bp_action_regenerate
+                else -> Icons.Outlined.AutoAwesome to R.string.bp_build
             }
-            // 进度条（统一组件，两个分支都用）
-            GenerationProgressBar(progress = progress, isBuilding = isBuilding)
-            FilledTonalButton(
-                onClick = onSaveClick,
-                enabled = blueprintBytes != null,
-                modifier = Modifier.weight(1f).height(48.dp),
-            ) {
-                Icon(Icons.Outlined.Save, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-                Text(stringResource(R.string.bp_save))
-            }
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
+            Text(stringResource(labelRes))
         }
     }
 }

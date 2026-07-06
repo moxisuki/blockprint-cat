@@ -532,7 +532,7 @@ private fun PadLayout(
                         )
                     }
                     composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
-                        ImageToBlueprintScreen()
+                        ImageToBlueprintScreen(navController = navController)
                     }
                     composable(
                         route = NavRoutes.ABOUT,
@@ -879,7 +879,7 @@ private fun CompactLayout(
                     )
                 }
                 composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
-                    ImageToBlueprintScreen()
+                    ImageToBlueprintScreen(navController = navController)
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }
                 composable(route = NavRoutes.CHANGELOG) { ChangelogScreen(navController = navController) }

@@ -73,6 +73,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -105,6 +110,7 @@ private const val SEC_RESULT = "result"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ImageToBlueprintScreen(
+    navController: androidx.navigation.NavController,
     viewModel: ImageToBlueprintViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -289,6 +295,15 @@ CollapsibleSection(
         ) {
             io.github.moxisuki.blockprint.cat.ui.tools.blueprintpreview.BlueprintPreviewContent(
                 encodedResult = exportPayload!!,
+                onViewBlueprint = { uuid ->
+                    // 关弹框 → 跳详情页
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            exportPayload = null
+                            navController.navigate(io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes.detailRoute(uuid))
+                        }
+                    }
+                },
                 onDismiss = {
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) exportPayload = null

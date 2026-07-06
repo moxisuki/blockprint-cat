@@ -48,6 +48,7 @@ data class BlueprintPreviewState(
     val isBuilding: Boolean = false,
     val buildProgress: Float = 0f,
     val saveMessage: String? = null,
+    val savedUuid: String? = null,
 )
 
 @HiltViewModel
@@ -112,6 +113,7 @@ class BlueprintPreviewViewModel @Inject constructor(
         val s = _state.value
         val img: ImageBitmap = s.resultImage ?: return
         val bitmap = img.asAndroidBitmap()
+        // 重置保存态（重新生成后旧 uuid 不再可"查看"）
         _state.update {
             it.copy(
                 isBuilding = true,
@@ -119,6 +121,7 @@ class BlueprintPreviewViewModel @Inject constructor(
                 saveMessage = null,
                 blueprintBytes = null,
                 commandsText = "",
+                savedUuid = null,
             )
         }
         viewModelScope.launch {
@@ -156,6 +159,8 @@ class BlueprintPreviewViewModel @Inject constructor(
                     _state.update { it.copy(buildProgress = 1f) }
                     result
                 }
+                // 人性化缓冲：100% 停留 400ms 再淡出，避免"瞬间消失"
+                kotlinx.coroutines.delay(400)
                 _state.update {
                     it.copy(
                         isBuilding = false,
@@ -198,7 +203,12 @@ class BlueprintPreviewViewModel @Inject constructor(
                 viewModelScope.launch {
                     runCatching { blueprintSink.ingest(safeName, bytes) }
                         .onSuccess { meta ->
-                            _state.update { it.copy(saveMessage = "saved: ${meta.displayName}") }
+                            _state.update {
+                                it.copy(
+                                    saveMessage = "saved: ${meta.displayName}",
+                                    savedUuid = meta.uuid,
+                                )
+                            }
                         }
                         .onFailure { e ->
                             _state.update {

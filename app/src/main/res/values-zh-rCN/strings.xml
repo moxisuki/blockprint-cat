@@ -579,6 +579,8 @@
     <string name="bp_action_copy">复制</string>
     <string name="bp_action_copied">已复制</string>
     <string name="bp_action_share">分享</string>
+    <string name="bp_action_view">查看</string>
+    <string name="bp_action_regenerate">重新生成</string>
     <string name="bp_save_dialog_title">保存为…</string>
     <string name="bp_save_dialog_hint">输入蓝图名称</string>
     <string name="bp_save_ok">已保存：%1$s</string>

@@ -92,62 +92,68 @@ fun BlueprintPreviewContent(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Spacer(Modifier.height(12.dp))
-        // 导出类型（FilterChip + FlowRow 自动换行，不会被裁切）
-        Text(
-            stringResource(R.string.bp_export_type),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        FlowRow(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ExportType.entries.forEach { type ->
-                FilterChip(
-                    selected = state.exportType == type,
-                    onClick = { viewModel.setExportType(type) },
-                    label = { Text(stringResource(type.labelRes())) },
+            Spacer(Modifier.height(12.dp))
+            // 导出类型（FilterChip + FlowRow 自动换行，不会被裁切）
+            Text(
+                stringResource(R.string.bp_export_type),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                ExportType.entries.forEach { type ->
+                    FilterChip(
+                        selected = state.exportType == type,
+                        onClick = { viewModel.setExportType(type) },
+                        label = { Text(stringResource(type.labelRes())) },
+                    )
+                }
+            }
+
+            // 分支 1: MC 命令 → 6 方向选择 + 命令预览 + 复制/分享
+            if (state.exportType == ExportType.MC_COMMANDS) {
+                McCommandBranch(
+                    direction = state.commandDirection,
+                    onDirectionChange = viewModel::setCommandDirection,
+                    commandsText = state.commandsText,
+                    isBuilding = state.isBuilding,
+                    progress = state.buildProgress,
+                    onGenerate = viewModel::buildBlueprint,
+                )
+            } else {
+                // 分支 2: 蓝图 → WALL/FLAT + 名称 + 保存
+                BlueprintSaveBranch(
+                    mode = state.blueprintMode,
+                    onModeChange = viewModel::setBlueprintMode,
+                    blueprintBytes = state.blueprintBytes,
+                    isBuilding = state.isBuilding,
+                    progress = state.buildProgress,
+                    savedUuid = state.savedUuid,
+                    onBuild = viewModel::buildBlueprint,
+                    onSaveClick = { showSaveDialog = true },
+                    onViewBlueprint = onViewBlueprint,
                 )
             }
+            Spacer(Modifier.height(16.dp))
         }
-
-        // 分支 1: MC 命令 → 6 方向选择 + 命令预览 + 复制/分享
-        if (state.exportType == ExportType.MC_COMMANDS) {
-            McCommandBranch(
-                direction = state.commandDirection,
-                onDirectionChange = viewModel::setCommandDirection,
-                commandsText = state.commandsText,
-                isBuilding = state.isBuilding,
-                progress = state.buildProgress,
-                onGenerate = viewModel::buildBlueprint,
-            )
-        } else {
-            // 分支 2: 蓝图 → WALL/FLAT + 名称 + 保存
-            BlueprintSaveBranch(
-                mode = state.blueprintMode,
-                onModeChange = viewModel::setBlueprintMode,
-                blueprintBytes = state.blueprintBytes,
-                isBuilding = state.isBuilding,
-                progress = state.buildProgress,
-                savedUuid = state.savedUuid,
-                onBuild = viewModel::buildBlueprint,
-                onSaveClick = { showSaveDialog = true },
-                onViewBlueprint = onViewBlueprint,
-            )
-        }
-        Spacer(Modifier.height(4.dp))
+        // Snackbar 浮在底部，overlay 在内容之上（不占 Column 布局空间）
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .align(androidx.compose.ui.Alignment.BottomCenter)
+                .fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
     }
 
     if (showSaveDialog) {

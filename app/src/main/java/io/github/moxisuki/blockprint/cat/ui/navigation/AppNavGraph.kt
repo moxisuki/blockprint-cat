@@ -85,7 +85,6 @@ import io.github.moxisuki.blockprint.cat.ui.settings.CommunitySettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.SettingsScreen
 import io.github.moxisuki.blockprint.cat.ui.settings.TermsScreen
 import io.github.moxisuki.blockprint.cat.ui.tools.ToolsScreen
-import io.github.moxisuki.blockprint.cat.ui.tools.blueprintpreview.BlueprintPreviewScreen
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.ImageToBlueprintScreen
 
 /**
@@ -533,23 +532,7 @@ private fun PadLayout(
                         )
                     }
                     composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
-                        ImageToBlueprintScreen(
-                            onExport = { encoded ->
-                                navController.navigate(NavRoutes.blueprintPreviewRoute(encoded))
-                            },
-                        )
-                    }
-                    composable(
-                        route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
-                        arguments = listOf(navArgument("result") { type = NavType.StringType }),
-                    ) { backStackEntry ->
-                        // NavType.StringType already URL-decodes the path segment;
-                        // calling URLDecoder.decode again would corrupt base64 (+ -> space).
-                        val encoded = backStackEntry.arguments?.getString("result").orEmpty()
-                        BlueprintPreviewScreen(
-                            encodedResult = encoded,
-                            onBack = { navController.popBackStack() },
-                        )
+                        ImageToBlueprintScreen()
                     }
                     composable(
                         route = NavRoutes.ABOUT,
@@ -896,23 +879,7 @@ private fun CompactLayout(
                     )
                 }
                 composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
-                    ImageToBlueprintScreen(
-                        onExport = { encoded ->
-                            navController.navigate(NavRoutes.blueprintPreviewRoute(encoded))
-                        },
-                    )
-                }
-                composable(
-                    route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
-                    arguments = listOf(navArgument("result") { type = NavType.StringType }),
-                ) { backStackEntry ->
-                    // NavType.StringType already URL-decodes the path segment;
-                    // calling URLDecoder.decode again would corrupt base64 (+ -> space).
-                    val encoded = backStackEntry.arguments?.getString("result").orEmpty()
-                    BlueprintPreviewScreen(
-                        encodedResult = encoded,
-                        onBack = { navController.popBackStack() },
-                    )
+                    ImageToBlueprintScreen()
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }
                 composable(route = NavRoutes.CHANGELOG) { ChangelogScreen(navController = navController) }

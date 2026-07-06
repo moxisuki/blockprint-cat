@@ -59,16 +59,21 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,11 +105,13 @@ private const val SEC_RESULT = "result"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ImageToBlueprintScreen(
-    onExport: (String) -> Unit,
     viewModel: ImageToBlueprintViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    var exportPayload by remember { mutableStateOf<String?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
 
     // 预热方块缩略图 cache：在 IO 线程把 140 个方块都 decode 一次，
     // 之后展开任何方块组都是 0 延迟。
@@ -260,11 +267,35 @@ CollapsibleSection(
             enabled = state.imageUri != null && state.resultBitmap != null,
             isUpdating = state.isUpdating,
             onClick = {
-                viewModel.encodeForExport()?.let(onExport)
+                viewModel.encodeForExport()?.let { encoded ->
+                    exportPayload = encoded
+                    scope.launch { sheetState.show() }
+                }
             },
         )
 
         Spacer(Modifier.height(24.dp))
+    }
+
+    // 底部弹出框：导出配置（MC 命令 / 蓝图），不是独立路由
+    if (exportPayload != null) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    if (!sheetState.isVisible) exportPayload = null
+                }
+            },
+            sheetState = sheetState,
+        ) {
+            io.github.moxisuki.blockprint.cat.ui.tools.blueprintpreview.BlueprintPreviewContent(
+                encodedResult = exportPayload!!,
+                onDismiss = {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) exportPayload = null
+                    }
+                },
+            )
+        }
     }
 }
 

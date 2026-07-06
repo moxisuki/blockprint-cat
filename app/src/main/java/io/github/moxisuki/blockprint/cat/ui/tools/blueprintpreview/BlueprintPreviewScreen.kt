@@ -60,9 +60,9 @@ import io.github.moxisuki.blockprint.cat.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BlueprintPreviewScreen(
+fun BlueprintPreviewContent(
     encodedResult: String,
-    onBack: () -> Unit,
+    onDismiss: () -> Unit,
     viewModel: BlueprintPreviewViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -81,88 +81,76 @@ fun BlueprintPreviewScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.bp_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Spacer(Modifier.height(12.dp))
+        // 3D 占位预览区
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+            contentAlignment = Alignment.Center,
         ) {
-            Spacer(Modifier.height(8.dp))
-            // 3D 占位预览区
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    stringResource(R.string.bp_placeholder),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            // 导出类型（5 选 1）
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.bp_export_type),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    val types = ExportType.entries
-                    types.forEachIndexed { index, type ->
-                        SegmentedButton(
-                            selected = state.exportType == type,
-                            onClick = { viewModel.setExportType(type) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
-                        ) {
-                            Text(
-                                text = stringResource(type.labelRes()),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
+            Text(
+                stringResource(R.string.bp_placeholder),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // 导出类型（5 选 1）
+        Text(
+            stringResource(R.string.bp_export_type),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            val types = ExportType.entries
+            types.forEachIndexed { index, type ->
+                SegmentedButton(
+                    selected = state.exportType == type,
+                    onClick = { viewModel.setExportType(type) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
+                ) {
+                    Text(
+                        text = stringResource(type.labelRes()),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-
-            // 分支 1: MC 命令 → 6 方向选择 + 命令预览（专用区域）
-            if (state.exportType == ExportType.MC_COMMANDS) {
-                McCommandBranch(
-                    direction = state.commandDirection,
-                    onDirectionChange = viewModel::setCommandDirection,
-                    commandsText = state.commandsText,
-                    isBuilding = state.isBuilding,
-                    onGenerate = viewModel::buildBlueprint,
-                )
-            } else {
-                // 分支 2: 蓝图 → WALL/FLAT + 名称 + 保存
-                BlueprintSaveBranch(
-                    mode = state.blueprintMode,
-                    onModeChange = viewModel::setBlueprintMode,
-                    blueprintBytes = state.blueprintBytes,
-                    isBuilding = state.isBuilding,
-                    onBuild = viewModel::buildBlueprint,
-                    onSaveClick = { showSaveDialog = true },
-                )
-            }
-            Spacer(Modifier.height(8.dp))
         }
+
+        // 分支 1: MC 命令 → 6 方向选择 + 命令预览
+        if (state.exportType == ExportType.MC_COMMANDS) {
+            McCommandBranch(
+                direction = state.commandDirection,
+                onDirectionChange = viewModel::setCommandDirection,
+                commandsText = state.commandsText,
+                isBuilding = state.isBuilding,
+                onGenerate = viewModel::buildBlueprint,
+            )
+        } else {
+            // 分支 2: 蓝图 → WALL/FLAT + 名称 + 保存
+            BlueprintSaveBranch(
+                mode = state.blueprintMode,
+                onModeChange = viewModel::setBlueprintMode,
+                blueprintBytes = state.blueprintBytes,
+                isBuilding = state.isBuilding,
+                onBuild = viewModel::buildBlueprint,
+                onSaveClick = { showSaveDialog = true },
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
     }
 
     if (showSaveDialog) {

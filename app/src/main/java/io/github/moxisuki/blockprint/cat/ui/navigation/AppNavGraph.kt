@@ -543,9 +543,11 @@ private fun PadLayout(
                         route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
                         arguments = listOf(navArgument("result") { type = NavType.StringType }),
                     ) { backStackEntry ->
+                        // NavType.StringType already URL-decodes the path segment;
+                        // calling URLDecoder.decode again would corrupt base64 (+ -> space).
                         val encoded = backStackEntry.arguments?.getString("result").orEmpty()
                         BlueprintPreviewScreen(
-                            encodedResult = java.net.URLDecoder.decode(encoded, "UTF-8"),
+                            encodedResult = encoded,
                             onBack = { navController.popBackStack() },
                         )
                     }
@@ -904,9 +906,11 @@ private fun CompactLayout(
                     route = NavRoutes.BLUEPRINT_PREVIEW_ROUTE,
                     arguments = listOf(navArgument("result") { type = NavType.StringType }),
                 ) { backStackEntry ->
+                    // NavType.StringType already URL-decodes the path segment;
+                    // calling URLDecoder.decode again would corrupt base64 (+ -> space).
                     val encoded = backStackEntry.arguments?.getString("result").orEmpty()
                     BlueprintPreviewScreen(
-                        encodedResult = java.net.URLDecoder.decode(encoded, "UTF-8"),
+                        encodedResult = encoded,
                         onBack = { navController.popBackStack() },
                     )
                 }

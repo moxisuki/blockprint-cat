@@ -12,7 +12,7 @@ lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
 kotlin = "2.2.10"
 composeBom = "2026.02.01"
-blockprint = "1.0.0"
+blockprint = "1.5.0"
 coil = "2.7.0"
 okhttp = "4.12.0"
 room = "2.7.1"
@@ -60,7 +60,7 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
-blockprint-core = { group = "io.github.moxisuki", name = "blockprint-core", version.ref = "blockprint" }
+blockprint-core = { group = "io.github.moxisuki", name = "blockprint-core-android", version.ref = "blockprint" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }

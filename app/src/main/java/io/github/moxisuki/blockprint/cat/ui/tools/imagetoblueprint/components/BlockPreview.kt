@@ -36,6 +36,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 private val pixelArtCache = ConcurrentHashMap<Int, ImageBitmap>()
 
+/** 公开查询：返回已 cache 的位图，没 cache 过则返回 null（不会触发同步 decode）。 */
+fun findPixelArt(@androidx.annotation.DrawableRes resId: Int): ImageBitmap? =
+    pixelArtCache[resId]
+
 /** 非 Composable 入口，给预热协程用。 */
 fun prewarmPixelArt(context: Context, resIds: Collection<Int>) {
     val appContext = context.applicationContext

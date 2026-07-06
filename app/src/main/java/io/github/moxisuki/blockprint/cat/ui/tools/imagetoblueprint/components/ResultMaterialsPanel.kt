@@ -76,7 +76,7 @@ internal fun ResultMaterialsPanel(
                                 modifier = Modifier.weight(1f),
                             ) {
                                 if (resId != null) {
-                                    val bitmap = pixelArtCache[resId]
+                                    val bitmap = findPixelArt(resId)
                                     if (bitmap != null) {
                                         Image(
                                             bitmap = bitmap,

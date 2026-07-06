@@ -43,4 +43,20 @@ class ExportPayloadCodecTest {
         assertThat(decoded.materials).isEmpty()
         assertThat(decoded.totalBlocks).isEqualTo(4)
     }
+
+    @Test fun `roundtrip with 100x100 bitmap stays under 200KB`() {
+        val bmp: Bitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+        val materials = (0 until 50).associate { "block_$it" to (it + 1) }
+        val encoded = ExportPayloadCodec.encode(bmp, 100, 100, 10000, materials)
+        assertThat(encoded.length).isLessThan(200_000)
+        val decoded = ExportPayloadCodec.decode(encoded)
+        assertThat(decoded.materials).hasSize(50)
+        assertThat(decoded.bitmap.width).isEqualTo(100)
+        assertThat(decoded.bitmap.height).isEqualTo(100)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `decode invalid base64 throws`() {
+        ExportPayloadCodec.decode("not-valid-base64-!!!@@@")
+    }
 }

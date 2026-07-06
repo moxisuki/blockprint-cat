@@ -101,9 +101,11 @@ internal object BlueprintBuilder {
                 val block = grid[y][x]
                 val idx = if (block == null) AIR_PALETTE_INDEX else blockToIndex.getValue(MC_PREFIX + block.name)
                 val rawIdx = when (mode) {
-                    // 竖直贴墙：image y 直接作为 region y，z=0。
-                    BlueprintMode.WALL -> y * W * D + 0 * W + x
-                    // 平铺地面：image y=0 对应 region z = depth-1（north），翻转过来。
+                    // 竖直贴墙：image y=0 → region y=height-1（墙顶），y=height-1 → y=0（墙底）
+                    // 这样站在墙前看（默认朝 -Z 看 +Z），图就是"正"的
+                    BlueprintMode.WALL -> (height - 1 - y) * W * D + 0 * W + x
+                    // 平铺地面：image y=0 → region z=depth-1（north / 远端）
+                    // 默认玩家视角（朝 -Z 看 +Z），图 y=0 在远端 → 看起来就是正的
                     BlueprintMode.FLAT -> 0 * W * D + (height - 1 - y) * W + x
                 }
                 raw[rawIdx] = idx

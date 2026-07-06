@@ -48,13 +48,13 @@ class BlueprintBuilderTest {
         assertThat(region.palette.entries.map { it.name }).containsExactly(
             "minecraft:air", "minecraft:red_wool", "minecraft:white_wool", "minecraft:blue_wool",
         ).inOrder()
+        // WALL: image y=0 maps to region y=height-1 (墙顶). row 0 (all red) → y=3
         // y-major, depth=1, so index = y * W * D + z * W + x = y * 4 + x
-        // row 3 (all null) should all be air (palette idx 0)
         for (x in 0 until 4) {
-            assertThat(region.getBlock(x, 3, 0)).isEqualTo(0)
+            assertThat(region.getBlock(x, 3, 0)).isEqualTo(1)  // row 0 → y=3 → red
         }
-        // row 0 col 0 should be red (palette idx 1)
-        assertThat(region.getBlock(0, 0, 0)).isEqualTo(1)
+        // image row 3 (all null) → region y=0 (墙底), so col 0 = air
+        assertThat(region.getBlock(0, 0, 0)).isEqualTo(0)
     }
 
     @Test fun `FLAT region has dims width x 1 x height`() {
@@ -151,7 +151,8 @@ class BlueprintBuilderTest {
     }
 
     @Test fun `WALL region rawBlocks match grid via getBlock`() {
-        // 2x2: red white / blue null
+        // 2x2: row 0 = red white, row 1 = blue null
+        // WALL: image y=0 → region y=1 (墙顶), y=1 → y=0 (墙底)
         val g = arrayOf(
             arrayOf<Block?>(red, white),
             arrayOf<Block?>(blue, null),
@@ -163,10 +164,11 @@ class BlueprintBuilderTest {
             name = "x",
         ).regions.single()
         // palette = [air, red, white, blue]  → indices 0,1,2,3
-        // WALL y-major: idx = y * W * D + z * W + x (depth=1 here)
-        assertThat(region.getBlock(0, 0, 0)).isEqualTo(1) // red
-        assertThat(region.getBlock(1, 0, 0)).isEqualTo(2) // white
-        assertThat(region.getBlock(0, 1, 0)).isEqualTo(3) // blue
-        assertThat(region.getBlock(1, 1, 0)).isEqualTo(0) // air (null)
+        // image row 0 (red, white) → region y=1
+        assertThat(region.getBlock(0, 1, 0)).isEqualTo(1) // red at top
+        assertThat(region.getBlock(1, 1, 0)).isEqualTo(2) // white at top
+        // image row 1 (blue, null) → region y=0
+        assertThat(region.getBlock(0, 0, 0)).isEqualTo(3) // blue at bottom
+        assertThat(region.getBlock(1, 0, 0)).isEqualTo(0) // air at bottom
     }
 }

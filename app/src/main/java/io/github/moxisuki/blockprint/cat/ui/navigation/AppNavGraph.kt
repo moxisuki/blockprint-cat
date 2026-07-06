@@ -120,6 +120,7 @@ internal data class NavGraphFlags(
     val isCommunitySettings: Boolean,
     val isTools: Boolean,
     val isImageToBlueprint: Boolean,
+    val isTextToBlueprint: Boolean,
     val isConnection: Boolean,
     val connectionState: ConnectionState,
     // Community fields are flattened to stable primitives so this data class
@@ -182,6 +183,7 @@ private fun rememberNavGraphFlags(
             isCommunity = route == NavRoutes.COMMUNITY,
             isCommunityDetail = route?.startsWith(NavRoutes.COMMUNITY_DETAIL) == true,
             isCommunityLogin = route == NavRoutes.COMMUNITY_LOGIN,
+            isTextToBlueprint = route == NavRoutes.TEXT_TO_BLUEPRINT,
             isAbout = route == NavRoutes.ABOUT,
             isChangelog = route == NavRoutes.CHANGELOG,
             isTerms = route == NavRoutes.TERMS,
@@ -310,6 +312,7 @@ private fun PadLayout(
         flags.isTerms -> stringResource(R.string.nav_title_terms)
         flags.isTools -> stringResource(R.string.nav_title_tools)
         flags.isImageToBlueprint -> stringResource(R.string.itb_title)
+        flags.isTextToBlueprint -> stringResource(R.string.tool_text_to_blueprint)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
@@ -529,10 +532,16 @@ private fun PadLayout(
                         ToolsScreen(
                             snackbarHostState = snackbarHostState,
                             onNavigateToImageToBlueprint = { navController.navigate(NavRoutes.IMAGE_TO_BLUEPRINT) },
+                            onNavigateToTextToBlueprint = { navController.navigate(NavRoutes.TEXT_TO_BLUEPRINT) },
                         )
                     }
                     composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
                         ImageToBlueprintScreen(navController = navController)
+                    }
+                    composable(NavRoutes.TEXT_TO_BLUEPRINT) {
+                        io.github.moxisuki.blockprint.cat.ui.tools.texttoblueprint.TextToBlueprintScreen(
+                            onBack = { navController.popBackStack() },
+                        )
                     }
                     composable(
                         route = NavRoutes.ABOUT,
@@ -669,6 +678,7 @@ private fun CompactLayout(
         flags.isTerms -> stringResource(R.string.nav_title_terms)
         flags.isTools -> stringResource(R.string.nav_title_tools)
         flags.isImageToBlueprint -> stringResource(R.string.itb_title)
+        flags.isTextToBlueprint -> stringResource(R.string.tool_text_to_blueprint)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
@@ -876,10 +886,16 @@ private fun CompactLayout(
                     ToolsScreen(
                         snackbarHostState = snackbarHostState,
                         onNavigateToImageToBlueprint = { navController.navigate(NavRoutes.IMAGE_TO_BLUEPRINT) },
+                        onNavigateToTextToBlueprint = { navController.navigate(NavRoutes.TEXT_TO_BLUEPRINT) },
                     )
                 }
                 composable(NavRoutes.IMAGE_TO_BLUEPRINT) {
                     ImageToBlueprintScreen(navController = navController)
+                }
+                composable(NavRoutes.TEXT_TO_BLUEPRINT) {
+                    io.github.moxisuki.blockprint.cat.ui.tools.texttoblueprint.TextToBlueprintScreen(
+                        onBack = { navController.popBackStack() },
+                    )
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }
                 composable(route = NavRoutes.CHANGELOG) { ChangelogScreen(navController = navController) }

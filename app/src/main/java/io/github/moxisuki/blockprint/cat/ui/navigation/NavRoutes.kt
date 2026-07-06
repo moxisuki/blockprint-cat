@@ -10,6 +10,7 @@ object NavRoutes {
     const val SETTINGS = "settings"
     const val TOOLS = "tools"
     const val IMAGE_TO_BLUEPRINT = "tools/image_to_blueprint"
+    const val TEXT_TO_BLUEPRINT = "tools/text_to_blueprint"
     const val CONNECTION = "connection"
     const val QR_SCANNER = "qr-scanner"
     const val RENDER = "render"

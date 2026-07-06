@@ -10,6 +10,7 @@ import javax.inject.Inject
 sealed interface ToolClickResult {
     data object NotImplemented : ToolClickResult
     data object NavigateToImageToBlueprint : ToolClickResult
+    data object NavigateToTextToBlueprint : ToolClickResult
 }
 
 @HiltViewModel
@@ -20,6 +21,8 @@ class ToolsViewModel @Inject constructor() : ViewModel() {
     fun onToolClick(entry: ToolEntry): ToolClickResult {
         return when (entry.id) {
             "image_to_blueprint" -> ToolClickResult.NavigateToImageToBlueprint
+            "text_to_blueprint" -> ToolClickResult.NavigateToTextToBlueprint
+            "qr_scan" -> ToolClickResult.NotImplemented // 占位：实际路由在 HomeScreen 内的入口
             else -> ToolClickResult.NotImplemented
         }
     }

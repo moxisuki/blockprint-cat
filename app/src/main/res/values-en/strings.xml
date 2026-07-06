@@ -73,11 +73,12 @@
     <string name="nav_title_tools">Tools</string>
     <string name="tool_image_to_blueprint">Image to Blueprint</string>
     <string name="tool_image_to_blueprint_subtitle">Convert any image into a stackable Minecraft block blueprint</string>
-    <string name="tool_pixel_art">Pixel Art Generator</string>
-    <string name="tool_color_palette">Color Palette</string>
+    <string name="tool_text_to_blueprint">Text to Blueprint</string>
+    <string name="tool_text_to_blueprint_subtitle">Paste NBT/JSON text or a description, auto-generate a stackable block blueprint</string>
+    <string name="ttb_input_hint">Paste NBT/JSON text or a description…</string>
+    <string name="ttb_input_supporting">Supports Sponge Schematic v3 NBT / BuildingHelper JSON / natural language</string>
+    <string name="ttb_generate">Generate blueprint</string>
     <string name="tool_qr_scan">Scan to Connect</string>
-    <string name="tool_backup_restore">Backup / Restore</string>
-    <string name="tool_cache_clear">Clear Cache</string>
     <string name="tool_not_implemented">This feature is under development</string>
 
     <!-- Image to Blueprint -->

@@ -253,11 +253,11 @@ CollapsibleSection(
 
         Button(
             onClick = { viewModel.startConvert() },
-            enabled = state.imageUri != null && !state.isConverting,
+            enabled = state.imageUri != null && !state.isUpdating,
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = RoundedCornerShape(12.dp),
         ) {
-            if (state.isConverting) {
+            if (state.isUpdating) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
                     color = MaterialTheme.colorScheme.onPrimary,

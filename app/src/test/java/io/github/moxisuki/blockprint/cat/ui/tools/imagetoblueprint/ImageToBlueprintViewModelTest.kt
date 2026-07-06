@@ -44,4 +44,22 @@ class ImageToBlueprintViewModelTest {
         advanceTimeBy(50)
         assertThat(vm.state.value.isUpdating).isTrue()
     }
+
+    @Test fun `setImage with bad uri results in error after debounce`() = runTest(testDispatcher) {
+        val vm = ImageToBlueprintViewModel()
+        // 不存在的 Uri 会让 loadBitmap 返回 null → IllegalStateException
+        vm.setImage(Uri.parse("file:///nonexistent.png"), 100, 100)
+        advanceTimeBy(220) // 跨过 debounce
+        advanceUntilIdle()
+        // isUpdating 应回 false（异常已捕获）
+        assertThat(vm.state.value.isUpdating).isFalse()
+        // errorMessage 应非空
+        assertThat(vm.state.value.errorMessage).isNotNull()
+    }
+
+    @Test fun `encodeForExport returns null when resultBitmap is null`() = runTest(testDispatcher) {
+        val vm = ImageToBlueprintViewModel()
+        // 没有选图，resultBitmap 为 null
+        assertThat(vm.encodeForExport()).isNull()
+    }
 }

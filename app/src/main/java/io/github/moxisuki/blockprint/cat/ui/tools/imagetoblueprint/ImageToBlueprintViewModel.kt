@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.moxisuki.pixelart.api.ExportApi
 import com.github.moxisuki.pixelart.BlockSelector
 import com.github.moxisuki.pixelart.ConversionOptions
 import com.github.moxisuki.pixelart.DitherMethod as EngineDitherMethod
@@ -64,6 +65,7 @@ class ImageToBlueprintViewModel @Inject constructor(
     }
 
     fun setImage(uri: Uri, width: Int, height: Int) {
+        _cachedResultGrid = null
         _state.update {
             it.copy(
                 imageUri = uri,
@@ -162,6 +164,31 @@ class ImageToBlueprintViewModel @Inject constructor(
         if (_state.value.imageUri != null) dirtySignal.push()
     }
 
+    fun setCommandDirection(direction: ExportApi.CommandDirection) {
+        _state.update { it.copy(commandDirection = direction) }
+    }
+
+    /**
+     * Generates Minecraft commands for the current conversion result and updates state.
+     * Must be called after a successful conversion (resultBitmap != null).
+     */
+    fun generateCommands(): String {
+        val s = _state.value
+        val blockGrid = _cachedResultGrid ?: return ""
+        if (s.resultBitmap == null) return ""
+        val text = with(ExportApi) {
+            val cmds = generateCommandsWithDirection(
+                blockGrid, s.resultWidth, s.resultHeight, s.commandDirection,
+                baseX = 0, baseY = 64, baseZ = 0, useFill = true
+            )
+            commandsToString(cmds)
+        }
+        _state.update { it.copy(commandsText = text) }
+        return text
+    }
+
+    private var _cachedResultGrid: Array<Array<com.github.moxisuki.pixelart.Block?>>? = null
+
     private fun requestConvert() {
         val s = _state.value
         val uri = s.imageUri ?: return
@@ -203,7 +230,9 @@ class ImageToBlueprintViewModel @Inject constructor(
                         transparencyTolerance = s.transparencyTolerance,
                     )
                     val selector = BlockSelector().selectGroups(groupKeys)
-                    PixelArtConverter.convert(bitmap, options, selector)
+                    val convResult = PixelArtConverter.convert(bitmap, options, selector)
+                    _cachedResultGrid = convResult.blocks
+                    convResult
                 }
                 _state.update {
                     it.copy(
@@ -214,7 +243,6 @@ class ImageToBlueprintViewModel @Inject constructor(
                         resultTotalBlocks = result.width * result.height,
                         resultMaterialCounts = PixelArtConverter.getMaterialList(result),
                         previewMode = PreviewMode.Result,
-                        // 成功转换时清掉上次的错误（之前选错参数 / 空 groups 等残留）
                         errorMessage = null,
                     )
                 }
@@ -268,6 +296,8 @@ class ImageToBlueprintViewModel @Inject constructor(
 
     /**
      * 编码当前结果为可导航传输的字符串。resultBitmap 为 null 时返回 null，UI 端应禁用按钮。
+     * 附带所有可复现当前 result grid 的转换参数，使 BP 预览页能用同一份输入重跑
+     * PixelArtConverter 后导出真正的 .litematic / .schematic。
      */
     fun encodeForExport(): String? {
         val s = _state.value
@@ -278,6 +308,15 @@ class ImageToBlueprintViewModel @Inject constructor(
             height = s.resultHeight,
             totalBlocks = s.resultTotalBlocks,
             materials = s.resultMaterialCounts,
+            ditherMethod = s.ditherMethod.id,
+            brightness = s.brightness,
+            contrast = s.contrast,
+            saturation = s.saturation,
+            transparencyEnabled = s.transparencyEnabled,
+            transparencyTolerance = s.transparencyTolerance,
+            selectedGroups = s.selectedGroups.map { it.key },
+            sourceWidth = s.imageWidth,
+            sourceHeight = s.imageHeight,
         )
     }
 

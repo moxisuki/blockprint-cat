@@ -77,4 +77,26 @@ class PreviewDebounceTest {
         assertThat(emissions).hasSize(2)
         job.cancel()
     }
+
+    @Test
+    fun `rapid pushes emit exactly once with all accumulated triggers collapsed`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val scope = TestScope(dispatcher)
+        val debounce = PreviewDebounce(scope, debounceMs = 200)
+
+        val emissions = mutableListOf<Unit>()
+        val job = launch(dispatcher) {
+            debounce.flow.toList(emissions)
+        }
+
+        repeat(10) {
+            debounce.push()
+            advanceTimeBy(20) // 每次 20ms，远小于 200ms debounce
+        }
+        advanceTimeBy(220)
+        advanceUntilIdle()
+
+        assertThat(emissions).hasSize(1)
+        job.cancel()
+    }
 }

@@ -105,6 +105,9 @@
     <string name="itb_group_glazed">釉陶</string>
     <string name="itb_group_light">光源</string>
     <string name="itb_group_ore">矿石</string>
+    <string name="itb_section_commands">MC 命令导出</string>
+    <string name="itb_export_direction_hint">选择方块的铺向（6 种方向）</string>
+    <string name="itb_export_generate">生成命令预览</string>
     <string name="itb_section_result">预览结果</string>
     <string name="itb_result_size">%1$d × %2$d 方块</string>
     <string name="itb_result_total">共 %1$s 个方块</string>

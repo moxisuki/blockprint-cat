@@ -121,6 +121,9 @@
     <string name="itb_group_glazed">Glazed</string>
     <string name="itb_group_light">Light</string>
     <string name="itb_group_ore">Ore</string>
+    <string name="itb_section_commands">MC Commands Export</string>
+    <string name="itb_export_direction_hint">Pick a placement direction (6 options)</string>
+    <string name="itb_export_generate">Generate Command Preview</string>
     <string name="itb_section_result">Preview Result</string>
     <string name="itb_result_size">%1$d × %2$d blocks</string>
     <string name="itb_result_total">%1$s blocks total</string>

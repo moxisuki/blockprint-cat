@@ -208,6 +208,21 @@ class ImageToBlueprintViewModel @Inject constructor(
     private fun loadBitmap(uri: Uri): Bitmap? =
         context?.contentResolver?.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
 
+    /**
+     * 编码当前结果为可导航传输的字符串。resultBitmap 为 null 时返回 null，UI 端应禁用按钮。
+     */
+    fun encodeForExport(): String? {
+        val s = _state.value
+        val bitmap = s.resultBitmap ?: return null
+        return ExportPayloadCodec.encode(
+            bitmap = bitmap,
+            width = s.resultWidth,
+            height = s.resultHeight,
+            totalBlocks = s.resultTotalBlocks,
+            materials = s.resultMaterialCounts,
+        )
+    }
+
     private fun mapDither(method: DitherMethod): EngineDitherMethod = when (method) {
         DitherMethod.NONE -> EngineDitherMethod.NONE
         DitherMethod.FLOYD_STEINBERG -> EngineDitherMethod.FLOYD_STEINBERG

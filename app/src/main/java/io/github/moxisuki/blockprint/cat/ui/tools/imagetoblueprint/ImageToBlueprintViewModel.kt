@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.moxisuki.pixelart.BlockSelector
@@ -13,6 +14,7 @@ import com.github.moxisuki.pixelart.BlockFilter as EngineBlockFilter
 import com.github.moxisuki.pixelart.PixelArtConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.flow.PreviewDebounce
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,11 +26,27 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ImageToBlueprintViewModel @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context?,
 ) : ViewModel() {
+
+    /**
+     * 测试专用无参构造器。Hilt 不允许 @Inject 构造器带默认值，所以单开一个无 @Inject
+     * 的副构造器供纯 JVM 单测使用。生产路径走 @Inject + @ApplicationContext 注入。
+     */
+    @VisibleForTesting
+    constructor() : this(context = null)
 
     private val _state = MutableStateFlow(ImageToBlueprintState())
     val state: StateFlow<ImageToBlueprintState> = _state.asStateFlow()
+
+    private val dirtySignal = PreviewDebounce(viewModelScope, debounceMs = 200L)
+
+    init {
+        // 收集 debounce 信号：每次静默 200ms 后触发一次 requestConvert()
+        viewModelScope.launch {
+            dirtySignal.flow.collect { requestConvert() }
+        }
+    }
 
     fun setImage(uri: Uri, width: Int, height: Int) {
         _state.update {
@@ -36,58 +54,95 @@ class ImageToBlueprintViewModel @Inject constructor(
                 imageUri = uri,
                 imageWidth = width,
                 imageHeight = height,
+                previewMode = PreviewMode.Source,
                 resultBitmap = null,
                 resultWidth = 0,
                 resultHeight = 0,
                 resultTotalBlocks = 0,
                 resultMaterialCounts = emptyMap(),
                 errorMessage = null,
+                isUpdating = true,
             )
         }
+        dirtySignal.push()
     }
 
     fun setTargetWidth(width: Int) {
-        _state.update { it.copy(targetWidth = width.coerceIn(ImageToBlueprintState.MIN_WIDTH, ImageToBlueprintState.MAX_WIDTH)) }
+        _state.update {
+            it.copy(
+                targetWidth = width.coerceIn(ImageToBlueprintState.MIN_WIDTH, ImageToBlueprintState.MAX_WIDTH),
+                isUpdating = true,
+            )
+        }
+        dirtySignal.push()
     }
 
     fun setDitherMethod(method: DitherMethod) {
-        _state.update { it.copy(ditherMethod = method) }
+        _state.update { it.copy(ditherMethod = method, isUpdating = true) }
+        dirtySignal.push()
     }
 
     fun setBrightness(value: Int) {
-        _state.update { it.copy(brightness = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST)) }
+        _state.update {
+            it.copy(
+                brightness = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
+                isUpdating = true,
+            )
+        }
+        dirtySignal.push()
     }
 
     fun setContrast(value: Int) {
-        _state.update { it.copy(contrast = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST)) }
+        _state.update {
+            it.copy(
+                contrast = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
+                isUpdating = true,
+            )
+        }
+        dirtySignal.push()
     }
 
     fun setSaturation(value: Int) {
-        _state.update { it.copy(saturation = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST)) }
+        _state.update {
+            it.copy(
+                saturation = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
+                isUpdating = true,
+            )
+        }
+        dirtySignal.push()
     }
 
     fun setTransparencyEnabled(enabled: Boolean) {
-        _state.update { it.copy(transparencyEnabled = enabled) }
+        _state.update { it.copy(transparencyEnabled = enabled, isUpdating = true) }
+        dirtySignal.push()
     }
 
     fun setTransparencyTolerance(value: Int) {
-        _state.update { it.copy(transparencyTolerance = value.coerceIn(ImageToBlueprintState.MIN_TOLERANCE, ImageToBlueprintState.MAX_TOLERANCE)) }
+        _state.update {
+            it.copy(
+                transparencyTolerance = value.coerceIn(ImageToBlueprintState.MIN_TOLERANCE, ImageToBlueprintState.MAX_TOLERANCE),
+                isUpdating = true,
+            )
+        }
+        dirtySignal.push()
     }
 
     fun toggleGroup(group: BlockGroup) {
         _state.update { s ->
             val selected = s.selectedGroups.toMutableSet()
             if (selected.contains(group)) selected.remove(group) else selected.add(group)
-            s.copy(selectedGroups = selected)
+            s.copy(selectedGroups = selected, isUpdating = true)
         }
+        dirtySignal.push()
     }
 
     fun toggleFilter(filter: BlockFilter) {
         _state.update { s ->
             val active = s.activeFilters.toMutableSet()
             if (active.contains(filter)) active.remove(filter) else active.add(filter)
-            s.copy(activeFilters = active)
+            s.copy(activeFilters = active, isUpdating = true)
         }
+        dirtySignal.push()
     }
 
     fun resetAdjustments() {
@@ -96,15 +151,24 @@ class ImageToBlueprintViewModel @Inject constructor(
                 brightness = ImageToBlueprintState.DEFAULT_ADJUST,
                 contrast = ImageToBlueprintState.DEFAULT_ADJUST,
                 saturation = ImageToBlueprintState.DEFAULT_ADJUST,
+                isUpdating = true,
             )
         }
+        dirtySignal.push()
     }
 
+    /**
+     * 保留为兼容旧 UI 调用入口（Screen 上的"开始转换"按钮）。
+     * 现在转换由 setter 防抖自动触发；显式点击等价于立即 push 一次信号。
+     */
     fun startConvert() {
+        dirtySignal.push()
+    }
+
+    private fun requestConvert() {
         val s = _state.value
         val uri = s.imageUri ?: return
         viewModelScope.launch {
-            _state.update { it.copy(isUpdating = true, resultBitmap = null, errorMessage = null) }
             try {
                 val result = withContext(Dispatchers.Default) {
                     val bitmap = loadBitmap(uri)
@@ -132,6 +196,7 @@ class ImageToBlueprintViewModel @Inject constructor(
                         resultHeight = result.height,
                         resultTotalBlocks = result.width * result.height,
                         resultMaterialCounts = PixelArtConverter.getMaterialList(result),
+                        previewMode = PreviewMode.Result,
                     )
                 }
             } catch (e: Exception) {
@@ -141,7 +206,7 @@ class ImageToBlueprintViewModel @Inject constructor(
     }
 
     private fun loadBitmap(uri: Uri): Bitmap? =
-        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+        context?.contentResolver?.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
 
     private fun mapDither(method: DitherMethod): EngineDitherMethod = when (method) {
         DitherMethod.NONE -> EngineDitherMethod.NONE

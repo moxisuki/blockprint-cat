@@ -101,6 +101,7 @@ private const val SEC_RESULT = "result"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ImageToBlueprintScreen(
+    onExport: (String) -> Unit,
     viewModel: ImageToBlueprintViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -258,7 +259,9 @@ CollapsibleSection(
         ExportButton(
             enabled = state.imageUri != null && state.resultBitmap != null,
             isUpdating = state.isUpdating,
-            onClick = { viewModel.startConvert() },  // T21 will replace with onExport
+            onClick = {
+                viewModel.encodeForExport()?.let(onExport)
+            },
         )
 
         Spacer(Modifier.height(24.dp))

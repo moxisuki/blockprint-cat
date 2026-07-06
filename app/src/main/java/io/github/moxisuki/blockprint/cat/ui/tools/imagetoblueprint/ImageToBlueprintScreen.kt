@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.TransparencySection
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -203,34 +204,12 @@ fun ImageToBlueprintScreen(
             expanded = expanded,
             onToggle = { expanded = expanded.toggle(it) },
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(R.string.itb_transparency_enable), style = MaterialTheme.typography.bodyLarge)
-                Switch(state.transparencyEnabled, onCheckedChange = { viewModel.setTransparencyEnabled(it) })
-            }
-            if (state.transparencyEnabled) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    stringResource(R.string.itb_transparency_tolerance, state.transparencyTolerance),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(4.dp))
-                Slider(
-                    value = state.transparencyTolerance.toFloat(),
-                    onValueChange = { viewModel.setTransparencyTolerance(it.toInt()) },
-                    valueRange = ImageToBlueprintState.MIN_TOLERANCE.toFloat()..ImageToBlueprintState.MAX_TOLERANCE.toFloat(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    stringResource(R.string.itb_transparency_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                )
-            }
+            TransparencySection(
+                enabled = state.transparencyEnabled,
+                tolerance = state.transparencyTolerance,
+                onEnabledChange = viewModel::setTransparencyEnabled,
+                onToleranceChange = viewModel::setTransparencyTolerance,
+            )
         }
 
         CollapsibleSection(

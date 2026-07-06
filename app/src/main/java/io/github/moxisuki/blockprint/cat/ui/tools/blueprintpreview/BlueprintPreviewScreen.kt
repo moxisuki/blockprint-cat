@@ -320,25 +320,39 @@ private fun BlueprintSaveBranch(
         }
         // 进度条（idle 时不渲染，不挤按钮）
         GenerationProgressBar(progress = progress, isBuilding = isBuilding)
-        // 单一主操作按钮：根据 state 切换
-        //   - 无 bytes:  "生成蓝图"  → onBuild
-        //   - 有 bytes 未保存: "重新生成"  → onBuild（同一个动作）
-        //   - 已保存:  "查看" + 跳详情  → onViewBlueprint(savedUuid)
+        // 两按钮行：左 生成/重新生成，右 保存/查看
+        //   左按钮：始终是 build 动作（label 切换：无 bytes=生成，有 bytes=重新生成）
+        //   右按钮：disabled 状态变化（无 bytes=禁用未生成）；label 切换（有 bytes 未保存=保存，已保存=查看）
         val hasBytes = blueprintBytes != null
         val isSaved = savedUuid != null
-        FilledTonalButton(
-            onClick = if (isSaved) ({ onViewBlueprint(savedUuid!!) }) else onBuild,
-            enabled = !isBuilding,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 按钮内容：图标 + 文字，按 state 切换
-            val (icon, labelRes) = when {
-                isSaved -> Icons.Outlined.OpenInNew to R.string.bp_action_view
-                hasBytes -> Icons.Outlined.Refresh to R.string.bp_action_regenerate
-                else -> Icons.Outlined.AutoAwesome to R.string.bp_build
+            FilledTonalButton(
+                onClick = onBuild,
+                enabled = !isBuilding,
+                modifier = Modifier.weight(1f).height(48.dp),
+            ) {
+                Icon(
+                    imageVector = if (hasBytes) Icons.Outlined.Refresh else Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+                Text(stringResource(if (hasBytes) R.string.bp_action_regenerate else R.string.bp_build))
             }
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-            Text(stringResource(labelRes))
+            FilledTonalButton(
+                onClick = if (isSaved) ({ onViewBlueprint(savedUuid!!) }) else onSaveClick,
+                enabled = hasBytes && !isBuilding,
+                modifier = Modifier.weight(1f).height(48.dp),
+            ) {
+                Icon(
+                    imageVector = if (isSaved) Icons.Outlined.OpenInNew else Icons.Outlined.Save,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+                Text(stringResource(if (isSaved) R.string.bp_action_view else R.string.bp_save))
+            }
         }
     }
 }

@@ -40,11 +40,15 @@ class ImageToBlueprintViewModel @Inject constructor(
 
     /**
      * 有图片时：更新 state（设 isUpdating=true）并推 debounce 信号。
-     * 无图片时：只更新参数（保留滑块位置等），不推信号、不翻 isUpdating。
+     * 无图片时：只更新参数（保留滑块位置等），不推信号、强制 isUpdating=false。
      * 这样用户调参数时没有图就不会显示"更新中"假状态。
      */
     private fun updateAndMaybeSchedule(transform: (ImageToBlueprintState) -> ImageToBlueprintState) {
-        _state.update(transform)
+        _state.update { current ->
+            val candidate = transform(current)
+            // 强制按 imageUri 是否存在决定 isUpdating——transform 里设的 true 也会被覆盖为 false
+            candidate.copy(isUpdating = candidate.imageUri != null)
+        }
         if (_state.value.imageUri != null) {
             dirtySignal.push()
         }

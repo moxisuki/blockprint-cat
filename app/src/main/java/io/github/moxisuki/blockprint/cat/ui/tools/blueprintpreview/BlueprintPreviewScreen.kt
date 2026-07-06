@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
@@ -61,6 +62,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.moxisuki.pixelart.api.ExportApi
 import io.github.moxisuki.blockprint.cat.R
+import io.github.moxisuki.blockprint.cat.ui.format.formatShortLabelRes
+import io.github.moxisuki.blockprint.core.SchematicFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -231,13 +234,13 @@ private fun McCommandBranch(
                     modifier = Modifier.weight(1f).height(40.dp),
                 ) {
                     androidx.compose.material3.Icon(
-                        androidx.compose.material.icons.Icons.Outlined.ContentCopy,
+                        imageVector = if (copied) androidx.compose.material.icons.Icons.Outlined.Check else androidx.compose.material.icons.Icons.Outlined.ContentCopy,
                         contentDescription = null,
                         modifier = Modifier
                             .padding(end = 6.dp)
                             .size(16.dp),
                     )
-                    Text(stringResource(R.string.bp_action_copy))
+                    Text(stringResource(if (copied) R.string.bp_action_copied else R.string.bp_action_copy))
                 }
                 FilledTonalButton(
                     onClick = {
@@ -374,11 +377,13 @@ private fun SaveNameDialog(
 }
 
 private fun ExportType.labelRes(): Int = when (this) {
+    // MC 命令用专属 label
     ExportType.MC_COMMANDS -> R.string.bp_type_mc_commands
-    ExportType.BLUEPRINT_LITEMATICA -> R.string.bp_type_litematica
-    ExportType.BLUEPRINT_SPONGE -> R.string.bp_type_schematic
-    ExportType.BLUEPRINT_STRUCTURE -> R.string.bp_type_structure
-    ExportType.BLUEPRINT_BUILDING_HELPER -> R.string.bp_type_buildinghelper
+    // 蓝图类型用蓝图列表 chip 同一套 i18n（formatShortLabelRes），保证全 app 一致
+    ExportType.BLUEPRINT_LITEMATICA -> formatShortLabelRes(SchematicFormat.Litematica)
+    ExportType.BLUEPRINT_SPONGE -> formatShortLabelRes(SchematicFormat.Sponge)
+    ExportType.BLUEPRINT_STRUCTURE -> formatShortLabelRes(SchematicFormat.Structure)
+    ExportType.BLUEPRINT_BUILDING_HELPER -> formatShortLabelRes(SchematicFormat.BuildingHelper)
 }
 
 private fun BlueprintMode.labelRes(): Int = when (this) {

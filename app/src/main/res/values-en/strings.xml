@@ -672,6 +672,7 @@
     <string name="bp_share">Share</string>
     <string name="bp_build">Build blueprint</string>
     <string name="bp_action_copy">Copy</string>
+    <string name="bp_action_copied">Copied</string>
     <string name="bp_action_share">Share</string>
     <string name="bp_save_dialog_title">Save as…</string>
     <string name="bp_save_dialog_hint">Enter blueprint name</string>

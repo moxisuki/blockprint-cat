@@ -655,4 +655,15 @@
     <string name="icon_variant_v3">v3</string>
     <string name="icon_variant_v4">v4</string>
     <string name="cd_icon_selected">Selected</string>
+
+    <!-- BlueprintPreviewScreen -->
+    <string name="bp_title">Blueprint preview</string>
+    <string name="bp_placeholder">Blueprint preview · coming soon</string>
+    <string name="bp_export_format">Export format</string>
+    <string name="bp_format_litematic">Litematic</string>
+    <string name="bp_format_schematic">Schematic</string>
+    <string name="bp_format_nbt">NBT</string>
+    <string name="bp_save">Save locally</string>
+    <string name="bp_share">Share</string>
+    <string name="bp_coming_soon">Export feature coming soon</string>
 </resources>

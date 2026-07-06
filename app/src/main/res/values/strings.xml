@@ -740,4 +740,15 @@ You may clear all locally stored data at any time via Settings → Storage → C
     <string name="icon_variant_v3">v3</string>
     <string name="icon_variant_v4">v4</string>
     <string name="cd_icon_selected">Selected</string>
+
+    <!-- BlueprintPreviewScreen -->
+    <string name="bp_title">蓝图预览</string>
+    <string name="bp_placeholder">蓝图预览 · 即将支持</string>
+    <string name="bp_export_format">导出格式</string>
+    <string name="bp_format_litematic">Litematic</string>
+    <string name="bp_format_schematic">Schematic</string>
+    <string name="bp_format_nbt">NBT</string>
+    <string name="bp_save">保存到本地</string>
+    <string name="bp_share">分享</string>
+    <string name="bp_coming_soon">导出功能即将支持</string>
 </resources>

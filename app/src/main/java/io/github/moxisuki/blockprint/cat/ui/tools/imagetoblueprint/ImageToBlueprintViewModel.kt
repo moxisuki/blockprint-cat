@@ -184,8 +184,8 @@ class ImageToBlueprintViewModel @Inject constructor(
                         transparencyEnabled = s.transparencyEnabled,
                         transparencyTolerance = s.transparencyTolerance,
                     )
-                    val selector = BlockSelector().selectGroups(groupKeys)
-                    s.activeFilters.forEach { f -> selector.applyFilter(mapBlockFilter(f), true) }
+                    var selector = BlockSelector().selectGroups(groupKeys)
+                    s.activeFilters.forEach { f -> selector = selector.applyFilter(mapBlockFilter(f), true) }
                     PixelArtConverter.convert(bitmap, options, selector)
                 }
                 _state.update {

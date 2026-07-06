@@ -70,12 +70,14 @@ internal fun BlockGroupSection(
                         )
                     }
                 }
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    blocks.forEach { block ->
-                        BlockPreview(drawableResId = block.drawableResId, dimmed = !selected)
+                if (selected) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        blocks.forEach { block ->
+                            BlockPreview(drawableResId = block.drawableResId, dimmed = false)
+                        }
                     }
                 }
             }

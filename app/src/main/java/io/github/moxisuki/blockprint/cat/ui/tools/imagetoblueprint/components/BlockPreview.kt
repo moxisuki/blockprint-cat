@@ -33,7 +33,7 @@ internal fun BlockPreview(
     val pixelBitmap = rememberPixelArt(drawableResId)
     Box(
         modifier = modifier
-            .size(44.dp)
+            .size(32.dp)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (dimmed) 0.3f else 0.5f))
             .border(
@@ -46,7 +46,7 @@ internal fun BlockPreview(
             bitmap = pixelBitmap,
             contentDescription = null,
             modifier = Modifier
-                .size(40.dp)
+                .size(28.dp)
                 .alpha(if (dimmed) 0.35f else 1f),
             contentScale = ContentScale.Fit,
             filterQuality = FilterQuality.None,

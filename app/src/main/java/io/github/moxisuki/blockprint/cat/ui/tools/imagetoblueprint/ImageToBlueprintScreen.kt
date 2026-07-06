@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
+import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockGroupSection
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.TransparencySection
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
@@ -219,7 +220,7 @@ fun ImageToBlueprintScreen(
             expanded = expanded,
             onToggle = { expanded = expanded.toggle(it) },
         ) {
-            CategoryGrid(selectedGroups = state.selectedGroups, onToggleGroup = viewModel::toggleGroup)
+            BlockGroupSection(selectedGroups = state.selectedGroups, onToggleGroup = viewModel::toggleGroup)
         }
 
         CollapsibleSection(
@@ -542,112 +543,6 @@ private fun EnlargedPreviewDialog(
         }
     }
 }
-
-@Composable
-private fun CategoryGrid(
-    selectedGroups: Set<BlockGroup>,
-    onToggleGroup: (BlockGroup) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        BlockGroup.entries.forEach { group ->
-            val blocks = BlockCatalog.byGroup[group] ?: return@forEach
-            val selected = group in selectedGroups
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onToggleGroup(group) }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(group.labelRes),
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                        ),
-                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "(${blocks.size})",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    if (selected) {
-                        Icon(
-                            Icons.Sharp.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    blocks.forEach { block ->
-                        BlockPreview(block = block, dimmed = !selected)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BlockPreview(
-    block: BlockEntry,
-    dimmed: Boolean,
-) {
-    val shape = RoundedCornerShape(6.dp)
-    val pixelBitmap = rememberPixelArt(block.drawableResId)
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (dimmed) 0.3f else 0.5f))
-            .border(
-                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (dimmed) 0.2f else 0.5f)),
-                shape,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            bitmap = pixelBitmap,
-            contentDescription = block.displayName,
-            modifier = Modifier
-                .size(40.dp)
-                .alpha(if (dimmed) 0.35f else 1f),
-            contentScale = ContentScale.Fit,
-            filterQuality = FilterQuality.None,
-        )
-    }
-}
-
-@Composable
-private fun rememberPixelArt(@androidx.annotation.DrawableRes resId: Int): androidx.compose.ui.graphics.ImageBitmap {
-    val context = LocalContext.current
-    return remember(resId) {
-        val original = androidx.core.content.ContextCompat.getDrawable(context, resId)
-            ?.let { drawable ->
-                val bitmap = android.graphics.Bitmap.createBitmap(
-                    drawable.intrinsicWidth.coerceAtLeast(1),
-                    drawable.intrinsicHeight.coerceAtLeast(1),
-                    android.graphics.Bitmap.Config.ARGB_8888,
-                )
-                val canvas = android.graphics.Canvas(bitmap)
-                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                drawable.draw(canvas)
-                bitmap
-            }
-            ?: android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
-        val scale = 8
-        val scaled = android.graphics.Bitmap.createScaledBitmap(original, original.width * scale, original.height * scale, false)
-        scaled.asImageBitmap()
-    }
 }
 
 private fun readImageDimensions(

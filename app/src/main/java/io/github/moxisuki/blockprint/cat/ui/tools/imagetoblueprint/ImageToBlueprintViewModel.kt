@@ -14,7 +14,12 @@ import io.github.moxisuki.pixelart.DitherMethod as EngineDitherMethod
 import io.github.moxisuki.pixelart.PixelArtConverter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.flow.PreviewDebounce
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlueprintUiDefaults
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlockGroup
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.DitherMethod
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.PreviewMode
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.ExportPayloadCodec
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.flow.PreviewDebounce
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,7 +92,7 @@ class ImageToBlueprintViewModel @Inject constructor(
     fun setTargetWidth(width: Int) {
         updateAndMaybeSchedule {
             it.copy(
-                targetWidth = width.coerceIn(ImageToBlueprintState.MIN_WIDTH, ImageToBlueprintState.MAX_WIDTH),
+                targetWidth = width.coerceIn(BlueprintUiDefaults.MIN_WIDTH, BlueprintUiDefaults.MAX_WIDTH),
                 isUpdating = true,
             )
         }
@@ -100,7 +105,7 @@ class ImageToBlueprintViewModel @Inject constructor(
     fun setBrightness(value: Int) {
         updateAndMaybeSchedule {
             it.copy(
-                brightness = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
+                brightness = value.coerceIn(BlueprintUiDefaults.MIN_ADJUST, BlueprintUiDefaults.MAX_ADJUST),
                 isUpdating = true,
             )
         }
@@ -109,7 +114,7 @@ class ImageToBlueprintViewModel @Inject constructor(
     fun setContrast(value: Int) {
         updateAndMaybeSchedule {
             it.copy(
-                contrast = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
+                contrast = value.coerceIn(BlueprintUiDefaults.MIN_ADJUST, BlueprintUiDefaults.MAX_ADJUST),
                 isUpdating = true,
             )
         }
@@ -118,7 +123,7 @@ class ImageToBlueprintViewModel @Inject constructor(
     fun setSaturation(value: Int) {
         updateAndMaybeSchedule {
             it.copy(
-                saturation = value.coerceIn(ImageToBlueprintState.MIN_ADJUST, ImageToBlueprintState.MAX_ADJUST),
+                saturation = value.coerceIn(BlueprintUiDefaults.MIN_ADJUST, BlueprintUiDefaults.MAX_ADJUST),
                 isUpdating = true,
             )
         }
@@ -131,7 +136,7 @@ class ImageToBlueprintViewModel @Inject constructor(
     fun setTransparencyTolerance(value: Int) {
         updateAndMaybeSchedule {
             it.copy(
-                transparencyTolerance = value.coerceIn(ImageToBlueprintState.MIN_TOLERANCE, ImageToBlueprintState.MAX_TOLERANCE),
+                transparencyTolerance = value.coerceIn(BlueprintUiDefaults.MIN_TOLERANCE, BlueprintUiDefaults.MAX_TOLERANCE),
                 isUpdating = true,
             )
         }
@@ -148,9 +153,9 @@ class ImageToBlueprintViewModel @Inject constructor(
     fun resetAdjustments() {
         updateAndMaybeSchedule {
             it.copy(
-                brightness = ImageToBlueprintState.DEFAULT_ADJUST,
-                contrast = ImageToBlueprintState.DEFAULT_ADJUST,
-                saturation = ImageToBlueprintState.DEFAULT_ADJUST,
+                brightness = BlueprintUiDefaults.DEFAULT_ADJUST,
+                contrast = BlueprintUiDefaults.DEFAULT_ADJUST,
+                saturation = BlueprintUiDefaults.DEFAULT_ADJUST,
                 isUpdating = true,
             )
         }

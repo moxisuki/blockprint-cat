@@ -17,6 +17,7 @@ fun ToolsScreen(
     snackbarHostState: SnackbarHostState,
     onNavigateToImageToBlueprint: (Uri?) -> Unit,
     onNavigateToTextToBlueprint: () -> Unit,
+    onNavigateToBlockPaint: () -> Unit,
     viewModel: ToolsViewModel = hiltViewModel(),
 ) {
     val tools by viewModel.tools.collectAsStateWithLifecycle()
@@ -28,6 +29,7 @@ fun ToolsScreen(
             when (viewModel.onToolClick(entry)) {
                 ToolClickResult.NavigateToImageToBlueprint -> onNavigateToImageToBlueprint(null)
                 ToolClickResult.NavigateToTextToBlueprint -> onNavigateToTextToBlueprint()
+                ToolClickResult.NavigateToBlockPaint -> onNavigateToBlockPaint()
                 ToolClickResult.NotImplemented -> scope.launch { snackbarHostState.showSnackbar(notImplMsg) }
             }.let { /* discard Job or Unit */ }
         }
@@ -35,3 +37,4 @@ fun ToolsScreen(
 
     ToolsContent(tools = tools, onToolClick = onToolClick)
 }
+

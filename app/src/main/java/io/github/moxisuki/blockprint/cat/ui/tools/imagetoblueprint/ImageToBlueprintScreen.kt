@@ -18,14 +18,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.AdjustSlider
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.BlockGroupSection
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.prewarmPixelArt
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.DitherDropdown
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.PreviewHero
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.ResultMaterialsPanel
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.AdjustSlider
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.BlockGroupSection
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.CollapsibleSection
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.prewarmPixelArt
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.DitherDropdown
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.PreviewHero
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.ResultMaterialsPanel
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.WidthInput
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.toggle
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.ExportButton
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.ExportPayloadCodec
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlockCatalog
 import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.TransparencySection
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components.WidthInput
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -316,59 +321,6 @@ CollapsibleSection(
                 },
             )
         }
-    }
-}
-
-private fun <T> Set<T>.toggle(item: T): Set<T> = if (item in this) this - item else this + item
-
-@Composable
-private fun CollapsibleSection(
-    id: String,
-    title: String,
-    expanded: Set<String>,
-    onToggle: (String) -> Unit,
-    icon: ImageVector? = null,
-    trailing: @Composable (() -> Unit)? = null,
-    content: @Composable () -> Unit,
-) {
-    val isExpanded = id in expanded
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onToggle(id) }
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (icon != null) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.weight(1f))
-            trailing?.invoke()
-            val rotation by animateFloatAsState(targetValue = if (isExpanded) 90f else 0f, label = "chevron")
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp).rotate(rotation),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
-        ) {
-            Column(modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
-                content()
-            }
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     }
 }
 

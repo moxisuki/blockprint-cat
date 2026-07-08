@@ -1,6 +1,7 @@
 package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint
 
 import com.google.common.truth.Truth.assertThat
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.PreviewAnimations
 import org.junit.Test
 
 class PreviewAnimationsTest {

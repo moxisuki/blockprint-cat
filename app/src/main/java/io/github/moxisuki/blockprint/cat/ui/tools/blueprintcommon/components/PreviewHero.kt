@@ -1,4 +1,4 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components
 
 import android.graphics.Bitmap
 import android.net.Uri
@@ -46,8 +46,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.github.moxisuki.blockprint.cat.R
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.PreviewAnimations
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.PreviewMode
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.PreviewAnimations
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.PreviewMode
 import kotlinx.coroutines.delay
 
 /**

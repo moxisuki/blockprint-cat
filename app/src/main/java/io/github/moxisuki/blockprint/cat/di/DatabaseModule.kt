@@ -52,4 +52,7 @@ object DatabaseModule {
 
     @Provides
     fun provideBridgeEventDao(db: AppDatabase): BridgeEventDao = db.bridgeEventDao()
+
+    @Provides
+    fun providePaintingDao(db: AppDatabase): io.github.moxisuki.blockprint.cat.data.blockpaint.PaintingDao = db.paintingDao()
 }

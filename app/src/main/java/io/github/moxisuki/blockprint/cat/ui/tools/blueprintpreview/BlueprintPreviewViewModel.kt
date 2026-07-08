@@ -49,6 +49,8 @@ data class BlueprintPreviewState(
     val buildProgress: Float = 0f,
     val saveMessage: String? = null,
     val savedUuid: String? = null,
+    /** v3 payload: 逐格方块 ID（BlockPaint 直出，跳过颜色匹配）。 */
+    val blockIds: List<String> = emptyList(),
 )
 
 @HiltViewModel
@@ -82,6 +84,7 @@ class BlueprintPreviewViewModel @Inject constructor(
                 height = decoded.height,
                 totalBlocks = decoded.totalBlocks,
                 materials = decoded.materials,
+                blockIds = decoded.blockIds,
             )
         }
     }
@@ -127,8 +130,13 @@ class BlueprintPreviewViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val (bytes, cmds) = withContext(Dispatchers.Default) {
-                    // 阶段 1: bitmap → 调色板 grid（~50%）
-                    val grid = BlueprintBuilder.bitmapToGrid(bitmap)
+                    // 如果有 blockIds（BlockPaint v3 直出），跳过颜色匹配直接用
+                    val blockIds = s.blockIds
+                    val grid = if (blockIds.isNotEmpty()) {
+                        BlueprintBuilder.blockIdsToGrid(blockIds, s.width, s.height)
+                    } else {
+                        BlueprintBuilder.bitmapToGrid(bitmap)
+                    }
                     _state.update { it.copy(buildProgress = 0.5f) }
 
                     val result = when (val type = s.exportType) {

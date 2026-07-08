@@ -1,4 +1,4 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,13 +10,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.ImageToBlueprintState
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlueprintUiDefaults
 
+/**
+ * 通用"标签 + 数值 + 滑块"组件，ITB 用来调亮度/对比度/饱和度，
+ * TTB 也可以扩展为字体大小调整等场景（只需换 valueRange）。
+ */
 @Composable
 internal fun AdjustSlider(
     label: String,
     value: Int,
     onValueChange: (Int) -> Unit,
+    valueRange: IntRange = BlueprintUiDefaults.MIN_ADJUST..BlueprintUiDefaults.MAX_ADJUST,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -35,7 +40,7 @@ internal fun AdjustSlider(
         Slider(
             value = value.toFloat(),
             onValueChange = { onValueChange(it.toInt()) },
-            valueRange = ImageToBlueprintState.MIN_ADJUST.toFloat()..ImageToBlueprintState.MAX_ADJUST.toFloat(),
+            valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
             modifier = Modifier.fillMaxWidth(),
         )
     }

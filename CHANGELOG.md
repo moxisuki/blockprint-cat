@@ -2,6 +2,38 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
+## [Unreleased]
+
+### 新增
+
+- **方块绘画 (BlockPaint)**：1×1 方块平面绘画工具
+  - 支持画笔/橡皮/缩放(0.5x-6x)/拖拽；画布用真实方块纹理渲染
+  - 方块调色板：按 BlockGroup 分类、横向滚动的 BlockPickerStrip
+  - 图画列表：Room 持久化，支持新建/切换/重命名/删除
+  - AppBar 标题显示当前图画名；导出按钮在 AppBar
+  - 导出：PNG（最近邻放大到 256px）+ BlueprintPreviewContent（MC 命令/蓝图/NBT）
+  - blockIds v3 直出：跳过 PixelArtConverter 颜色匹配，画什么块就是什么块
+- **文字转蓝图画 (TTB) 重写**：
+  - 8×8 位图字体 (FONT8X8) 直接生成 grid，支持缩放/间距
+  - TTF 模式：输入中文自动切换系统字体渲染，可调字高 (4-32)
+  - 单方块选择、BlockCanvas 实时预览、导出同 BlockPaint
+- **共享 UI**：`blueprintcommon/` 包抽 BlockCatalog/ExportPayloadCodec/BlockPreview/PreviewHero/CollapsibleSection 等
+- **共享导出**：`ExportBottomSheet` 组件（PNG + BlueprintPreviewContent），BlockPaint/TTB 共用
+
+### 修复
+
+- ITB `ImageToBlueprintState` companion 常量引用 `BlueprintUiDefaults`
+- ITB PreviewAnimations test import 修复
+- TTB 保存弹框取消卡死：dismiss 后 clearExport
+- Pad 布局选择蓝图文件夹无响应：补传 `onRequestSafFolder`
+- AppTopBar customActions 支持横滚，不挤压返回按钮
+
+### 重构
+
+- 删 ITB 旧 components（AdjustSlider/BlockGroupSection/BlockPreview/DitherDropdown/PreviewHero/ResultMaterialsPanel/WidthInput/ExportButton）
+- 删 ITB ExportPayloadCodec/PreviewAnimations/PreviewDebounce → typealias 转接 blueprincommon
+- ExportPayloadCodec v3：新增 `blockIds` 字段（逐格方块 ID，BlockPaint/TTB 直出）
+
 ## [1.1.0] · 2026-07-07
 
 ### 新增

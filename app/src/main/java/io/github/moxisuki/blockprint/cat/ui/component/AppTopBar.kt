@@ -7,7 +7,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -22,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import io.github.moxisuki.blockprint.cat.R
@@ -50,6 +54,7 @@ internal fun AppTopBar(
     onBack: () -> Unit,
     isHeatSort: Boolean,
     actions: @Composable RowScope.() -> Unit = {},
+    customActions: @Composable RowScope.() -> Unit = {},
 ) {
     TopAppBar(
         title = {
@@ -79,6 +84,9 @@ internal fun AppTopBar(
             }
         },
         actions = {
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                customActions()
+            }
             if (onCommunity && showCommunityActions) {
                 IconButton(onClick = onToggleFilter) {
                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))

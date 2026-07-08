@@ -11,6 +11,7 @@ sealed interface ToolClickResult {
     data object NotImplemented : ToolClickResult
     data object NavigateToImageToBlueprint : ToolClickResult
     data object NavigateToTextToBlueprint : ToolClickResult
+    data object NavigateToBlockPaint : ToolClickResult
 }
 
 @HiltViewModel
@@ -22,7 +23,9 @@ class ToolsViewModel @Inject constructor() : ViewModel() {
         return when (entry.id) {
             "image_to_blueprint" -> ToolClickResult.NavigateToImageToBlueprint
             "text_to_blueprint" -> ToolClickResult.NavigateToTextToBlueprint
+            "block_paint" -> ToolClickResult.NavigateToBlockPaint
             else -> ToolClickResult.NotImplemented
         }
     }
 }
+

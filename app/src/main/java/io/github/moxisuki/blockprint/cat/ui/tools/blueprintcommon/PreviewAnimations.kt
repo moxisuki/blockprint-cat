@@ -1,10 +1,9 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon
 
 import androidx.compose.animation.core.CubicBezierEasing
 
 /**
  * 统一的动画规格常量。所有动效时长/缓动都从本文件取，禁止在组件里写 magic number。
- * 数值见 docs/superpowers/specs/2026-07-06-image-to-blueprint-ui-redesign-design.md §5.1
  */
 object PreviewAnimations {
     const val TINY = 120        // 图标缩放

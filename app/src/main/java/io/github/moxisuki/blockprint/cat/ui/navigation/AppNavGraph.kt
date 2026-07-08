@@ -121,6 +121,7 @@ internal data class NavGraphFlags(
     val isTools: Boolean,
     val isImageToBlueprint: Boolean,
     val isTextToBlueprint: Boolean,
+    val isBlockPaint: Boolean,
     val isConnection: Boolean,
     val connectionState: ConnectionState,
     // Community fields are flattened to stable primitives so this data class
@@ -142,12 +143,12 @@ internal data class NavGraphFlags(
     val showBottomBar: Boolean =
         !isDetail && !isRender && !isPreview && !isCommunityDetail &&
             !isCommunityLogin && !isAbout && !isChangelog && !isTerms && !isQrScanner && !isCommunitySettings &&
-            !isImageToBlueprint && !isTextToBlueprint
+            !isImageToBlueprint && !isTextToBlueprint && !isBlockPaint
 
     val showBackButton: Boolean =
         isDetail || isRender || isPreview || isCommunityDetail || isCommunityLogin ||
             isAbout || isChangelog || isTerms || isQrScanner || isCommunitySettings ||
-            isImageToBlueprint || isTextToBlueprint
+            isImageToBlueprint || isTextToBlueprint || isBlockPaint
 }
 
 /**
@@ -185,6 +186,7 @@ private fun rememberNavGraphFlags(
             isCommunityDetail = route?.startsWith(NavRoutes.COMMUNITY_DETAIL) == true,
             isCommunityLogin = route == NavRoutes.COMMUNITY_LOGIN,
             isTextToBlueprint = route == NavRoutes.TEXT_TO_BLUEPRINT,
+            isBlockPaint = route == NavRoutes.BLOCK_PAINT,
             isAbout = route == NavRoutes.ABOUT,
             isChangelog = route == NavRoutes.CHANGELOG,
             isTerms = route == NavRoutes.TERMS,
@@ -243,6 +245,7 @@ internal fun AppNavGraph(
             snackbarHostState = snackbarHostState,
             onImportSafer = onImportSafer,
             onRefresh = onRefresh,
+            onRequestSafFolder = onRequestSafFolder,
             isPreviewFullscreen = isPreviewFullscreen,
             onPreviewFullscreenChange = onPreviewFullscreenChange,
             detailTitle = detailTitle,
@@ -289,6 +292,7 @@ private fun PadLayout(
     snackbarHostState: SnackbarHostState,
     onImportSafer: (Uri) -> Unit,
     onRefresh: (Int) -> Unit,
+    onRequestSafFolder: () -> Unit,
     isPreviewFullscreen: Boolean,
     onPreviewFullscreenChange: (Boolean) -> Unit,
     detailTitle: String,
@@ -314,6 +318,7 @@ private fun PadLayout(
         flags.isTools -> stringResource(R.string.nav_title_tools)
         flags.isImageToBlueprint -> stringResource(R.string.itb_title)
         flags.isTextToBlueprint -> stringResource(R.string.tool_text_to_blueprint)
+        flags.isBlockPaint -> stringResource(R.string.tool_block_paint)
         flags.isQrScanner -> stringResource(R.string.nav_title_qr_scanner)
         else -> ""
     }
@@ -331,7 +336,8 @@ private fun PadLayout(
             if (!isPreviewFullscreen) {
                 if (flags.isHome) {
                     AppTopBar(
-                        title = topBarTitle,
+                        title = 
+                            io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.currentBlockPaintNameOrNull(flags = flags, navController = navController) ?: topBarTitle,
                         showBackButton = flags.showBackButton,
                         showCommunityActions = padOnCommunity && padActiveReady,
                         showLogout = flags.communityCurrentSource == CommunitySource.MCS,
@@ -342,6 +348,16 @@ private fun PadLayout(
                         onLogout = { communityVm.logout(); communityVm.refreshLoginState() },
                         onBack = { navController.popBackStack() },
                         isHeatSort = padActiveHeatSort,
+                        customActions = {
+                            if (flags.isBlockPaint) {
+                                val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
+                                if (entry != null) {
+                                    val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
+                                        androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
+                                    io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
+                                }
+                            }
+                        },
                         actions = {
                             IconButton(onClick = { navController.navigate(NavRoutes.CONNECTION) }) {
                                 Box(
@@ -359,7 +375,8 @@ private fun PadLayout(
                     )
                 } else {
                     AppTopBar(
-                        title = topBarTitle,
+                        title = 
+                            io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.currentBlockPaintNameOrNull(flags = flags, navController = navController) ?: topBarTitle,
                         showBackButton = flags.showBackButton,
                         showCommunityActions = padOnCommunity && padActiveReady,
                         showLogout = flags.communityCurrentSource == CommunitySource.MCS,
@@ -370,6 +387,16 @@ private fun PadLayout(
                         onLogout = { communityVm.logout(); communityVm.refreshLoginState() },
                         onBack = { navController.popBackStack() },
                         isHeatSort = padActiveHeatSort,
+                        customActions = {
+                            if (flags.isBlockPaint) {
+                                val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
+                                if (entry != null) {
+                                    val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
+                                        androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
+                                    io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
+                                }
+                            }
+                        },
                     )
                 }
             }
@@ -385,7 +412,7 @@ private fun PadLayout(
                     composable(NavRoutes.HOME) {
                         Row(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(0.4f)) {
-                                HomeScreen(navController = navController, bridgeVm = bridgeVm, snackbarHostState = snackbarHostState, onRequestSafFolder = {}, onRefresh = onRefresh, onBlueprintSelected = remember { { bp -> selectedBlueprintUuid = bp.uuid } })
+                                HomeScreen(navController = navController, bridgeVm = bridgeVm, snackbarHostState = snackbarHostState, onRequestSafFolder = onRequestSafFolder, onRefresh = onRefresh, onBlueprintSelected = remember { { bp -> selectedBlueprintUuid = bp.uuid } })
                             }
                             HorizontalDivider(modifier = Modifier.fillMaxHeight().width(1.dp))
                             Box(Modifier.weight(0.6f)) {
@@ -541,6 +568,7 @@ private fun PadLayout(
                                 navController.navigate(route)
                             },
                             onNavigateToTextToBlueprint = { navController.navigate(NavRoutes.TEXT_TO_BLUEPRINT) },
+                            onNavigateToBlockPaint = { navController.navigate(NavRoutes.BLOCK_PAINT) },
                         )
                     }
                     composable(
@@ -552,10 +580,12 @@ private fun PadLayout(
                     }
                     composable(NavRoutes.TEXT_TO_BLUEPRINT) {
                         io.github.moxisuki.blockprint.cat.ui.tools.texttoblueprint.TextToBlueprintScreen(
-                            onNavigateToImageToBlueprint = { uri ->
-                                val route = "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri=${java.net.URLEncoder.encode(uri.toString(), "UTF-8")}"
-                                navController.navigate(route)
-                            },
+                            navController = navController,
+                        )
+                    }
+                    composable(NavRoutes.BLOCK_PAINT) {
+                        io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintScreen(
+                            navController = navController,
                         )
                     }
                     composable(
@@ -709,7 +739,8 @@ private fun CompactLayout(
             if (showMainTopBar) {
                 if (flags.isHome) {
                     AppTopBar(
-                        title = topBarTitle,
+                        title = 
+                            io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.currentBlockPaintNameOrNull(flags = flags, navController = navController) ?: topBarTitle,
                         showBackButton = flags.showBackButton,
                         showCommunityActions = onCommunity2 && active2Ready,
                         showLogout = flags.communityCurrentSource == CommunitySource.MCS,
@@ -739,7 +770,8 @@ private fun CompactLayout(
                     )
                 } else {
                     AppTopBar(
-                        title = topBarTitle,
+                        title = 
+                            io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.currentBlockPaintNameOrNull(flags = flags, navController = navController) ?: topBarTitle,
                         showBackButton = flags.showBackButton,
                         showCommunityActions = onCommunity2 && active2Ready,
                         showLogout = flags.communityCurrentSource == CommunitySource.MCS,
@@ -750,6 +782,16 @@ private fun CompactLayout(
                         onLogout = { communityVm.logout(); communityVm.refreshLoginState() },
                         onBack = { navController.popBackStack() },
                         isHeatSort = active2HeatSort,
+                        customActions = {
+                            if (flags.isBlockPaint) {
+                                val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
+                                if (entry != null) {
+                                    val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
+                                        androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
+                                    io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
+                                }
+                            }
+                        },
                     )
                 }
             }
@@ -909,6 +951,7 @@ private fun CompactLayout(
                             navController.navigate(route)
                         },
                         onNavigateToTextToBlueprint = { navController.navigate(NavRoutes.TEXT_TO_BLUEPRINT) },
+                        onNavigateToBlockPaint = { navController.navigate(NavRoutes.BLOCK_PAINT) },
                     )
                 }
                 composable(
@@ -920,10 +963,12 @@ private fun CompactLayout(
                 }
                 composable(NavRoutes.TEXT_TO_BLUEPRINT) {
                     io.github.moxisuki.blockprint.cat.ui.tools.texttoblueprint.TextToBlueprintScreen(
-                        onNavigateToImageToBlueprint = { uri ->
-                            val route = "${NavRoutes.IMAGE_TO_BLUEPRINT}?imageUri=${java.net.URLEncoder.encode(uri.toString(), "UTF-8")}"
-                            navController.navigate(route)
-                        },
+                        navController = navController,
+                    )
+                }
+                composable(NavRoutes.BLOCK_PAINT) {
+                    io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintScreen(
+                        navController = navController,
                     )
                 }
                 composable(route = NavRoutes.ABOUT) { AboutScreen(navController = navController) }

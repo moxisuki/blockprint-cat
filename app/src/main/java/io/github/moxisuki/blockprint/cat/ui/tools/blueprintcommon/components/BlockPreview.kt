@@ -1,4 +1,4 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -31,14 +31,19 @@ import java.util.concurrent.ConcurrentHashMap
  * 的根因。改成 ConcurrentHashMap 后任何 Composable 第一次 decode 后所有后续
  * 访问都 hit cache。
  *
- * 预热：在 ImageToBlueprintScreen 用 LaunchedEffect + Dispatchers.IO 把
- * 140 个方块全部 decode 一遍（~100-200ms 在后台），之后展开任意组都是 0 延迟。
+ * 预热：在 ImageToBlueprintScreen / TextToBlueprintScreen 用 LaunchedEffect +
+ * Dispatchers.IO 把 140 个方块全部 decode 一遍（~100-200ms 在后台），之后展开任意
+ * 组都是 0 延迟。
  */
 private val pixelArtCache = ConcurrentHashMap<Int, ImageBitmap>()
 
 /** 公开查询：返回已 cache 的位图，没 cache 过则返回 null（不会触发同步 decode）。 */
 fun findPixelArt(@androidx.annotation.DrawableRes resId: Int): ImageBitmap? =
     pixelArtCache[resId]
+
+/** 非 Composable 版本的 getOrPut，给 Canvas 渲染用（不能调 @Composable）。 */
+fun getOrWarmPixelArt(context: Context, @androidx.annotation.DrawableRes resId: Int): ImageBitmap =
+    pixelArtCache.getOrPut(resId) { decodePixelArt(context.applicationContext, resId) }
 
 /** 非 Composable 入口，给预热协程用。 */
 fun prewarmPixelArt(context: Context, resIds: Collection<Int>) {
@@ -75,20 +80,25 @@ internal fun BlockPreview(
     @DrawableRes drawableResId: Int,
     dimmed: Boolean,
     modifier: Modifier = Modifier,
+    withBorder: Boolean = true,
 ) {
     val shape = RoundedCornerShape(6.dp)
-    // cache-first：已 decode 直接拿；没有则同步 decode（模块级 ConcurrentHashMap 保证单次）
     val pixelBitmap = pixelArtCache.getOrPut(drawableResId) {
         decodePixelArt(LocalContext.current, drawableResId)
     }
     Box(
         modifier = modifier
             .size(32.dp)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (dimmed) 0.3f else 0.5f))
-            .border(
-                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (dimmed) 0.2f else 0.5f)),
-                shape,
+            .then(
+                if (withBorder) {
+                    Modifier
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (dimmed) 0.3f else 0.5f))
+                        .border(
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (dimmed) 0.2f else 0.5f)),
+                            shape,
+                        )
+                } else Modifier
             ),
         contentAlignment = Alignment.Center,
     ) {

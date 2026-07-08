@@ -1,4 +1,4 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.DitherMethod
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.DitherMethod
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("DEPRECATION")

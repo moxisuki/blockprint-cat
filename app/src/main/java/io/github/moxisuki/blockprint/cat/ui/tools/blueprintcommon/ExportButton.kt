@@ -1,11 +1,10 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +26,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.moxisuki.blockprint.cat.R
 
+/**
+ * 通用导出按钮。ITB 和 TTB 都用它：点击后弹出底部 ModalBottomSheet 让用户选格式。
+ *
+ * isUpdating 时显示菊花 + "更新中…"，否则显示"导出 →"。按下时 if isUpdating 直接
+ * 禁用，避免重复触发。
+ */
 @Composable
 internal fun ExportButton(
     enabled: Boolean,

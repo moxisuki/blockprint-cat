@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.moxisuki.blockprint.cat.R
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.ImageToBlueprintState
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlueprintUiDefaults
 
 @Composable
 internal fun TransparencySection(
@@ -46,7 +46,7 @@ internal fun TransparencySection(
             Slider(
                 value = tolerance.toFloat(),
                 onValueChange = { onToleranceChange(it.toInt()) },
-                valueRange = ImageToBlueprintState.MIN_TOLERANCE.toFloat()..ImageToBlueprintState.MAX_TOLERANCE.toFloat(),
+                valueRange = BlueprintUiDefaults.MIN_TOLERANCE.toFloat()..BlueprintUiDefaults.MAX_TOLERANCE.toFloat(),
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(

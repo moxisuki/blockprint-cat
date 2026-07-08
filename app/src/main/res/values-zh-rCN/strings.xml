@@ -59,10 +59,53 @@
     <string name="tool_image_to_blueprint_subtitle">把任意图片转换为可堆叠的 Minecraft 方块蓝图</string>
     <string name="tool_text_to_blueprint">文字转蓝图画</string>
     <string name="tool_text_to_blueprint_subtitle">粘贴 NBT/JSON 文本或描述，自动生成可堆叠的方块蓝图</string>
-    <string name="ttb_input_hint">粘贴 NBT/JSON 文本或描述…</string>
-    <string name="ttb_input_supporting">支持 Sponge Schematic v3 NBT / BuildingHelper JSON / 自然语言描述</string>
+    <string name="ttb_input_hint">输入要转换的文字…</string>
+    <string name="ttb_input_supporting">中文字符自动切换系统字体渲染，支持缩放和字高调节</string>
     <string name="ttb_generate">生成蓝图</string>
     <string name="ttb_font_size">字体大小</string>
+    <string name="ttb_section_text">文字内容</string>
+    <string name="ttb_section_output">输出宽度（分辨率）</string>
+    <string name="ttb_section_font">字体与字号</string>
+    <string name="ttb_section_dither">抖动算法</string>
+    <string name="ttb_section_blocks">方块选择</string>
+    <string name="ttb_resolution_hint">目标宽度（方块数），最终蓝图按比例换算高度</string>
+    <string name="ttb_font_size_hint">字号越大单行能塞下更多字符，最终蓝图也越宽</string>
+    <string name="ttb_source_size">文字 %1$d × %2$d</string>
+    <string name="ttb_preview_placeholder">在下方输入文字即可预览</string>
+    <string name="ttb_result_placeholder">转换结果会显示在这里</string>
+
+    <!-- 方块绘画（1×1 方块平面绘画） -->
+    <string name="tool_block_paint">方块绘画</string>
+    <string name="tool_block_paint_subtitle">逐格挑选方块，1×1 平铺成可堆叠的 Minecraft 蓝图</string>
+    <string name="bp_section_palette">方块调色板</string>
+    <string name="bp_section_result">预览结果</string>
+    <string name="bp_tool_paint">画笔</string>
+    <string name="bp_tool_erase">橡皮</string>
+    <string name="bp_tool_clear">清除</string>
+    <string name="bp_canvas_size">画布尺寸</string>
+    <string name="bp_width">宽</string>
+    <string name="bp_height">高</string>
+    <string name="bp_result_error">渲染失败: %1$s</string>
+    <string name="bp_result_total">共 %1$s 个方块</string>
+    <string name="bp_result_empty">还没有画任何方块</string>
+    <string name="bp_export_short">导出</string>
+    <string name="bp_painted_count">已画 %1$d</string>
+    <string name="bp_picker_title">选择方块</string>
+    <string name="bp_picker_search_hint">搜索方块名称…</string>
+    <string name="bp_picker_no_results">没有匹配的方块</string>
+    <string name="bp_list_title">图画列表</string>
+    <string name="bp_list_new">新建图画</string>
+    <string name="bp_list_rename">重命名</string>
+    <string name="bp_list_delete">删除</string>
+    <string name="bp_list_empty">还没有图画，点击右下角新建</string>
+    <string name="bp_rename_title">重命名图画</string>
+    <string name="bp_rename_hint">输入图画名称</string>
+    <string name="bp_rename_confirm">保存</string>
+    <string name="bp_rename_cancel">取消</string>
+    <string name="bp_default_painting_name">未命名 %1$d</string>
+    <string name="bp_zoom_in">放大</string>
+    <string name="bp_zoom_out">缩小</string>
+    <string name="bp_zoom_reset">重置缩放</string>
     <string name="tool_qr_scan">扫码连接</string>
     <string name="tool_not_implemented">该功能正在开发中</string>
 
@@ -575,7 +618,7 @@
     <string name="bp_format_litematic">Litematic</string>
     <string name="bp_format_schematic">Schematic</string>
     <string name="bp_format_nbt">NBT</string>
-    <string name="bp_save">保存到本地</string>
+    <string name="bp_save">保存</string>
     <string name="bp_share">分享</string>
     <string name="bp_build">生成蓝图</string>
     <string name="bp_action_copy">复制</string>
@@ -591,4 +634,9 @@
     <string name="bp_build_fail">生成失败：%1$s</string>
     <string name="bp_default_name">蓝图_%1$s</string>
     <string name="bp_coming_soon">导出功能即将支持</string>
+    <string name="ttb_scale">缩放 %1$d</string>
+    <string name="ttb_spacing">间距 %1$d</string>
+    <string name="ttb_height">字高 %1$d</string>
+    <string name="ttb_size_hint">%1$d × %2$d 方块</string>
+    <string name="ttb_pick_block">选择方块</string>
 </resources>

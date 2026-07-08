@@ -138,10 +138,21 @@ internal object BlueprintBuilder {
     fun encode(doc: BlockPrintDocument): ByteArray =
         BlockPrintConverter.convert(doc, doc.format)
 
+    /** BlockPaint 直出：从逐格 blockId 列表构建 grid，不做颜色匹配。 */
+    fun blockIdsToGrid(blockIds: List<String>, width: Int, height: Int): Array<Array<Block?>> {
+        val grid = Array(height) { arrayOfNulls<Block>(width) }
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val idx = x + y * width
+                val id = blockIds.getOrNull(idx)?.takeIf { it.isNotEmpty() } ?: continue
+                val block = BlockPalette.blocks.firstOrNull { it.name == "minecraft:$id" || it.name == id }
+                if (block != null) grid[y][x] = block
+            }
+        }
+        return grid
+    }
+
     /**
-     * 从 result bitmap（每个像素 = 一个方块颜色）反推 grid。空像素当作空气。
-     *
-     * 完整重跑 `PixelArtConverter` 需要原始 source bitmap（不在 payload 里），但 result bitmap
      * 已经是后处理（dither / brightness / saturation / transparency）的最终结果，
      * 采样 + 最近色匹配能恢复出等价的 grid，无需回传 source。
      */

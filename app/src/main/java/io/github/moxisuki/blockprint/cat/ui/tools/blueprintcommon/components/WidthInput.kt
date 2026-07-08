@@ -1,4 +1,4 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.moxisuki.blockprint.cat.R
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.ImageToBlueprintState
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlueprintUiDefaults
 
 @Composable
 internal fun WidthInput(
@@ -33,7 +33,13 @@ internal fun WidthInput(
         },
         label = { Text(stringResource(R.string.itb_width)) },
         supportingText = {
-            Text(stringResource(R.string.itb_width_range, ImageToBlueprintState.MIN_WIDTH, ImageToBlueprintState.MAX_WIDTH))
+            Text(
+                stringResource(
+                    R.string.itb_width_range,
+                    BlueprintUiDefaults.MIN_WIDTH,
+                    BlueprintUiDefaults.MAX_WIDTH,
+                ),
+            )
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,

@@ -1,4 +1,4 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,8 +24,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.BlockCatalog
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.BlockGroup
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlockCatalog
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlockGroup
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

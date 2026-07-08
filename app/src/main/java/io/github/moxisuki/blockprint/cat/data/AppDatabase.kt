@@ -2,6 +2,8 @@ package io.github.moxisuki.blockprint.cat.data
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import io.github.moxisuki.blockprint.cat.data.blockpaint.PaintingDao
+import io.github.moxisuki.blockprint.cat.data.blockpaint.PaintingEntity
 import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMetaEntity
 import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMetaDao
 import io.github.moxisuki.blockprint.cat.data.blueprint.StorageConfigEntity
@@ -29,8 +31,9 @@ import io.github.moxisuki.blockprint.cat.data.vanilla.VanillaAssetStatusDao
         GlbCacheEntity::class,
         PairedDeviceEntity::class,
         BridgeEventEntity::class,
+        PaintingEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,4 +45,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun glbCacheDao(): GlbCacheDao
     abstract fun pairedDeviceDao(): PairedDeviceDao
     abstract fun bridgeEventDao(): BridgeEventDao
+    abstract fun paintingDao(): PaintingDao
 }

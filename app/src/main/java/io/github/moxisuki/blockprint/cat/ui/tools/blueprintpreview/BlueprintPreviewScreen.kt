@@ -73,6 +73,7 @@ fun BlueprintPreviewContent(
     onViewBlueprint: (uuid: String) -> Unit,
     onDismiss: () -> Unit,
     viewModel: BlueprintPreviewViewModel = hiltViewModel(),
+    defaultSaveName: String? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -152,6 +153,7 @@ fun BlueprintPreviewContent(
                 showSaveDialog = false
                 viewModel.save(name)
             },
+            defaultName = defaultSaveName,
         )
     }
 }
@@ -346,7 +348,7 @@ private fun BlueprintSaveBranch(
                     contentDescription = null,
                     modifier = Modifier.padding(end = 6.dp),
                 )
-                Text(stringResource(if (isSaved) R.string.bp_action_view else R.string.bp_save))
+                Text(stringResource(if (isSaved) R.string.bp_action_view else R.string.bp_save), maxLines = 1)
             }
         }
     }
@@ -367,9 +369,10 @@ private fun ExportApi.CommandDirection.shortLabel(): String = when (this) {
 private fun SaveNameDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
+    defaultName: String? = null,
 ) {
     var name by remember {
-        mutableStateOf("blueprint_" + System.currentTimeMillis().toString())
+        mutableStateOf(defaultName ?: ("blueprint_" + System.currentTimeMillis().toString()))
     }
     AlertDialog(
         onDismissRequest = onDismiss,

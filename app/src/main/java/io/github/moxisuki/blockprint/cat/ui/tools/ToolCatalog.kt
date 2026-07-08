@@ -2,6 +2,7 @@ package io.github.moxisuki.blockprint.cat.ui.tools
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.ui.graphics.Color
@@ -35,6 +36,14 @@ internal object ToolCatalog {
             subtitleRes = R.string.tool_text_to_blueprint_subtitle,
             icon = Icons.Outlined.TextFields,
             accent = Color(0xFF42A5F5),
+            kind = ToolKind.ListItem,
+        ),
+        ToolEntry(
+            id = "block_paint",
+            titleRes = R.string.tool_block_paint,
+            subtitleRes = R.string.tool_block_paint_subtitle,
+            icon = Icons.Outlined.Brush,
+            accent = Color(0xFF26A69A),
             kind = ToolKind.ListItem,
         ),
     )

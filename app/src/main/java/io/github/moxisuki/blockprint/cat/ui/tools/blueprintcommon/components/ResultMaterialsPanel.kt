@@ -1,13 +1,11 @@
-package io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.components
+package io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.data.vanilla.LangManager
-import io.github.moxisuki.blockprint.cat.ui.tools.imagetoblueprint.BlockCatalog
+import io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.BlockCatalog
 import io.github.moxisuki.blockprint.cat.ui.util.formatNumber
 
 @Composable

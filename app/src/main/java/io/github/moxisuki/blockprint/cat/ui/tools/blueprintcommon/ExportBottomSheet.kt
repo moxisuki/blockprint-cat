@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ExportBottomSheet(
     exportPayload: String?,
-    resultBitmap: Bitmap?,
+    onSavePng: (() -> Unit)? = null,
     defaultSaveName: String,
     sheetState: SheetState,
     context: Context,
@@ -65,19 +65,7 @@ fun ExportBottomSheet(
             ) {
                 Icon(Icons.Outlined.IosShare, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 Text("PNG", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                TextButton(onClick = {
-                    resultBitmap?.let { bmp ->
-                        val f = java.io.File(context.cacheDir, "export_${System.currentTimeMillis()}.png")
-                        java.io.FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", f)
-                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "image/png"
-                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(android.content.Intent.createChooser(intent, null))
-                    }
-                }) {
+                TextButton(onClick = { onSavePng?.invoke() }) {
                     Text(stringResource(R.string.bp_save_png), color = MaterialTheme.colorScheme.primary)
                 }
             }

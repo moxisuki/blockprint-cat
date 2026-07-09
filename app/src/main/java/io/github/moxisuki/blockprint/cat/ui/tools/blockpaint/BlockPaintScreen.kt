@@ -165,7 +165,7 @@ fun BlockPaintScreen(
     val suffix = stringResource(R.string.bp_painting_suffix)
     io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.ExportBottomSheet(
         exportPayload = exportPayload,
-        resultBitmap = state.resultBitmap,
+        onSavePng = { viewModel.savePng(context) },
         defaultSaveName = "${paintingName}_$suffix",
         sheetState = sheetState,
         context = context,

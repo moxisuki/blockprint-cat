@@ -132,7 +132,7 @@ fun TextToBlueprintScreen(
     val name = (state.text.take(20).ifBlank { "text" } + "_$suffix").trim()
     io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.ExportBottomSheet(
         exportPayload = state.exportPayload,
-        resultBitmap = state.resultBitmap,
+        onSavePng = { viewModel.savePng(context) },
         defaultSaveName = name,
         sheetState = sheetState,
         context = context,

@@ -2,6 +2,7 @@ package io.github.moxisuki.blockprint.cat.ui.tools.texttoblueprint
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,6 +53,34 @@ class TextToBlueprintViewModel @Inject constructor(
     }
 
     fun clearExport() { _state.update { it.copy(exportPayload = null) } }
+
+    fun savePng(context: Context) {
+        val grid = _state.value.grid
+        if (grid.isEmpty()) return
+        val cellPx = 16
+        val w = grid.size * cellPx
+        val h = grid[0].size * cellPx
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        c.drawColor(android.graphics.Color.TRANSPARENT)
+        for (x in grid.indices) {
+            for (y in grid[0].indices) {
+                val blockId = grid[x][y] ?: continue
+                val entry = BlockCatalog.all.firstOrNull { it.id == blockId } ?: continue
+                val icon = io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.findPixelArt(entry.drawableResId) ?: continue
+                val abm = icon.asAndroidBitmap()
+                c.drawBitmap(abm, null, android.graphics.Rect(x * cellPx, y * cellPx, (x + 1) * cellPx, (y + 1) * cellPx), null)
+            }
+        }
+        val file = java.io.File(context.cacheDir, "ttb_${System.currentTimeMillis()}.png")
+        java.io.FileOutputStream(file).use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        bmp.recycle()
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "image/png"; putExtra(android.content.Intent.EXTRA_STREAM, uri); addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(intent, null))
+    }
 
     fun setSpacing(spacing: Int) {
         _state.update { it.copy(spacing = spacing.coerceIn(TextToBlueprintState.MIN_SPACING, TextToBlueprintState.MAX_SPACING)) }

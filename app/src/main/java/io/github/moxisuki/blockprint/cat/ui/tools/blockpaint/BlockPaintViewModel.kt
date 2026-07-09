@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -259,13 +260,28 @@ class BlockPaintViewModel @Inject constructor(
     }
 
     fun savePng(context: Context) {
-        val bmp = _state.value.resultBitmap ?: return
-        // 放大到每格至少 8px，不然 32×32 的图肉眼不可见
-        val scale = maxOf(1, 256 / maxOf(bmp.width, bmp.height))
-        val scaled = android.graphics.Bitmap.createScaledBitmap(bmp, bmp.width * scale, bmp.height * scale, false)
+        val s = _state.value
+        val grid = s.grid
+        if (grid.isEmpty()) return
+        // 每格 16px 渲染真实方块纹理
+        val cellPx = 16
+        val w = grid.size * cellPx
+        val h = grid[0].size * cellPx
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        canvas.drawColor(android.graphics.Color.TRANSPARENT)
+        for (x in grid.indices) {
+            for (y in grid[0].indices) {
+                val blockId = grid[x][y] ?: continue
+                val entry = BlockCatalog.all.firstOrNull { it.id == blockId } ?: continue
+                val icon = io.github.moxisuki.blockprint.cat.ui.tools.blueprintcommon.components.findPixelArt(entry.drawableResId) ?: continue
+                val abm = icon.asAndroidBitmap()
+                canvas.drawBitmap(abm, null, android.graphics.Rect(x * cellPx, y * cellPx, (x + 1) * cellPx, (y + 1) * cellPx), null)
+            }
+        }
         val file = java.io.File(context.cacheDir, "blockpaint_${System.currentTimeMillis()}.png")
-        java.io.FileOutputStream(file).use { scaled.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
-        if (scaled != bmp) scaled.recycle()
+        java.io.FileOutputStream(file).use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        bmp.recycle()
         val uri = androidx.core.content.FileProvider.getUriForFile(
             context, "${context.packageName}.fileprovider", file
         )

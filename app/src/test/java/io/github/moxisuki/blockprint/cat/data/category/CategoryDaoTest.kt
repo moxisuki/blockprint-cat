@@ -2,7 +2,6 @@ package io.github.moxisuki.blockprint.cat.data.category
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.cash.turbine.test
 import io.github.moxisuki.blockprint.cat.data.AppDatabase
 import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMetaDao
 import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMetaEntity
@@ -54,12 +53,9 @@ class CategoryDaoTest {
 
     @Test
     fun `upsert then observeAll returns inserted entity`() = runTest {
-        dao.observeAll().test {
-            assertEquals(emptyList<CategoryEntity>(), awaitItem())
-            dao.upsert(cat("c1", "Castle", createdAt = 2L))
-            assertEquals(listOf("c1"), awaitItem().map { it.id })
-            cancelAndIgnoreRemainingEvents()
-        }
+        assertEquals(emptyList<CategoryEntity>(), dao.observeAll().first())
+        dao.upsert(cat("c1", "Castle", createdAt = 2L))
+        assertEquals(listOf("c1"), dao.observeAll().first().map { it.id })
     }
 
     @Test
@@ -67,11 +63,8 @@ class CategoryDaoTest {
         dao.upsert(cat("c1", "A", createdAt = 3L))
         dao.upsert(cat("c2", "B", createdAt = 1L))
         dao.upsert(cat("c3", "C", createdAt = 2L))
-        dao.observeAll().test {
-            val list = awaitItem()
-            assertEquals(listOf("c2", "c3", "c1"), list.map { it.id })
-            cancelAndIgnoreRemainingEvents()
-        }
+        val list = dao.observeAll().first()
+        assertEquals(listOf("c2", "c3", "c1"), list.map { it.id })
     }
 
     @Test
@@ -98,12 +91,9 @@ class CategoryDaoTest {
         bpDao.upsert(bp("b3", "c2"))
         bpDao.upsert(bp("b4", null))
 
-        dao.observeCountsByCategory().test {
-            val counts = awaitItem().associate { it.categoryId to it.cnt }
-            assertEquals(2, counts["c1"])
-            assertEquals(1, counts["c2"])
-            assertEquals(1, counts[null])
-            cancelAndIgnoreRemainingEvents()
-        }
+        val counts = dao.observeCountsByCategory().first().associate { it.categoryId to it.cnt }
+        assertEquals(2, counts["c1"])
+        assertEquals(1, counts["c2"])
+        assertEquals(1, counts[null])
     }
 }

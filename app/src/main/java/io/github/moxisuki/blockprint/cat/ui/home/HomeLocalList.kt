@@ -77,6 +77,7 @@ private const val PAGE_SIZE = 15
  */
 @Composable
 internal fun LocalBlueprintList(
+    modifier: Modifier = Modifier,
     allBlueprints: List<BlueprintMeta>,
     scanning: Boolean,
     visibleCount: Int,
@@ -96,6 +97,8 @@ internal fun LocalBlueprintList(
     onFilterQueryChange: (String) -> Unit,
     filterFormat: FormatFilter,
     onFilterFormatChange: (FormatFilter) -> Unit,
+    onLongPress: (String) -> Unit = {},
+    isSelected: (String) -> Boolean = { false },
 ) {
     // Debounce search query (avoid re-filtering on every keystroke)
     var debouncedQuery by remember { mutableStateOf("") }
@@ -131,7 +134,7 @@ internal fun LocalBlueprintList(
 
     if (scanning) {
         Column(
-            Modifier.fillMaxSize(),
+            modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -147,9 +150,10 @@ internal fun LocalBlueprintList(
         EmptyHomeState(
             onScanFolder = onRequestSafFolder,
             safFolderName = safFolderName,
+            modifier = modifier.fillMaxSize(),
         )
     } else {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = modifier.fillMaxSize()) {
             AnimatedVisibility(
                 visible = filterVisible,
                 enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(180)),
@@ -191,6 +195,8 @@ internal fun LocalBlueprintList(
                             onUpload = { onUpload(bp) },
                             connected = bridgeConnected,
                             canTransfer = canTransfer,
+                            selected = isSelected(bp.uuid),
+                            onLongClick = { onLongPress(bp.uuid) },
                         )
                     }
                     if (hasMore) {

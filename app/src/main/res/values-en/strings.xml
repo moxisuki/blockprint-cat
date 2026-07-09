@@ -22,6 +22,11 @@
     <string name="settings_backup_subtitle">Bundle local blueprints and save to Downloads</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about_subtitle">BlockPrint Cat v1.0</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_features">Features</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_about_subtitle_info">App info, open source licenses &amp; updates</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_subtitle_system">Follow system</string>
     <string name="settings_language_subtitle_zh">简体中文</string>
@@ -72,9 +77,9 @@
     <string name="bottom_nav_tools">Tools</string>
     <string name="nav_title_tools">Tools</string>
     <string name="tool_image_to_blueprint">Image to Blueprint</string>
-    <string name="tool_image_to_blueprint_subtitle">Convert any image into a stackable Minecraft block blueprint</string>
+    <string name="tool_image_to_blueprint_subtitle">Convert images to block blueprints</string>
     <string name="tool_text_to_blueprint">Text to Blueprint</string>
-    <string name="tool_text_to_blueprint_subtitle">Paste NBT/JSON text or a description, auto-generate a stackable block blueprint</string>
+    <string name="tool_text_to_blueprint_subtitle">Generate blueprints from text</string>
     <string name="ttb_input_hint">Enter text to convert…</string>
     <string name="ttb_input_supporting">CJK auto-switches to system font rendering with adjustable height</string>
     <string name="ttb_generate">Generate blueprint</string>
@@ -97,7 +102,7 @@
 
     <!-- Block Paint (1×1 block flat painting) -->
     <string name="tool_block_paint">Block Paint</string>
-    <string name="tool_block_paint_subtitle">Pick blocks cell by cell, paint a 1×1 flat blueprint that stacks in Minecraft</string>
+    <string name="tool_block_paint_subtitle">Paint block-by-block blueprints</string>
     <string name="bp_section_palette">Block palette</string>
     <string name="bp_section_result">Preview result</string>
     <string name="bp_tool_paint">Paint</string>
@@ -464,6 +469,7 @@
     <string name="ns_info_dialog_example">For example, "create:mechanical_arm" belongs to the create namespace, "minecraft:stone" belongs to the minecraft namespace.</string>
     <string name="ns_info_dialog_action">If a namespace shows "Not installed", go to the render page to install the matching resource pack — otherwise blocks in that namespace will be missing and cannot render in the preview.</string>
     <string name="ns_info_dialog_hint">Namespaces are automatically detected from the prefix of each block\'s ID in the blueprint.</string>
+    <string name="action_share">Share</string>
     <string name="action_ok">OK</string>
 
     <!-- CmsBypassOverlay -->

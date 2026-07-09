@@ -349,15 +349,14 @@ private fun PadLayout(
                         onBack = { navController.popBackStack() },
                         isHeatSort = padActiveHeatSort,
                         customActions = {
-                            if (flags.isBlockPaint) {
-                                val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
-                                if (entry != null) {
-                                    val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
-                                        androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
-                                    io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
-                                }
+                            val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
+                            if (entry != null) {
+                                val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
+                                    androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
+                                io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
                             }
                         },
+                        showCustomActions = flags.isBlockPaint,
                         actions = {
                             IconButton(onClick = { navController.navigate(NavRoutes.CONNECTION) }) {
                                 Box(
@@ -388,15 +387,14 @@ private fun PadLayout(
                         onBack = { navController.popBackStack() },
                         isHeatSort = padActiveHeatSort,
                         customActions = {
-                            if (flags.isBlockPaint) {
-                                val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
-                                if (entry != null) {
-                                    val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
-                                        androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
-                                    io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
-                                }
+                            val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
+                            if (entry != null) {
+                                val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
+                                    androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
+                                io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
                             }
                         },
+                        showCustomActions = flags.isBlockPaint,
                     )
                 }
             }
@@ -783,15 +781,14 @@ private fun CompactLayout(
                         onBack = { navController.popBackStack() },
                         isHeatSort = active2HeatSort,
                         customActions = {
-                            if (flags.isBlockPaint) {
-                                val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
-                                if (entry != null) {
-                                    val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
-                                        androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
-                                    io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
-                                }
+                            val entry = runCatching { navController.getBackStackEntry(NavRoutes.BLOCK_PAINT) }.getOrNull()
+                            if (entry != null) {
+                                val bpVm: io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintViewModel =
+                                    androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = entry)
+                                io.github.moxisuki.blockprint.cat.ui.tools.blockpaint.BlockPaintTopBarActions(bpVm)
                             }
                         },
+                        showCustomActions = flags.isBlockPaint,
                     )
                 }
             }

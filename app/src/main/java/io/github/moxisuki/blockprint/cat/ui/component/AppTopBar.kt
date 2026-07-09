@@ -4,13 +4,16 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -55,6 +58,7 @@ internal fun AppTopBar(
     isHeatSort: Boolean,
     actions: @Composable RowScope.() -> Unit = {},
     customActions: @Composable RowScope.() -> Unit = {},
+    showCustomActions: Boolean = false,
 ) {
     TopAppBar(
         title = {
@@ -75,8 +79,8 @@ internal fun AppTopBar(
         navigationIcon = {
             AnimatedVisibility(
                 visible = showBackButton,
-                enter = fadeIn(AnimSpec.title),
-                exit = fadeOut(AnimSpec.title),
+                enter = fadeIn(AnimSpec.title) + expandHorizontally(animationSpec = tween(280), expandFrom = Alignment.Start),
+                exit = fadeOut(AnimSpec.title) + shrinkHorizontally(animationSpec = tween(280), shrinkTowards = Alignment.Start),
             ) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
@@ -84,8 +88,14 @@ internal fun AppTopBar(
             }
         },
         actions = {
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                customActions()
+            AnimatedVisibility(
+                visible = showCustomActions,
+                enter = fadeIn(AnimSpec.title) + expandHorizontally(animationSpec = tween(280), expandFrom = Alignment.End),
+                exit = fadeOut(AnimSpec.title) + shrinkHorizontally(animationSpec = tween(280), shrinkTowards = Alignment.End),
+            ) {
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    customActions()
+                }
             }
             if (onCommunity && showCommunityActions) {
                 IconButton(onClick = onToggleFilter) {

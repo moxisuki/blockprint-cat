@@ -22,6 +22,11 @@
     <string name="settings_backup_subtitle">Bundle local blueprints and save to Downloads</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about_subtitle">BlockPrint Cat v1.0</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_section_features">功能</string>
+    <string name="settings_section_data">数据</string>
+    <string name="settings_section_about">关于</string>
+    <string name="settings_about_subtitle_info">应用信息、开源许可与检查更新</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_subtitle_system">Follow system</string>
     <string name="settings_language_subtitle_zh">简体中文</string>
@@ -84,9 +89,9 @@
     <string name="bottom_nav_tools">工具</string>
     <string name="nav_title_tools">工具</string>
     <string name="tool_image_to_blueprint">图片转蓝图画</string>
-    <string name="tool_image_to_blueprint_subtitle">把任意图片转换为可堆叠的 Minecraft 方块蓝图</string>
+    <string name="tool_image_to_blueprint_subtitle">将图片转为方块蓝图</string>
     <string name="tool_text_to_blueprint">文字转蓝图画</string>
-    <string name="tool_text_to_blueprint_subtitle">粘贴 NBT/JSON 文本或描述，自动生成可堆叠的方块蓝图</string>
+    <string name="tool_text_to_blueprint_subtitle">文字生成方块蓝图</string>
     <string name="ttb_input_hint">输入要转换的文字…</string>
     <string name="ttb_input_supporting">中文字符自动切换系统字体渲染，支持缩放和字高调节</string>
     <string name="ttb_generate">生成蓝图</string>
@@ -109,7 +114,7 @@
 
     <!-- Block Paint (1×1 方块平面绘画) -->
     <string name="tool_block_paint">方块绘画</string>
-    <string name="tool_block_paint_subtitle">逐格挑选方块，1×1 平铺成可堆叠的 Minecraft 蓝图</string>
+    <string name="tool_block_paint_subtitle">逐格绘制方块蓝图</string>
     <string name="bp_section_palette">方块调色板</string>
     <string name="bp_section_result">预览结果</string>
     <string name="bp_tool_paint">画笔</string>
@@ -526,6 +531,7 @@
     <string name="ns_info_dialog_example">For example, "create:mechanical_arm" belongs to the create namespace, "minecraft:stone" belongs to the minecraft namespace.</string>
     <string name="ns_info_dialog_action">If a namespace shows "Not installed", go to the render page to install the matching resource pack — otherwise blocks in that namespace will be missing and cannot render in the preview.</string>
     <string name="ns_info_dialog_hint">Namespaces are automatically detected from the prefix of each block\'s ID in the blueprint.</string>
+    <string name="action_share">分享</string>
     <string name="action_ok">OK</string>
     <string name="ns_install">Install</string>
 

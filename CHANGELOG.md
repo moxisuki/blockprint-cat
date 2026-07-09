@@ -2,7 +2,7 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
-## [Unreleased]
+## [1.2.0] · 2026-07-10
 
 ### 新增
 
@@ -11,28 +11,36 @@
   - 方块调色板：按 BlockGroup 分类、横向滚动的 BlockPickerStrip
   - 图画列表：Room 持久化，支持新建/切换/重命名/删除
   - AppBar 标题显示当前图画名；导出按钮在 AppBar
-  - 导出：PNG（最近邻放大到 256px）+ BlueprintPreviewContent（MC 命令/蓝图/NBT）
+  - 导出：PNG（16px/cell 真实纹理）+ BlueprintPreviewContent（MC 命令/蓝图/NBT）
   - blockIds v3 直出：跳过 PixelArtConverter 颜色匹配，画什么块就是什么块
 - **文字转蓝图画 (TTB) 重写**：
   - 8×8 位图字体 (FONT8X8) 直接生成 grid，支持缩放/间距
   - TTF 模式：输入中文自动切换系统字体渲染，可调字高 (4-32)
   - 单方块选择、BlockCanvas 实时预览、导出同 BlockPaint
-- **共享 UI**：`blueprintcommon/` 包抽 BlockCatalog/ExportPayloadCodec/BlockPreview/PreviewHero/CollapsibleSection 等
+- **共享 UI**：`blueprintcommon/` 包 BlockCatalog/ExportPayloadCodec/BlockPreview/CollapsibleSection 等
 - **共享导出**：`ExportBottomSheet` 组件（PNG + BlueprintPreviewContent），BlockPaint/TTB 共用
+- **设置页 UI 重构**：分组标题（外观/功能/数据/关于）、统一卡片样式（40dp 图标方块 + titleSmall + 副标题省略）、头部弹性动画
+- **缓存管理修复**：Room 数据库大小从 0B 修正（litematic.db → blockprintcat.db + WAL/SHM 文件汇总）；卡片化 UI
+- **备份分享**：备份完成支持系统分享（ACTION_SEND）；加载/进度/完成三态卡片 + 百分比进度
+- **语言/主题 Dialog 优化**：卡片式选择、选中高亮 + ✓ 图标、更紧凑的排版
+- **AppBar 动画**：返回按钮 + customActions 均增加 expandHorizontally/shrinkHorizontally 动画，标题平滑过渡
+- **工具页重新设计**：副标题精简、Hero 居中大卡片 + 下方工具并排布局
 
 ### 修复
 
 - ITB `ImageToBlueprintState` companion 常量引用 `BlueprintUiDefaults`
-- ITB PreviewAnimations test import 修复
 - TTB 保存弹框取消卡死：dismiss 后 clearExport
 - Pad 布局选择蓝图文件夹无响应：补传 `onRequestSafFolder`
 - AppTopBar customActions 支持横滚，不挤压返回按钮
+- 缓存 Room 大小始终显示 0B：数据库文件名错误
 
 ### 重构
 
 - 删 ITB 旧 components（AdjustSlider/BlockGroupSection/BlockPreview/DitherDropdown/PreviewHero/ResultMaterialsPanel/WidthInput/ExportButton）
 - 删 ITB ExportPayloadCodec/PreviewAnimations/PreviewDebounce → typealias 转接 blueprincommon
 - ExportPayloadCodec v3：新增 `blockIds` 字段（逐格方块 ID，BlockPaint/TTB 直出）
+- 语言/缓存/备份 Dialog 统一卡片设计语言
+- 工具页副标题精简 + 卡片化布局
 
 ## [1.1.0] · 2026-07-07
 

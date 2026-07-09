@@ -7,11 +7,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,9 +30,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -36,7 +45,9 @@ import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintManager
 import io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao
 import io.github.moxisuki.blockprint.cat.data.vanilla.ModAssetStatusDao
 import io.github.moxisuki.blockprint.cat.data.vanilla.VanillaAssetStatusDao
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun CacheManagementDialog(onDismiss: () -> Unit) {
@@ -68,19 +79,19 @@ fun CacheManagementDialog(onDismiss: () -> Unit) {
     }
 
     LaunchedEffect(Unit) {
-        val dbPath = context.getDatabasePath("litematic.db")
-        roomSize = if (dbPath.isFile) dbPath.length() else 0L
-        roomCount = blueprintManager.blueprintCount.value
-        val renderDir = java.io.File(context.filesDir, "blockprintcat/render_assets")
-        renderAssetsSize = if (renderDir.isDirectory) renderDir.walkTopDown().sumOf { if (it.isFile) it.length() else 0L } else 0L
+        withContext(Dispatchers.IO) {
+            roomSize = dbTotalSize(context)
+            roomCount = blueprintManager.blueprintCount.value
+            val renderDir = java.io.File(context.filesDir, "blockprintcat/render_assets")
+            renderAssetsSize = if (renderDir.isDirectory) renderDir.walkTopDown().sumOf { if (it.isFile) it.length() else 0L } else 0L
+        }
     }
 
     fun doClearRoom() {
         clearingRoom = true
         scope.launch {
             runCatching { blueprintManager.clearAllBlueprints() }
-            val dbPath = context.getDatabasePath("litematic.db")
-            roomSize = if (dbPath.isFile) dbPath.length() else 0L
+            roomSize = dbTotalSize(context)
             roomCount = 0
             clearingRoom = false; confirmRoom = false
         }
@@ -116,10 +127,22 @@ fun CacheManagementDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_cache_title)) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Storage,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.settings_cache_title))
+            }
+        },
         text = {
-            Column(Modifier.fillMaxWidth()) {
-                cacheCard(
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CacheCard(
+                    icon = Icons.Default.Storage,
                     title = stringResource(R.string.cache_room_title),
                     stats = if (roomSize >= 0) stringResource(R.string.cache_room_stats, roomCount, formatSize(roomSize)) else stringResource(R.string.cache_calculating),
                     showConfirm = confirmRoom,
@@ -130,9 +153,9 @@ fun CacheManagementDialog(onDismiss: () -> Unit) {
                     onConfirm = { doClearRoom() },
                     onCancel = { confirmRoom = false },
                 )
-                Spacer(Modifier.height(8.dp))
 
-                cacheCard(
+                CacheCard(
+                    icon = Icons.Default.ViewInAr,
                     title = stringResource(R.string.cache_glb_title),
                     stats = if (glbSize >= 0) stringResource(R.string.cache_glb_stats, glbCount, formatSize(glbSize)) else stringResource(R.string.cache_calculating),
                     showConfirm = confirmGlb,
@@ -143,9 +166,9 @@ fun CacheManagementDialog(onDismiss: () -> Unit) {
                     onConfirm = { doClearGlb() },
                     onCancel = { confirmGlb = false },
                 )
-                Spacer(Modifier.height(8.dp))
 
-                cacheCard(
+                CacheCard(
+                    icon = Icons.Default.ViewInAr,
                     title = stringResource(R.string.cache_render_title),
                     stats = if (renderAssetsSize >= 0) stringResource(R.string.cache_render_stats, formatSize(renderAssetsSize)) else stringResource(R.string.cache_calculating),
                     showConfirm = confirmRender,
@@ -156,11 +179,12 @@ fun CacheManagementDialog(onDismiss: () -> Unit) {
                     onConfirm = { doClearRender() },
                     onCancel = { confirmRender = false },
                 )
-                Spacer(Modifier.height(8.dp))
+
                 Text(
                     stringResource(R.string.cache_note),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
         },
@@ -171,7 +195,8 @@ fun CacheManagementDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun cacheCard(
+private fun CacheCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     stats: String,
     showConfirm: Boolean,
@@ -183,35 +208,78 @@ private fun cacheCard(
     onCancel: () -> Unit,
 ) {
     Card(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            if (!showConfirm) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        if (!showConfirm) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
                     Column {
-                        Text(title, style = MaterialTheme.typography.bodyMedium)
-                        Text(stats, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                        Text(
+                            stats,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                    TextButton(onClick = onClear, enabled = enabled) { Text(stringResource(R.string.action_clear)) }
                 }
-            } else {
-                Text(confirmMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onClear, enabled = enabled) {
+                    Text(stringResource(R.string.action_clear))
+                }
+            }
+        } else {
+            Column(Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(confirmMsg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
                     TextButton(onClick = onConfirm, enabled = !clearing) {
-                        Text(
-                            if (clearing) stringResource(R.string.cache_clearing) else stringResource(R.string.action_confirm_clear),
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                        if (clearing) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(stringResource(R.string.action_confirm_clear), color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
         }
     }
+}
+
+private fun dbTotalSize(context: android.content.Context): Long {
+    val dbFile = context.getDatabasePath("blockprintcat.db")
+    if (!dbFile.isFile) return 0L
+    var size = dbFile.length()
+    val wal = context.getDatabasePath("blockprintcat.db-wal")
+    if (wal.isFile) size += wal.length()
+    val shm = context.getDatabasePath("blockprintcat.db-shm")
+    if (shm.isFile) size += shm.length()
+    return size
 }
 
 private fun formatSize(bytes: Long): String = when {

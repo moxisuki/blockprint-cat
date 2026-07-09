@@ -7,6 +7,7 @@ import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMetaDao
 import io.github.moxisuki.blockprint.cat.data.blueprint.StorageConfigDao
 import io.github.moxisuki.blockprint.cat.data.bridge.BridgeEventDao
 import io.github.moxisuki.blockprint.cat.data.bridge.PairedDeviceDao
+import io.github.moxisuki.blockprint.cat.data.category.CategoryDao
 import io.github.moxisuki.blockprint.cat.data.vanilla.VanillaAssetStatusDao
 import io.github.moxisuki.blockprint.cat.data.community.DisclaimerStatusDao
 import io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao
@@ -31,6 +32,9 @@ object DatabaseModule {
 
     @Provides
     fun provideBlueprintMetaDao(db: AppDatabase): BlueprintMetaDao = db.blueprintMetaDao()
+
+    @Provides
+    fun provideCategoryDao(db: AppDatabase): CategoryDao = db.categoryDao()
 
     @Provides
     fun provideStorageConfigDao(db: AppDatabase): StorageConfigDao = db.storageConfigDao()

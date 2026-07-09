@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoryDao {
-    @Query("SELECT * FROM categories ORDER BY sortOrder ASC, createdAt ASC")
+    @Query("SELECT * FROM categories ORDER BY sortOrder DESC, createdAt ASC")
     fun observeAll(): Flow<List<CategoryEntity>>
 
     @Query("SELECT categoryId AS categoryId, COUNT(*) AS cnt FROM blueprints GROUP BY categoryId")

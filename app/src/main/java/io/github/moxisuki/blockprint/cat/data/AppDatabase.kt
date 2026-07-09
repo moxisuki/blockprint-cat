@@ -12,6 +12,8 @@ import io.github.moxisuki.blockprint.cat.data.bridge.BridgeEventDao
 import io.github.moxisuki.blockprint.cat.data.bridge.BridgeEventEntity
 import io.github.moxisuki.blockprint.cat.data.bridge.PairedDeviceDao
 import io.github.moxisuki.blockprint.cat.data.bridge.PairedDeviceEntity
+import io.github.moxisuki.blockprint.cat.data.category.CategoryDao
+import io.github.moxisuki.blockprint.cat.data.category.CategoryEntity
 import io.github.moxisuki.blockprint.cat.data.community.DisclaimerStatusEntity
 import io.github.moxisuki.blockprint.cat.data.community.DisclaimerStatusDao
 import io.github.moxisuki.blockprint.cat.data.render.GlbCacheDao
@@ -24,6 +26,7 @@ import io.github.moxisuki.blockprint.cat.data.vanilla.VanillaAssetStatusDao
 @Database(
     entities = [
         BlueprintMetaEntity::class,
+        CategoryEntity::class,
         StorageConfigEntity::class,
         VanillaAssetStatusEntity::class,
         ModAssetStatusEntity::class,
@@ -33,11 +36,12 @@ import io.github.moxisuki.blockprint.cat.data.vanilla.VanillaAssetStatusDao
         BridgeEventEntity::class,
         PaintingEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun blueprintMetaDao(): BlueprintMetaDao
+    abstract fun categoryDao(): CategoryDao
     abstract fun storageConfigDao(): StorageConfigDao
     abstract fun vanillaAssetStatusDao(): VanillaAssetStatusDao
     abstract fun modAssetStatusDao(): ModAssetStatusDao

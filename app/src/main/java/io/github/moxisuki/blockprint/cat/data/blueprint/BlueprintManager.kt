@@ -301,6 +301,7 @@ class BlueprintManager @Inject constructor(
         displayName = displayName, author = author, regionCount = regionCount,
         blockCount = blockCount,
         format = runCatching { SchematicFormat.valueOf(format) }.getOrDefault(SchematicFormat.Unknown),
+        categoryId = categoryId,
     )
 
     private fun BlueprintMetaEntity.toEntity() = this

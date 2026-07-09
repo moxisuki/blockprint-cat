@@ -13,6 +13,7 @@ data class BlueprintMeta(
     val regionCount: Int,
     val blockCount: Int,
     val format: SchematicFormat,
+    val categoryId: String? = null,
 ) {
     /** 预计算的列表副标题，避免每次 recompose 做字符串拼接 */
     val subtitle: String = "作者: ${author.ifEmpty { "未知" }}  |  区域: $regionCount  |  方块: ${formatNumber(blockCount)}"

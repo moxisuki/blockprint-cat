@@ -35,8 +35,8 @@ class CategoryDaoTest {
     @After
     fun tearDown() { db.close() }
 
-    private fun cat(id: String, name: String, colorIdx: Int = 0, patternIdx: Int = 0, createdAt: Long = 1L) =
-        CategoryEntity(id = id, name = name, colorIdx = colorIdx, patternIdx = patternIdx, sortOrder = 0, createdAt = createdAt)
+    private fun cat(id: String, name: String, colorIdx: Int = 0, patternIdx: Int = 0, sortOrder: Int = 0, createdAt: Long = 1L) =
+        CategoryEntity(id = id, name = name, colorIdx = colorIdx, patternIdx = patternIdx, sortOrder = sortOrder, createdAt = createdAt)
 
     private fun bp(uuid: String, categoryId: String? = null) = BlueprintMetaEntity(
         uuid = uuid,
@@ -60,9 +60,12 @@ class CategoryDaoTest {
 
     @Test
     fun `observeAll orders by sortOrder then createdAt`() = runTest {
+        // c1 has sortOrder=0, createdAt=3 -> last (secondary)
+        // c2 has sortOrder=1, createdAt=1 -> first (primary wins)
+        // c3 has sortOrder=1, createdAt=2 -> second (primary ties, secondary wins)
         dao.upsert(cat("c1", "A", createdAt = 3L))
-        dao.upsert(cat("c2", "B", createdAt = 1L))
-        dao.upsert(cat("c3", "C", createdAt = 2L))
+        dao.upsert(cat("c2", "B", sortOrder = 1, createdAt = 1L))
+        dao.upsert(cat("c3", "C", sortOrder = 1, createdAt = 2L))
         val list = dao.observeAll().first()
         assertEquals(listOf("c2", "c3", "c1"), list.map { it.id })
     }

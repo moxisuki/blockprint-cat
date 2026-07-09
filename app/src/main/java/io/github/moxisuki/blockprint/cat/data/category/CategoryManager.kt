@@ -14,17 +14,22 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/** UI-facing row for the category rail. Includes virtual ALL row. */
+/**
+ * UI-facing row for the category rail. Includes virtual ALL row.
+ *
+ * Note: `displayName` is intentionally NOT here. UI must apply localized text:
+ * - `row is CategoryRow.All` -> stringResource(R.string.home_category_all)
+ * - `row is CategoryRow.Real` -> row.entity.name
+ * (Data layer cannot access Context for stringResource.)
+ */
 sealed interface CategoryRow {
     val id: String? // null for All
-    val displayName: String
     val count: Int
     val colorIdx: Int
     val patternIdx: Int
 
     data object All : CategoryRow {
         override val id: String? = null
-        override val displayName: String = "全部"
         override val count: Int = 0
         override val colorIdx: Int = 0
         override val patternIdx: Int = 0
@@ -35,7 +40,6 @@ sealed interface CategoryRow {
         override val count: Int = 0,
     ) : CategoryRow {
         override val id: String? get() = entity.id
-        override val displayName: String get() = entity.name
         override val colorIdx: Int get() = entity.colorIdx
         override val patternIdx: Int get() = entity.patternIdx
     }

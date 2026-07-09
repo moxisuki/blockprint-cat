@@ -742,4 +742,31 @@
     <string name="bp_build_fail">Build failed: %1$s</string>
     <string name="bp_default_name">Blueprint_%1$s</string>
     <string name="bp_coming_soon">Export feature coming soon</string>
+
+    <!-- Categories -->
+    <string name="home_category_title">My categories</string>
+    <string name="home_category_all">All</string>
+    <string name="home_category_uncategorized">Uncategorized</string>
+    <string name="home_category_empty_title">No categories yet</string>
+    <string name="home_category_empty_sub">Tap + to create a category</string>
+    <string name="cat_dialog_new_title">New category</string>
+    <string name="cat_dialog_edit_title">Edit \"%1$s\"</string>
+    <string name="cat_dialog_label_name">Name</string>
+    <string name="cat_dialog_label_color">Color</string>
+    <string name="cat_dialog_label_pattern">Pattern</string>
+    <string name="cat_dialog_btn_create">Create</string>
+    <string name="cat_dialog_btn_save">Save</string>
+    <string name="cat_dialog_btn_delete_cat">Delete category</string>
+    <string name="cat_dialog_delete_title">Delete \"%1$s\"?</string>
+    <string name="cat_dialog_delete_body">%1$d blueprints will be moved to Uncategorized. This cannot be undone.</string>
+    <string name="cat_move_dialog_title">Move %1$d items to</string>
+    <string name="cat_move_remove">Remove from category</string>
+    <string name="cat_multi_count">%1$d selected</string>
+    <string name="cd_category_add">Create category</string>
+
+    <!-- Category count plural -->
+    <plurals name="category_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
 </resources>

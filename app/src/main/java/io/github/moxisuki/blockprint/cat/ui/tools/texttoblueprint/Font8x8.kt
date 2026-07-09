@@ -138,54 +138,44 @@ internal object Font8x8 {
     fun hasCjk(text: String): Boolean = text.any { it.code in 0x4E00..0x9FFF || it.code in 0x3040..0x30FF || it.code in 0xAC00..0xD7AF }
 
     /**
-     * 用 Android 系统字体渲染文字 → 0/1 网格。
+     * 用系统字体以像素风渲染（关抗锯齿，目标高度直接画）。
      * height = 文字高度（方块数），spacing = 字间距（方块数）。
-     * 整体渲染（不逐字拆），对 CJK 更可靠。
      */
     fun renderTtf(text: String, height: Int, spacing: Int): Array<IntArray> {
         val h = height.coerceAtLeast(4)
-        // 用支持中文的系统字体
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val paint = Paint().apply {
             typeface = Typeface.SANS_SERIF
             color = android.graphics.Color.BLACK
-            isAntiAlias = true
+            isAntiAlias = false    // 像素风：不模糊
+            textSize = h.toFloat()
         }
-        // 先测总宽：逐字量 + 间距
+        // 逐字测量宽度（1:1 像素 = 方块，无 oversample）
+        val glyphs = mutableListOf<Pair<Float, Float>>() // width, xOff for draw
         var totalW = 0f
-        val widths = FloatArray(text.length)
         for (i in text.indices) {
-            paint.textSize = h * 4f
-            widths[i] = paint.measureText(text, i, i + 1)
-            totalW += widths[i]
+            val w = paint.measureText(text, i, i + 1)
+            glyphs.add(w to totalW)
+            totalW += w + spacing
         }
-        totalW += spacing * h * (text.length - 1).coerceAtLeast(0)
         val canvasW = totalW.toInt().coerceAtLeast(1)
-        val canvasH = h * 4 // oversample 4x
-
-        val bmp = Bitmap.createBitmap(canvasW * 2, canvasH, Bitmap.Config.ARGB_8888)
+        val fm = paint.fontMetrics
+        val bmp = Bitmap.createBitmap(canvasW, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawColor(android.graphics.Color.WHITE)
-        paint.textSize = h * 4f
-        val fm = paint.fontMetrics
-        var xCur = 0f
         for (i in text.indices) {
-            c.drawText(text, i, i + 1, xCur, -fm.ascent, paint)
-            xCur += widths[i] + spacing * h // spacing 以方块为单位
+            c.drawText(text, i, i + 1, glyphs[i].second, -fm.ascent, paint)
         }
 
-        // downscale to target height
-        val outW = ((totalW / h * h) / 4).toInt().coerceAtLeast(1)
-        val small = Bitmap.createScaledBitmap(bmp, outW, h, true)
-        val pixels = IntArray(outW * h)
-        small.getPixels(pixels, 0, outW, 0, 0, outW, h)
-        bmp.recycle(); small.recycle()
+        val pixels = IntArray(canvasW * h)
+        bmp.getPixels(pixels, 0, canvasW, 0, 0, canvasW, h)
+        bmp.recycle()
 
         val rows = Array(h) { y ->
-            IntArray(outW) { x ->
-                val px = pixels[y * outW + x]
+            IntArray(canvasW) { x ->
+                val px = pixels[y * canvasW + x]
                 val r = (px shr 16) and 0xFF; val g = (px shr 8) and 0xFF; val b = px and 0xFF
-                val gray = (r * 299 + g * 587 + b * 114) / 1000
-                if (gray < 200) 1 else 0 // 黑色像素=前景
+                // 白色背景=0，黑色笔画=1
+                if (r < 128 && g < 128 && b < 128) 1 else 0
             }
         }
         return rows

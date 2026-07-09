@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,7 +83,11 @@ fun CategoryCard(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "${row.count} 个",
+                    text = pluralStringResource(
+                        id = R.plurals.category_count,
+                        count = row.count,
+                        row.count,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

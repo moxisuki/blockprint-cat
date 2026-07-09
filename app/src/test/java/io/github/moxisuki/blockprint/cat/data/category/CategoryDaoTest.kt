@@ -99,4 +99,30 @@ class CategoryDaoTest {
         assertEquals(1, counts["c2"])
         assertEquals(1, counts[null])
     }
+
+    @Test
+    fun `reassignCategory moves blueprints to new category`() = runTest {
+        dao.upsert(cat("c1", "Castle"))
+        dao.upsert(cat("c2", "Redstone"))
+        bpDao.upsert(bp("b1", "c1"))
+        bpDao.upsert(bp("b2", "c1"))
+        bpDao.upsert(bp("b3", null))
+
+        bpDao.reassignCategory(listOf("b1", "b3"), "c2")
+
+        val counts = dao.observeCountsByCategory().first().associate { it.categoryId to it.cnt }
+        assertEquals(1, counts["c1"])
+        assertEquals(2, counts["c2"])
+        assertEquals(null, counts[null])
+    }
+
+    @Test
+    fun `reassignCategory with null removes from any category`() = runTest {
+        dao.upsert(cat("c1", "Castle"))
+        bpDao.upsert(bp("b1", "c1"))
+        bpDao.reassignCategory(listOf("b1"), null)
+        val counts = dao.observeCountsByCategory().first()
+        assertEquals(1, counts.first { it.categoryId == null }.cnt)
+        assertEquals(null, counts.firstOrNull { it.categoryId == "c1" })
+    }
 }

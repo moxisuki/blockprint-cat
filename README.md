@@ -6,6 +6,11 @@
 
 <p align="center">Android 端 Minecraft 蓝图管理与 3D 预览工具</p>
 
+<p align="center">
+  <a href="https://crowdin.com/project/blockprint-cat"><img src="https://badges.crowdin.net/blockprint-cat/localized.svg" alt="Crowdin" /></a>
+  <a href="https://github.com/moxisuki/blockprint-cat/actions/workflows/build.yml"><img src="https://github.com/moxisuki/blockprint-cat/actions/workflows/build.yml/badge.svg" alt="Build" /></a>
+</p>
+
 <table>
 <tr>
   <td><img src="docs/screenshots/d5.png" alt="首页" width="100%"></td>

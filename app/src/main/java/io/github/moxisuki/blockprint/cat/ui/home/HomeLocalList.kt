@@ -39,6 +39,7 @@ import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMeta
 import io.github.moxisuki.blockprint.cat.data.category.CategoryRow
 import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
 import io.github.moxisuki.blockprint.cat.ui.home.components.EmptyHomeState
+import io.github.moxisuki.blockprint.cat.ui.home.components.CategoryListHeader
 import io.github.moxisuki.blockprint.cat.ui.home.components.HomeBlueprintCard
 import io.github.moxisuki.blockprint.cat.ui.home.components.HomeFilterPanel
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
@@ -95,6 +96,7 @@ internal fun LocalBlueprintList(
     onCategorySelect: (CategoryRow) -> Unit = {},
     onCategoryLongClick: (CategoryRow) -> Unit = {},
     onAddCategory: () -> Unit = {},
+    onClearCategoryFilter: () -> Unit = {},
     onLongPress: (String) -> Unit = {},
     isSelected: (String) -> Boolean = { false },
 ) {
@@ -171,6 +173,18 @@ internal fun LocalBlueprintList(
                     onFormatChange = onFilterFormatChange,
                 )
             }
+            // 分类 header (sticky, 不滚动)
+            val selectedRow = categories.firstOrNull { row ->
+                when (row) {
+                    is CategoryRow.All -> selectedCategoryId == null
+                    is CategoryRow.Real -> selectedCategoryId == row.entity.id
+                }
+            } ?: categories.firstOrNull() ?: CategoryRow.All(visibleBlueprints.size)
+            CategoryListHeader(
+                selectedCategoryRow = selectedRow,
+                visibleCount = visibleBlueprints.size,
+                onClearFilter = onClearCategoryFilter,
+            )
             if (visibleBlueprints.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(

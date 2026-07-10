@@ -448,6 +448,7 @@ fun HomeScreen(
                                     if (row is CategoryRow.Real) editCategoryFor = row.entity
                                 },
                                 onAddCategory = { showNewDialog = true },
+                                onClearCategoryFilter = { viewModel.selectCategory(null) },
                                 onLongPress = viewModel::enterMultiSelect,
                                 isSelected = { uuid ->
                                     (multi as? MultiSelectState.On)?.selected?.contains(uuid) == true

@@ -205,6 +205,8 @@
     <string name="home_subdir_hint">The app reads the blockprintCat/ subfolder under the chosen directory (created if absent)</string>
     <string name="home_scanning">Scanning blueprints…</string>
     <string name="home_filter_search_hint">Search filenames…</string>
+    <string name="home_list_header_subtitle">%1$d blueprints</string>
+    <string name="home_list_header_clear">Clear filter</string>
     <string name="home_filter_label_category">Category</string>
     <string name="home_filter_label_format">Format</string>
     <string name="home_filter_format_all">All</string>

@@ -38,8 +38,70 @@
             android:enabled="false"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|fontScale"
-            android:theme="@style/Theme.BlockPrintCat" />
+            android:theme="@style/Theme.BlockPrintCat">
+            <!--
+                Accept blueprint files opened from other apps (file managers,
+                browsers, chat apps). All extensions the blockprint-core
+                reader supports.
+
+                WHY THIS IS SPLIT INTO MULTIPLE intent-filter BLOCKS:
+                  Android matches a single intent-filter as an atomic unit —
+                  if ANY <data> child mismatches the intent, the whole filter
+                  is rejected. Mixing content:// + file:// + pathPattern in
+                  one filter breaks pathPattern matching on some OEMs. So we
+                  separate by scheme + by MIME type, one filter per shape.
+
+                WHY NO RAW .json / .nbt IN pathPattern:
+                  *.json and *.nbt path matching would make us absorb every
+                  JSON/NBT file in the system, which is too greedy. We claim
+                  those only via mimeType below, where the user (or file
+                  manager) makes the call.
+            -->
+
+            <!-- content:// URIs (FileProvider / SAF) for .litematic + .schem -->
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.litematic" />
+                <data android:pathPattern=".*\\.schem" />
+                <data android:pathPattern=".*\\.schematic" />
+                <data android:pathPattern=".*\\.nbt" />
+            </intent-filter>
+
+            <!-- content:// URIs as a generic catch-all — covers MIME-only senders
+                 that don't include a recognized path. -->
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+
+            <!-- file:// URIs (legacy file managers) for the same extensions -->
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.litematic" />
+                <data android:pathPattern=".*\\.schem" />
+                <data android:pathPattern=".*\\.schematic" />
+                <data android:pathPattern=".*\\.nbt" />
+            </intent-filter>
+
+            <!-- file:// URIs generic catch-all -->
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
         <activity-alias
             android:name=".MainActivityV1"
             android:targetActivity=".MainActivity"
@@ -50,6 +112,45 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!--
+                Aliases do NOT inherit intent-filters from their targetActivity
+                — each alias must declare its own. V1 is the only enabled
+                launcher entry, so it has to mirror the parent's VIEW filters
+                for the "Open with" dialog to surface BlockPrint Cat.
+            -->
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.litematic" />
+                <data android:pathPattern=".*\\.schem" />
+                <data android:pathPattern=".*\\.schematic" />
+                <data android:pathPattern=".*\\.nbt" />
+            </intent-filter>
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.litematic" />
+                <data android:pathPattern=".*\\.schem" />
+                <data android:pathPattern=".*\\.schematic" />
+                <data android:pathPattern=".*\\.nbt" />
+            </intent-filter>
+            <intent-filter android:label="@string/intent_label_open_blueprint">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity-alias>
         <activity-alias

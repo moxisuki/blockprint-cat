@@ -446,6 +446,9 @@ fun HomeScreen(
                                         is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
                                     }
                                 },
+                                onCategoryEdit = { row ->
+                                    if (row is CategoryRow.Real) editCategoryFor = row.entity
+                                },
                                 onManageCategoryClick = { showManageDialog = true },
                                 onClearCategoryFilter = { viewModel.selectCategory(null) },
                                 onLongPress = viewModel::enterMultiSelect,

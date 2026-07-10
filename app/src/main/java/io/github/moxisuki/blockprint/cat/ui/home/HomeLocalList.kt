@@ -94,6 +94,7 @@ internal fun LocalBlueprintList(
     categories: List<CategoryRow> = emptyList(),
     selectedCategoryId: String? = null,
     onCategorySelect: (CategoryRow) -> Unit = {},
+    onCategoryEdit: (CategoryRow) -> Unit = {},
     onManageCategoryClick: () -> Unit = {},
     onClearCategoryFilter: () -> Unit = {},
     onLongPress: (String) -> Unit = {},
@@ -179,6 +180,7 @@ internal fun LocalBlueprintList(
                 selectedRow = selectedRow,
                 visibleCount = visibleBlueprints.size,
                 onSelect = onCategorySelect,
+                onEdit = onCategoryEdit,
                 onClearFilter = onClearCategoryFilter,
                 onManageClick = onManageCategoryClick,
             )

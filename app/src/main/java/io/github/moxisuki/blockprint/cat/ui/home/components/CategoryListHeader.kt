@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,9 +56,17 @@ private const val PAGER_HEIGHT = 64
  * "管理分类" card (gear + new) — swipe past all real categories to access
  * management (create/edit/delete).
  *
- * Visual: full-width card with cover/icon on the left, name + count on the
- * right, optional clear-filter ✕ button. When the user is on a specific
- * category (not "全部" and not "管理"), the clear button is shown.
+ * Visual: no card background, left-aligned, no peek (sibling pages are
+ * not shown at rest). Selection is indicated by primary text color +
+ * SemiBold on the category name.
+ *
+ * Interaction:
+ *   - Swipe to a page → onSelect fires immediately when the swipe settles
+ *     (currentPage + isScrollInProgress=false). The category switches
+ *     right away, no extra tap required.
+ *   - Tap a card → onEdit fires (opens the category edit dialog).
+ *   - Tap the clear button → onClearFilter (reset to "全部").
+ *   - Tap the manage page → onManageClick (open management dialog).
  *
  * Gesture isolation: this pager is inside the Local tab of the outer
  * HomeScreen pager (Local ↔ PC). Compose's nested HorizontalPager handles
@@ -71,6 +80,7 @@ internal fun CategoryListHeader(
     selectedRow: CategoryRow,
     visibleCount: Int,
     onSelect: (CategoryRow) -> Unit,
+    onEdit: (CategoryRow) -> Unit,
     onClearFilter: () -> Unit,
     onManageClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -91,10 +101,22 @@ internal fun CategoryListHeader(
         }
     }
 
+    // 滑动结束立即切换分类 (currentPage 变化 + 不在拖动中)
+    // isScrollInProgress 保证动画中间帧不触发回调, 避免快速滑动时反复切
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage to pagerState.isScrollInProgress }
+            .collect { (page, scrolling) ->
+                if (!scrolling && page < rows.size) {
+                    val row = rows[page]
+                    if (row != selectedRow) onSelect(row)
+                }
+            }
+    }
+
     HorizontalPager(
         state = pagerState,
-        contentPadding = PaddingValues(horizontal = 32.dp),
-        pageSpacing = 8.dp,
+        contentPadding = PaddingValues(0.dp),
+        pageSpacing = 0.dp,
         modifier = modifier
             .fillMaxWidth()
             .height(PAGER_HEIGHT.dp),
@@ -114,7 +136,7 @@ internal fun CategoryListHeader(
                 selected = isSelectedPage,
                 count = if (isSelectedPage) visibleCount else rows[page].count,
                 showClear = !isSelectedPage && isRealCategory(rows[page]),
-                onClick = { onSelect(rows[page]) },
+                onClick = { onEdit(rows[page]) },  // 点击 = 编辑
                 onClear = onClearFilter,
             )
         } else {
@@ -148,18 +170,15 @@ private fun HeaderCard(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-            .background(bg)
             .combinedClickable(onClick = onClick, onLongClick = {})
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Cover/icon container
+        // Cover/icon container (no background — sits on screen surface)
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                .clip(RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
             AnimatedContent(
@@ -203,7 +222,8 @@ private fun HeaderCard(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (selected) MaterialTheme.colorScheme.primary
+                             else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                 )
             }

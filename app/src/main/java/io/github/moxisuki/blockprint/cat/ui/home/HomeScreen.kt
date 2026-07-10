@@ -83,7 +83,6 @@ import io.github.moxisuki.blockprint.cat.ui.bridge.ConnectionState
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcActionSheet
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcBlueprintCard
 import io.github.moxisuki.blockprint.cat.ui.bridge.TransferProgressBar
-import io.github.moxisuki.blockprint.cat.ui.category.CategoryHomeSection
 import io.github.moxisuki.blockprint.cat.ui.category.CategoryMoveDialog
 import io.github.moxisuki.blockprint.cat.ui.category.EditCategoryDialog
 import io.github.moxisuki.blockprint.cat.ui.category.MultiSelectAppBar
@@ -148,9 +147,9 @@ fun HomeScreen(
 
     val allBlueprints by viewModel.displayedBlueprints.collectAsStateWithLifecycle()
     val multi by viewModel.multi.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val selectedCategoryId by viewModel.selectedCategoryId.collectAsStateWithLifecycle()
     val safFolderName = viewModel.safFolderName()
-    // 还没选 SAF 文件夹时, 整个分类区隐藏(避免"还没有分类"和"暂无蓝图"双提示打架)
-    val hasSafFolder = safFolderName != null
     var visibleCount by remember { mutableIntStateOf(PAGE_SIZE) }
 
     val visibleBlueprints by remember {
@@ -391,21 +390,6 @@ fun HomeScreen(
                 when (page) {
                     0 -> {
                         Column(modifier = Modifier.fillMaxSize()) {
-                            if (hasSafFolder) {
-                                CategoryHomeSection(
-                                    vm = viewModel,
-                                    onCategoryClick = { row ->
-                                        when (row) {
-                                            is CategoryRow.All -> viewModel.selectCategory(null)
-                                            is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
-                                        }
-                                    },
-                                    onCategoryLongClick = { row ->
-                                        if (row is CategoryRow.Real) editCategoryFor = row.entity
-                                    },
-                                    onAddClick = { showNewDialog = true },
-                                )
-                            }
                             LocalBlueprintList(
                                 modifier = Modifier.weight(1f),
                                 allBlueprints = allBlueprints,
@@ -452,6 +436,18 @@ fun HomeScreen(
                                 onFilterQueryChange = { localFilterQuery = it; visibleCount = PAGE_SIZE },
                                 filterFormat = localFilterFormat,
                                 onFilterFormatChange = { localFilterFormat = it; visibleCount = PAGE_SIZE },
+                                categories = categories,
+                                selectedCategoryId = selectedCategoryId,
+                                onCategorySelect = { row ->
+                                    when (row) {
+                                        is CategoryRow.All -> viewModel.selectCategory(null)
+                                        is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
+                                    }
+                                },
+                                onCategoryLongClick = { row ->
+                                    if (row is CategoryRow.Real) editCategoryFor = row.entity
+                                },
+                                onAddCategory = { showNewDialog = true },
                                 onLongPress = viewModel::enterMultiSelect,
                                 isSelected = { uuid ->
                                     (multi as? MultiSelectState.On)?.selected?.contains(uuid) == true

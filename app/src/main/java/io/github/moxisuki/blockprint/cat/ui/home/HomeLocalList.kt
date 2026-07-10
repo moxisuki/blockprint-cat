@@ -9,7 +9,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,16 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,10 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMeta
+import io.github.moxisuki.blockprint.cat.data.category.CategoryRow
 import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
 import io.github.moxisuki.blockprint.cat.ui.home.components.EmptyHomeState
 import io.github.moxisuki.blockprint.cat.ui.home.components.HomeBlueprintCard
-import io.github.moxisuki.blockprint.cat.ui.home.components.FormatChipFilter
+import io.github.moxisuki.blockprint.cat.ui.home.components.HomeFilterPanel
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import kotlinx.coroutines.delay
 
@@ -97,6 +89,11 @@ internal fun LocalBlueprintList(
     onFilterQueryChange: (String) -> Unit,
     filterFormat: FormatFilter,
     onFilterFormatChange: (FormatFilter) -> Unit,
+    categories: List<CategoryRow> = emptyList(),
+    selectedCategoryId: String? = null,
+    onCategorySelect: (CategoryRow) -> Unit = {},
+    onCategoryLongClick: (CategoryRow) -> Unit = {},
+    onAddCategory: () -> Unit = {},
     onLongPress: (String) -> Unit = {},
     isSelected: (String) -> Boolean = { false },
 ) {
@@ -159,12 +156,16 @@ internal fun LocalBlueprintList(
                 enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(180)),
                 exit = shrinkVertically(animationSpec = tween(280)) + fadeOut(animationSpec = tween(220)),
             ) {
-                BlueprintFilterBar(
+                HomeFilterPanel(
                     query = filterQuery,
                     onQueryChange = onFilterQueryChange,
-                    selected = filterFormat,
-                    onSelectedChange = onFilterFormatChange,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    categories = categories,
+                    selectedCategoryId = selectedCategoryId,
+                    onCategorySelect = onCategorySelect,
+                    onCategoryLongClick = onCategoryLongClick,
+                    onAddCategory = onAddCategory,
+                    selectedFormat = filterFormat,
+                    onFormatChange = onFilterFormatChange,
                 )
             }
             if (visibleBlueprints.isEmpty()) {
@@ -217,82 +218,3 @@ internal fun LocalBlueprintList(
     }
 }
 
-/**
- * Search field + format chip row that appears beneath the action bar when
- * the user taps the filter icon. `query` and `selected` are external state
- * owned by HomeScreen so they survive tab switches.
- */
-@Composable
-internal fun BlueprintFilterBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    selected: FormatFilter,
-    onSelectedChange: (FormatFilter) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = {
-                Text(
-                    stringResource(R.string.home_filter_search_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            trailingIcon = if (query.isNotEmpty()) {{
-                IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }} else null,
-            shape = RoundedCornerShape(24.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            FormatChipFilter(
-                label = stringResource(R.string.home_filter_format_all),
-                selected = selected == FormatFilter.All,
-            ) { onSelectedChange(FormatFilter.All) }
-            FormatChipFilter(
-                label = stringResource(R.string.format_filter_litematica),
-                selected = selected == FormatFilter.Litematica,
-            ) { onSelectedChange(FormatFilter.Litematica) }
-            FormatChipFilter(
-                label = stringResource(R.string.format_filter_schematic),
-                selected = selected == FormatFilter.Schematic,
-            ) { onSelectedChange(FormatFilter.Schematic) }
-            FormatChipFilter(
-                label = stringResource(R.string.format_filter_json),
-                selected = selected == FormatFilter.Json,
-            ) { onSelectedChange(FormatFilter.Json) }
-            FormatChipFilter(
-                label = stringResource(R.string.format_filter_nbt),
-                selected = selected == FormatFilter.Nbt,
-            ) { onSelectedChange(FormatFilter.Nbt) }
-        }
-    }
-}

@@ -219,6 +219,8 @@
     <string name="home_tab_local">Local</string>
     <string name="home_tab_pc">PC</string>
     <string name="home_filter_search_hint">Search filenames…</string>
+    <string name="home_filter_label_category">分类</string>
+    <string name="home_filter_label_format">格式</string>
     <string name="home_filter_format_all">All</string>
     <string name="home_filter_no_results">No matching blueprints</string>
     <string name="home_connect_pc_hint">Connect a PC device via the top status bar first</string>

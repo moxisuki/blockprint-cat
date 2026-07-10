@@ -2,21 +2,66 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
-## v1.3.0 (unreleased)
+## v1.4.0 · 2026-07-11
 
-### Added
+### 新增
 
-- Blueprint categories: a new horizontal layer on the Home screen lets you organize local blueprints into named, color-coded buckets with 8-color palette × 8-pattern cover designs.
-- Long-press a blueprint card to enter multi-select mode for bulk reassignment and deletion.
-- Edit existing categories (rename, recolor, repaint) and delete them — blueprints automatically revert to "未分类" via Room's ON DELETE SET NULL.
+- **从外部直接打开蓝图文件**：在文件管理器、聊天、浏览器等场景下点击 `.litematic` / `.schem` / `.schematic` / `.nbt` 文件，可直接用 BlockPrint Cat 打开；打开流程经过预览页面（显示文件名、作者、区域数、方块数、文件大小、格式），确认后才导入
+- **首页内导入也走预览**：顶部「上传」图标选择本地蓝图文件后，同样先弹出预览确认面板，让用户在写入 SAF 文件夹前审视
 
-### Changed
+### Intent / 权限
 
-- Database schema bumped to v10. Existing users will lose cached blueprint metadata on first launch after upgrade (one-time rescan rebuilds it).
+- `MainActivity` 加 `android:launchMode="singleTop"`，保证 ACTION_VIEW 经 `onNewIntent` 走并保留原 Activity 的 URI 授权
+- 新增多个 `<intent-filter>`（V1 alias 同样复制）覆盖 content:// + file:// 两种 scheme，按扩展名 pathPattern + `*/*` MIME 兜底，所以旧文件浏览器也能匹配
+- Uri 通过 `LocalPendingImportUri` CompositionLocal 透传到页面，全程不 stringify、不 `Uri.parse`，保留 ACTION_VIEW 自带的临时读权限
+- 文件名通过 `OpenableColumns.DISPLAY_NAME` 查询（部分第三方 provider 用 docId 当 lastPathSegment，会退化为「随机数」），正确显示原始文件名 + 后缀
 
-### Notes
+### UI
 
-- No breaking changes for users who never create a category: the rail shows an empty-state hint and the lower blueprint list behaves exactly as before.
+- 预览 UI 用 `ModalBottomSheet`，浮在主页/PC/社区任何 tab 之上，不离开当前页面；保留 scrim 让用户感知上下文
+- 格式 chip 和 HomeBlueprintCard 完全一致：中文标签 + 按 `BadgeColor.Primary/Secondary/Outline` 上色
+
+### 修复
+
+- MT Manager / Solid Explorer / Google Drive 这类用 docId 当 lastPathSegment 的 provider，原先会显示一串 UUID；现在通过 `OpenableColumns.DISPLAY_NAME` 拿到真实文件名
+- `Activity` 的 `enableEdgeToEdge` + `singleTop` 协同下，外部分享文件不再丢 ACTION_VIEW 授权导致 `SecurityException: Permission Denial`
+
+### 重构
+
+- 抽离 `ui/import_/ImportPreviewSheet.kt`：之前是 `Scaffold + TopAppBar` 整页面，现在改成 `ModalBottomSheet`，既支持 ACTION_VIEW 也支持 HomeScreen 内 picker 走同一条路径
+
+## v1.3.0 · 2026-07-10
+
+### 新增
+
+- **分类管理 (Blueprint Categories)**
+  - 首页顶部横向滑动的分类条，`HorizontalPager` 实现，每张卡片从 8 色调色板 × 8 种像素图案中选择封面
+  - 长按蓝图卡片进入多选模式：底部弹起 Move / Delete 工具栏
+  - 类别管理对话框：新建 / 重命名 / 改封面 / 删除（删除时蓝图自动归到「未分类」，零数据丢失）
+  - 末页「管理分类」卡片，整合所有类别操作入口
+- **分类条交互**
+  - 滑动分页即时切换分类，bind 用 `rememberUpdatedState` 解决 stale capture 闭包陷阱
+  - 点击分类卡 = 打开编辑，长按分类卡 = 通过「管理」对话框操作
+  - 上滑列表自动收起分类条 + filter 面板，下滑自动展开，全程 200ms 缓动
+
+### 动画 / UI 优化
+
+- 分类切换过渡：内容区用 `slideVertically + fade` 替代纯 crossfade，模拟「新内容从下方推出」消除鬼影感
+- 分类卡背景与 app 背景融为一体，仅靠主色文字 + SemiBold 字重区分选中态
+- 筛选面板展开 / 收起改为 FastOutSlowIn 缓动 + expandVertically + fade
+- 多选 AppBar 选中态统一 titleMedium / bodyMedium 字号阶梯
+
+### 国际化
+
+- `res/values/strings.xml` 是源语言（中文），`res/values-en/strings.xml` 是英文翻译
+- 所有新功能字符串在 commit 时同时添加到这两个 locale
+- 第三方（俄语、日语…）由 Crowdin 管理，本地不再编辑
+
+### 依赖 / 数据层
+
+- 数据库 schema 升到 v10，新增 `categories` 表 + `blueprints.categoryId` 外键，删除分类时 Room `ON DELETE SET NULL` 自动孤立化所属蓝图
+- `CategoryManager`（`@Singleton`） + `CategoryDao`，hot StateFlow 暴露给 UI
+- 149 个单元测试通过，覆盖 DAO sort/count/FK 行为与 Manager 状态合并
 
 ## [1.2.0] · 2026-07-10
 

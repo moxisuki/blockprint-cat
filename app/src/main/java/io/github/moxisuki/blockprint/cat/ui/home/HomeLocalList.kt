@@ -163,13 +163,9 @@ internal fun LocalBlueprintList(
             safFolderName = safFolderName,
             modifier = modifier.fillMaxSize(),
         )
-    } else if (allBlueprints.isEmpty()) {
-        // SAF 已选, 有蓝图, 但当前分类下为空 (其他分类有)
-        CategoryEmptyState(
-            onClearFilter = onClearCategoryFilter,
-            modifier = modifier.fillMaxSize(),
-        )
     } else {
+        // SAF 已选 + 有文件: 完整显示 (分类条 + 筛选 + 内容)
+        // 即使当前分类为空, 分类条仍要可见 (用户能切换到其他分类)
         Column(modifier = modifier.fillMaxSize()) {
             AnimatedVisibility(
                 visible = filterVisible,
@@ -202,13 +198,21 @@ internal fun LocalBlueprintList(
                 onManageClick = onManageCategoryClick,
             )
             if (visibleBlueprints.isEmpty()) {
-                NoMatchState(
-                    onClearFilters = {
-                        onFilterQueryChange("")
-                        onFilterFormatChange(FormatFilter.All)
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                // 区分两种空态: 当前分类本身没文件 vs 搜索/格式过滤排除全部
+                if (allBlueprints.isEmpty()) {
+                    CategoryEmptyState(
+                        onClearFilter = onClearCategoryFilter,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    NoMatchState(
+                        onClearFilters = {
+                            onFilterQueryChange("")
+                            onFilterFormatChange(FormatFilter.All)
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),

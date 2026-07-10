@@ -2,21 +2,38 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
-## v1.3.0 (unreleased)
+## v1.3.0 · 2026-07-10
 
-### Added
+### 新增
 
-- Blueprint categories: a new horizontal layer on the Home screen lets you organize local blueprints into named, color-coded buckets with 8-color palette × 8-pattern cover designs.
-- Long-press a blueprint card to enter multi-select mode for bulk reassignment and deletion.
-- Edit existing categories (rename, recolor, repaint) and delete them — blueprints automatically revert to "未分类" via Room's ON DELETE SET NULL.
+- **分类管理 (Blueprint Categories)**
+  - 首页顶部横向滑动的分类条，`HorizontalPager` 实现，每张卡片从 8 色调色板 × 8 种像素图案中选择封面
+  - 长按蓝图卡片进入多选模式：底部弹起 Move / Delete 工具栏
+  - 类别管理对话框：新建 / 重命名 / 改封面 / 删除（删除时蓝图自动归到「未分类」，零数据丢失）
+  - 末页「管理分类」卡片，整合所有类别操作入口
+- **分类条交互**
+  - 滑动分页即时切换分类，bind 用 `rememberUpdatedState` 解决 stale capture 闭包陷阱
+  - 点击分类卡 = 打开编辑，长按分类卡 = 通过「管理」对话框操作
+  - 上滑列表自动收起分类条 + filter 面板，下滑自动展开，全程 200ms 缓动
 
-### Changed
+### 动画 / UI 优化
 
-- Database schema bumped to v10. Existing users will lose cached blueprint metadata on first launch after upgrade (one-time rescan rebuilds it).
+- 分类切换过渡：内容区用 `slideVertically + fade` 替代纯 crossfade，模拟「新内容从下方推出」消除鬼影感
+- 分类卡背景与 app 背景融为一体，仅靠主色文字 + SemiBold 字重区分选中态
+- 筛选面板展开 / 收起改为 FastOutSlowIn 缓动 + expandVertically + fade
+- 多选 AppBar 选中态统一 titleMedium / bodyMedium 字号阶梯
 
-### Notes
+### 国际化
 
-- No breaking changes for users who never create a category: the rail shows an empty-state hint and the lower blueprint list behaves exactly as before.
+- `res/values/strings.xml` 是源语言（中文），`res/values-en/strings.xml` 是英文翻译
+- 所有新功能字符串在 commit 时同时添加到这两个 locale
+- 第三方（俄语、日语…）由 Crowdin 管理，本地不再编辑
+
+### 依赖 / 数据层
+
+- 数据库 schema 升到 v10，新增 `categories` 表 + `blueprints.categoryId` 外键，删除分类时 Room `ON DELETE SET NULL` 自动孤立化所属蓝图
+- `CategoryManager`（`@Singleton`） + `CategoryDao`，hot StateFlow 暴露给 UI
+- 149 个单元测试通过，覆盖 DAO sort/count/FK 行为与 Manager 状态合并
 
 ## [1.2.0] · 2026-07-10
 

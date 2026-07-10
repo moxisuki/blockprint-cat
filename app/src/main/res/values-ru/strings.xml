@@ -20,7 +20,7 @@
     <string name="settings_backup_title">Резервное копирование</string>
     <string name="settings_backup_subtitle">Упаковать локальные чертежи и сохранить в каталог загрузок</string>
     <string name="settings_about_title">О приложении</string>
-    <string name="settings_about_subtitle">BlockPrint Cat v1.0</string>
+    <string name="settings_about_subtitle">BlockPrint Cat</string>
     <string name="settings_section_appearance">Внешний вид</string>
     <string name="settings_section_features">Функции</string>
     <string name="settings_section_data">Данные</string>
@@ -30,6 +30,7 @@
     <string name="settings_language_subtitle_system">Как в системе</string>
     <string name="settings_language_subtitle_zh">Упрощённый китайский</string>
     <string name="settings_language_subtitle_en">English</string>
+    <string name="settings_language_subtitle_ru">Русский</string>
     <!-- 顶部栏标题 -->
     <string name="nav_title_home">Чертежи</string>
     <string name="nav_title_community">Чертежи сообщества</string>

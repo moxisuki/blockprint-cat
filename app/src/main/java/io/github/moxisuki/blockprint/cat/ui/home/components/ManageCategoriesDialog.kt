@@ -84,7 +84,7 @@ internal fun ManageCategoriesDialog(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = stringResource(R.string.home_category_empty_sub),
+                            text = stringResource(R.string.cat_dialog_manage_empty),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

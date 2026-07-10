@@ -224,7 +224,11 @@
     <string name="home_filter_label_category">分类</string>
     <string name="home_filter_label_format">格式</string>
     <string name="home_filter_format_all">All</string>
-    <string name="home_filter_no_results">No matching blueprints</string>
+    <string name="home_category_empty_title">该分类下暂无蓝图</string>
+    <string name="home_category_empty_hint">长按其他蓝图，选择「移动到分类」可移入此分类</string>
+    <string name="home_filter_empty_title">没有匹配的蓝图</string>
+    <string name="home_filter_empty_hint">试试清除搜索或切换格式</string>
+    <string name="action_clear_filters">清空筛选</string>
     <string name="home_connect_pc_hint">Connect a PC device via the top status bar first</string>
     <string name="home_pc_empty_title">No blueprints on this PC yet</string>
     <string name="home_pc_empty_hint">Place or save a new .litematic in-game to see it here</string>
@@ -355,6 +359,7 @@
     <string name="home_category_manage">管理分类</string>
     <string name="cat_dialog_manage_title">管理分类</string>
     <string name="cat_dialog_manage_new">+ 新建分类</string>
+    <string name="cat_dialog_manage_empty">还没有分类，点击上方按钮创建</string>
     <string name="dialog_delete_title">Confirm delete</string>
     <string name="dialog_delete_msg">Delete %1$s? This cannot be undone.</string>
     <string name="dialog_rename_title">Rename file</string>
@@ -841,8 +846,6 @@ You may clear all locally stored data at any time via Settings → Storage → C
     <string name="home_category_title">我的分类</string>
     <string name="home_category_all">全部</string>
     <string name="home_category_uncategorized">未分类</string>
-    <string name="home_category_empty_title">还没有分类</string>
-    <string name="home_category_empty_sub">点击右上角 + 新建分类，把蓝图整理得井井有条</string>
     <string name="cat_dialog_new_title">新建分类</string>
     <string name="cat_dialog_edit_title">编辑\"%1$s\"</string>
     <string name="cat_dialog_label_name">名称</string>

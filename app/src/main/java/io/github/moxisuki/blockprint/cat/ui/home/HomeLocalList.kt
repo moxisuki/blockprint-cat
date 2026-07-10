@@ -40,8 +40,10 @@ import io.github.moxisuki.blockprint.cat.data.category.CategoryRow
 import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
 import io.github.moxisuki.blockprint.cat.ui.home.components.EmptyHomeState
 import io.github.moxisuki.blockprint.cat.ui.home.components.CategoryListHeader
+import io.github.moxisuki.blockprint.cat.ui.home.components.CategoryEmptyState
 import io.github.moxisuki.blockprint.cat.ui.home.components.HomeBlueprintCard
 import io.github.moxisuki.blockprint.cat.ui.home.components.HomeFilterPanel
+import io.github.moxisuki.blockprint.cat.ui.home.components.NoMatchState
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import kotlinx.coroutines.delay
 
@@ -73,6 +75,7 @@ private const val PAGE_SIZE = 15
 internal fun LocalBlueprintList(
     modifier: Modifier = Modifier,
     allBlueprints: List<BlueprintMeta>,
+    totalBlueprintCount: Int,
     scanning: Boolean,
     visibleCount: Int,
     onVisibleCountChange: (Int) -> Unit,
@@ -146,10 +149,24 @@ internal fun LocalBlueprintList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    } else if (allBlueprints.isEmpty()) {
+    } else if (safFolderName == null) {
+        // SAF 未选: 引导选 SAF 文件夹
+        EmptyHomeState(
+            onScanFolder = onRequestSafFolder,
+            safFolderName = null,
+            modifier = modifier.fillMaxSize(),
+        )
+    } else if (totalBlueprintCount == 0) {
+        // SAF 已选, 但文件夹里没有任何蓝图
         EmptyHomeState(
             onScanFolder = onRequestSafFolder,
             safFolderName = safFolderName,
+            modifier = modifier.fillMaxSize(),
+        )
+    } else if (allBlueprints.isEmpty()) {
+        // SAF 已选, 有蓝图, 但当前分类下为空 (其他分类有)
+        CategoryEmptyState(
+            onClearFilter = onClearCategoryFilter,
             modifier = modifier.fillMaxSize(),
         )
     } else {
@@ -185,13 +202,13 @@ internal fun LocalBlueprintList(
                 onManageClick = onManageCategoryClick,
             )
             if (visibleBlueprints.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(R.string.home_filter_no_results),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                NoMatchState(
+                    onClearFilters = {
+                        onFilterQueryChange("")
+                        onFilterFormatChange(FormatFilter.All)
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),

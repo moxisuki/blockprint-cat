@@ -210,7 +210,11 @@
     <string name="home_filter_label_category">Category</string>
     <string name="home_filter_label_format">Format</string>
     <string name="home_filter_format_all">All</string>
-    <string name="home_filter_no_results">No matching blueprints</string>
+    <string name="home_category_empty_title">No blueprints in this category</string>
+    <string name="home_category_empty_hint">Long-press a blueprint and choose \"Move to category\" to put it here</string>
+    <string name="home_filter_empty_title">No matching blueprints</string>
+    <string name="home_filter_empty_hint">Try clearing the search or switching format</string>
+    <string name="action_clear_filters">Clear filters</string>
     <string name="home_connect_pc_hint">Connect a PC device via the top status bar first</string>
     <string name="home_pc_empty_title">No blueprints on this PC yet</string>
     <string name="home_pc_empty_hint">Place or save a new .litematic in-game to see it here</string>
@@ -332,6 +336,7 @@
     <string name="home_category_manage">Manage</string>
     <string name="cat_dialog_manage_title">Manage Categories</string>
     <string name="cat_dialog_manage_new">+ New category</string>
+    <string name="cat_dialog_manage_empty">No categories yet — tap the button above to create one</string>
     <string name="dialog_delete_title">Confirm delete</string>
     <string name="dialog_delete_msg">Delete %1$s? This cannot be undone.</string>
     <string name="dialog_rename_title">Rename file</string>
@@ -756,8 +761,6 @@
     <string name="home_category_title">My categories</string>
     <string name="home_category_all">All</string>
     <string name="home_category_uncategorized">Uncategorized</string>
-    <string name="home_category_empty_title">No categories yet</string>
-    <string name="home_category_empty_sub">Tap + to create a category</string>
     <string name="cat_dialog_new_title">New category</string>
     <string name="cat_dialog_edit_title">Edit \"%1$s\"</string>
     <string name="cat_dialog_label_name">Name</string>

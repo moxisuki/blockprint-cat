@@ -147,6 +147,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     val allBlueprints by viewModel.displayedBlueprints.collectAsStateWithLifecycle()
+    val blueprintCount by viewModel.blueprintCount.collectAsStateWithLifecycle()
     val multi by viewModel.multi.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedCategoryId by viewModel.selectedCategoryId.collectAsStateWithLifecycle()
@@ -395,6 +396,7 @@ fun HomeScreen(
                             LocalBlueprintList(
                                 modifier = Modifier.weight(1f),
                                 allBlueprints = allBlueprints,
+                                totalBlueprintCount = blueprintCount,
                                 scanning = scanning,
                                 visibleCount = visibleCount,
                                 onVisibleCountChange = { visibleCount = it },

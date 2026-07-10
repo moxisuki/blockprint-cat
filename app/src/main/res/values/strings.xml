@@ -31,7 +31,6 @@
     <string name="settings_language_subtitle_system">跟随系统</string>
     <string name="settings_language_subtitle_zh">简体中文</string>
     <string name="settings_language_subtitle_en">English</string>
-    <string name="settings_language_subtitle_ru">Русский</string>
 
     <!-- 顶部栏标题 -->
     <string name="nav_title_home">蓝图</string>

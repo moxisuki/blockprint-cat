@@ -66,31 +66,30 @@ fun CategoryRail(
                 )
             }
         }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(rows, key = { row ->
+                when (row) {
+                    CategoryRow.All -> "cat-all"
+                    is CategoryRow.Real -> "cat-${row.entity.id}"
+                }
+            }) { row ->
+                val isSelected = when (row) {
+                    CategoryRow.All -> selectedId == null
+                    is CategoryRow.Real -> selectedId == row.entity.id
+                }
+                CategoryCard(
+                    row = row,
+                    selected = isSelected,
+                    onClick = { onCategoryClick(row) },
+                    onLongClick = { onCategoryLongClick(row) },
+                )
+            }
+        }
         if (showEmpty && rows.size <= 1) {
             CategoryEmptyState(modifier = Modifier.fillMaxWidth())
-        } else {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(rows, key = { row ->
-                    when (row) {
-                        CategoryRow.All -> "cat-all"
-                        is CategoryRow.Real -> "cat-${row.entity.id}"
-                    }
-                }) { row ->
-                    val isSelected = when (row) {
-                        CategoryRow.All -> selectedId == null
-                        is CategoryRow.Real -> selectedId == row.entity.id
-                    }
-                    CategoryCard(
-                        row = row,
-                        selected = isSelected,
-                        onClick = { onCategoryClick(row) },
-                        onLongClick = { onCategoryLongClick(row) },
-                    )
-                }
-            }
         }
     }
 }

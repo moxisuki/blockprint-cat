@@ -37,7 +37,7 @@ fun CategoryCard(
 ) {
     Surface(
         modifier = modifier
-            .width(96.dp)
+            .width(112.dp)
             .height(120.dp)
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
@@ -56,7 +56,7 @@ fun CategoryCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp),
+                    .height(72.dp),
             ) {
                 when (row) {
                     CategoryRow.All -> {
@@ -71,16 +71,16 @@ fun CategoryCard(
                     }
                 }
             }
-            Column(modifier = Modifier.padding(8.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
                 Text(
                     text = when (row) {
                         CategoryRow.All -> stringResource(R.string.home_category_all)
                         is CategoryRow.Real -> row.entity.name
                     },
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
                     text = pluralStringResource(
@@ -88,7 +88,7 @@ fun CategoryCard(
                         count = row.count,
                         row.count,
                     ),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

@@ -91,6 +91,7 @@ import io.github.moxisuki.blockprint.cat.ui.category.MultiSelectBottomBar
 import io.github.moxisuki.blockprint.cat.ui.category.NewCategoryDialog
 import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
 import io.github.moxisuki.blockprint.cat.ui.home.MultiSelectState
+import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.ui.home.components.EmptyPcState
 import io.github.moxisuki.blockprint.cat.ui.home.components.PcHeader
 import io.github.moxisuki.blockprint.cat.ui.home.util.hasUnsafeWorldEditChars
@@ -410,7 +411,16 @@ fun HomeScreen(
                                 safFolderName = viewModel.safFolderName(),
                                 onRequestSafFolder = onRequestSafFolder,
                                 navController = navController,
-                                onBlueprintSelected = onBlueprintSelected,
+                                onBlueprintSelected = { bp ->
+                                    // In multi-select mode, tap toggles selection instead of opening detail.
+                                    if (multi is MultiSelectState.On) {
+                                        viewModel.toggleSelected(bp.uuid)
+                                    } else if (onBlueprintSelected != null) {
+                                        onBlueprintSelected.invoke(bp)
+                                    } else {
+                                        navController.navigate(NavRoutes.detailRoute(bp.uuid))
+                                    }
+                                },
                                 onDeleteTarget = { deleteTarget = it },
                                 onRenameTarget = { bp -> renameTarget = bp; renameText = bp.fileName },
                                 onUpload = { bp ->

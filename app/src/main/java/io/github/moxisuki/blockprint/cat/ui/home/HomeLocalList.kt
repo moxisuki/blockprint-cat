@@ -1,5 +1,6 @@
 package io.github.moxisuki.blockprint.cat.ui.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -7,6 +8,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -29,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -46,6 +52,7 @@ import io.github.moxisuki.blockprint.cat.ui.home.components.HomeFilterPanel
 import io.github.moxisuki.blockprint.cat.ui.home.components.NoMatchState
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 
 private const val PAGE_SIZE = 15
 
@@ -165,7 +172,6 @@ internal fun LocalBlueprintList(
         )
     } else {
         // SAF 已选 + 有文件: 完整显示 (分类条 + 筛选 + 内容)
-        // 即使当前分类为空, 分类条仍要可见 (用户能切换到其他分类)
         Column(modifier = modifier.fillMaxSize()) {
             AnimatedVisibility(
                 visible = filterVisible,
@@ -181,74 +187,131 @@ internal fun LocalBlueprintList(
                     onFormatChange = onFilterFormatChange,
                 )
             }
-            // 分类 header (sticky, 横向可滑动, 末页是管理)
+
+            // --- 分类 header：向上滑动列表时自动收起 ---
+            val listState = rememberLazyListState()
+            var headerVisible by remember { mutableStateOf(true) }
+            val hasContent = visibleBlueprints.isNotEmpty()
+            val showHeader = headerVisible || !hasContent  // 无内容时始终显示
+
+            // 切换分类时重置滚动位置并显示 header
+            LaunchedEffect(selectedCategoryId) {
+                listState.scrollToItem(0, 0)
+                headerVisible = true
+            }
+
+            // 监听滚动方向：上滑隐藏，下滑显示
+            LaunchedEffect(listState) {
+                var prevIndex = 0
+                var prevOffset = 0
+                snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+                    .collect { (index, offset) ->
+                        if (index == 0 && offset == 0) {
+                            headerVisible = true
+                        } else {
+                            val scrollingDown = index > prevIndex || (index == prevIndex && offset > prevOffset)
+                            val scrollingUp = index < prevIndex || (index == prevIndex && offset < prevOffset)
+                            if (scrollingDown) headerVisible = false
+                            else if (scrollingUp) headerVisible = true
+                        }
+                        prevIndex = index
+                        prevOffset = offset
+                    }
+            }
+
             val selectedRow = categories.firstOrNull { row ->
                 when (row) {
                     is CategoryRow.All -> selectedCategoryId == null
                     is CategoryRow.Real -> selectedCategoryId == row.entity.id
                 }
             } ?: categories.firstOrNull() ?: CategoryRow.All(visibleBlueprints.size)
-            CategoryListHeader(
-                rows = categories,
-                selectedRow = selectedRow,
-                visibleCount = visibleBlueprints.size,
-                onSelect = onCategorySelect,
-                onEdit = onCategoryEdit,
-                onClearFilter = onClearCategoryFilter,
-                onManageClick = onManageCategoryClick,
-            )
-            if (visibleBlueprints.isEmpty()) {
-                // 区分两种空态: 当前分类本身没文件 vs 搜索/格式过滤排除全部
-                if (allBlueprints.isEmpty()) {
-                    CategoryEmptyState(
-                        onClearFilter = onClearCategoryFilter,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    NoMatchState(
-                        onClearFilters = {
-                            onFilterQueryChange("")
-                            onFilterFormatChange(FormatFilter.All)
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(visibleBlueprints, key = { it.uuid }, contentType = { "bp" }) { bp ->
-                        HomeBlueprintCard(
-                            blueprint = bp,
-                            onDetail = {
-                                if (onBlueprintSelected != null) {
-                                    onBlueprintSelected(bp)
-                                } else {
-                                    navController.navigate(NavRoutes.detailRoute(bp.uuid))
-                                }
+
+            AnimatedVisibility(
+                visible = showHeader,
+                enter = expandVertically(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
+                        fadeIn(animationSpec = tween(160, easing = FastOutSlowInEasing)),
+                exit = shrinkVertically(animationSpec = tween(180, easing = FastOutSlowInEasing)) +
+                       fadeOut(animationSpec = tween(120, easing = FastOutSlowInEasing)),
+            ) {
+                CategoryListHeader(
+                    rows = categories,
+                    selectedRow = selectedRow,
+                    visibleCount = visibleBlueprints.size,
+                    onSelect = onCategorySelect,
+                    onEdit = onCategoryEdit,
+                    onClearFilter = onClearCategoryFilter,
+                    onManageClick = onManageCategoryClick,
+                )
+            }
+
+            // 内容区：slideVertically + fade，模拟"内容推出"的感觉
+            AnimatedContent(
+                targetState = selectedCategoryId,
+                transitionSpec = {
+                    (slideInVertically(
+                        initialOffsetY = { fullHeight -> (fullHeight / 16).coerceAtLeast(16) },
+                        animationSpec = tween(220, easing = FastOutSlowInEasing),
+                    ) + fadeIn(animationSpec = tween(160, easing = FastOutSlowInEasing))) togetherWith
+                    (slideOutVertically(
+                        targetOffsetY = { fullHeight -> -(fullHeight / 16).coerceAtLeast(16) },
+                        animationSpec = tween(140, easing = FastOutSlowInEasing),
+                    ) + fadeOut(animationSpec = tween(80)))
+                },
+                label = "categoryContent",
+            ) { _ ->
+                if (visibleBlueprints.isEmpty()) {
+                    if (allBlueprints.isEmpty()) {
+                        CategoryEmptyState(
+                            onClearFilter = onClearCategoryFilter,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        NoMatchState(
+                            onClearFilters = {
+                                onFilterQueryChange("")
+                                onFilterFormatChange(FormatFilter.All)
                             },
-                            onDelete = { onDeleteTarget(bp) },
-                            onRename = { onRenameTarget(bp) },
-                            onUpload = { onUpload(bp) },
-                            connected = bridgeConnected,
-                            canTransfer = canTransfer,
-                            selected = isSelected(bp.uuid),
-                            onLongClick = { onLongPress(bp.uuid) },
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    if (hasMore) {
-                        item(key = "load_more") {
-                            LaunchedEffect(Unit) { onVisibleCountChange(visibleCount + PAGE_SIZE) }
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(visibleBlueprints, key = { it.uuid }, contentType = { "bp" }) { bp ->
+                            HomeBlueprintCard(
+                                blueprint = bp,
+                                onDetail = {
+                                    if (onBlueprintSelected != null) {
+                                        onBlueprintSelected(bp)
+                                    } else {
+                                        navController.navigate(NavRoutes.detailRoute(bp.uuid))
+                                    }
+                                },
+                                onDelete = { onDeleteTarget(bp) },
+                                onRename = { onRenameTarget(bp) },
+                                onUpload = { onUpload(bp) },
+                                connected = bridgeConnected,
+                                canTransfer = canTransfer,
+                                selected = isSelected(bp.uuid),
+                                onLongClick = { onLongPress(bp.uuid) },
+                            )
+                        }
+                        if (hasMore) {
+                            item(key = "load_more") {
+                                LaunchedEffect(Unit) { onVisibleCountChange(visibleCount + PAGE_SIZE) }
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                                }
                             }
                         }
+                        item(key = "bottom_spacer") { Spacer(Modifier.height(88.dp)) }
                     }
-                    item(key = "bottom_spacer") { Spacer(Modifier.height(88.dp)) }
                 }
             }
         }

@@ -440,16 +440,11 @@ fun HomeScreen(
                                 onFilterFormatChange = { localFilterFormat = it; visibleCount = PAGE_SIZE },
                                 categories = categories,
                                 selectedCategoryId = selectedCategoryId,
-                                onCategorySelect = { pageIndex ->
-                                    val row = categories.getOrNull(pageIndex)
+                                onCategorySelect = { row ->
                                     when (row) {
-                                        null, is CategoryRow.All -> viewModel.selectCategory(null)
+                                        is CategoryRow.All -> viewModel.selectCategory(null)
                                         is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
                                     }
-                                },
-                                onCategoryLongClick = { pageIndex ->
-                                    val row = categories.getOrNull(pageIndex)
-                                    if (row is CategoryRow.Real) editCategoryFor = row.entity
                                 },
                                 onManageCategoryClick = { showManageDialog = true },
                                 onClearCategoryFilter = { viewModel.selectCategory(null) },

@@ -40,7 +40,6 @@ import io.github.moxisuki.blockprint.cat.data.category.CategoryRow
 import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
 import io.github.moxisuki.blockprint.cat.ui.home.components.EmptyHomeState
 import io.github.moxisuki.blockprint.cat.ui.home.components.CategoryListHeader
-import io.github.moxisuki.blockprint.cat.ui.home.components.CategoryPager
 import io.github.moxisuki.blockprint.cat.ui.home.components.HomeBlueprintCard
 import io.github.moxisuki.blockprint.cat.ui.home.components.HomeFilterPanel
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
@@ -94,8 +93,7 @@ internal fun LocalBlueprintList(
     onFilterFormatChange: (FormatFilter) -> Unit,
     categories: List<CategoryRow> = emptyList(),
     selectedCategoryId: String? = null,
-    onCategorySelect: (Int) -> Unit = {},  // 接收 page index
-    onCategoryLongClick: (Int) -> Unit = {},
+    onCategorySelect: (CategoryRow) -> Unit = {},
     onManageCategoryClick: () -> Unit = {},
     onClearCategoryFilter: () -> Unit = {},
     onLongPress: (String) -> Unit = {},
@@ -155,20 +153,6 @@ internal fun LocalBlueprintList(
         )
     } else {
         Column(modifier = modifier.fillMaxSize()) {
-            // 分类横向滑动 pager（顶部，常驻）
-            val selectedIndex = categories.indexOfFirst { row ->
-                when (row) {
-                    is CategoryRow.All -> selectedCategoryId == null
-                    is CategoryRow.Real -> selectedCategoryId == row.entity.id
-                }
-            }.coerceAtLeast(0)
-            CategoryPager(
-                categories = categories,
-                selectedIndex = selectedIndex,
-                onSelect = onCategorySelect,
-                onLongPress = onCategoryLongClick,
-                onManageClick = onManageCategoryClick,
-            )
             AnimatedVisibility(
                 visible = filterVisible,
                 enter = expandVertically(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
@@ -183,7 +167,7 @@ internal fun LocalBlueprintList(
                     onFormatChange = onFilterFormatChange,
                 )
             }
-            // 分类 header (sticky, 不滚动)
+            // 分类 header (sticky, 横向可滑动, 末页是管理)
             val selectedRow = categories.firstOrNull { row ->
                 when (row) {
                     is CategoryRow.All -> selectedCategoryId == null
@@ -191,9 +175,12 @@ internal fun LocalBlueprintList(
                 }
             } ?: categories.firstOrNull() ?: CategoryRow.All(visibleBlueprints.size)
             CategoryListHeader(
-                selectedCategoryRow = selectedRow,
+                rows = categories,
+                selectedRow = selectedRow,
                 visibleCount = visibleBlueprints.size,
+                onSelect = onCategorySelect,
                 onClearFilter = onClearCategoryFilter,
+                onManageClick = onManageCategoryClick,
             )
             if (visibleBlueprints.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

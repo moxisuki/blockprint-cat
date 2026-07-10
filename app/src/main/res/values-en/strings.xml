@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BlockPrint Cat</string>
-    <!-- Error messages -->
+    <!-- 错误消息 -->
     <string name="error_network">Network unavailable</string>
     <string name="error_timeout">Request timed out</string>
     <string name="error_cms_cloudflare">CMS site requires browser verification, please retry later</string>
     <string name="error_http_code">HTTP error: %1$d</string>
     <string name="error_unknown">Unknown error</string>
-    <!-- Settings page -->
+    <!-- 设置页 -->
     <string name="settings_title">Settings</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_theme_subtitle_light">Light mode</string>
@@ -30,7 +30,7 @@
     <string name="settings_language_subtitle_system">Follow system</string>
     <string name="settings_language_subtitle_zh">Simplified Chinese</string>
     <string name="settings_language_subtitle_en">English</string>
-    <!-- Top bar titles -->
+    <!-- 顶部栏标题 -->
     <string name="nav_title_home">Blueprints</string>
     <string name="nav_title_community">Community</string>
     <string name="nav_title_detail_default">Blueprint</string>
@@ -58,7 +58,7 @@
     <string name="bottom_nav_connection">Connection</string>
     <string name="bottom_nav_tools">Tools</string>
     <string name="nav_title_tools">Tools</string>
-    <string name="tool_image_to_blueprint">Image to Blueprint</string>
+    <string name="tool_image_to_blueprint">Image To Block Blueprint</string>
     <string name="tool_image_to_blueprint_subtitle">Convert image to block blueprint</string>
     <string name="tool_text_to_blueprint">Text to Blueprint</string>
     <string name="tool_text_to_blueprint_subtitle">Generate block blueprint from text</string>
@@ -76,7 +76,7 @@
     <string name="ttb_source_size">Text %1$d × %2$d</string>
     <string name="ttb_preview_placeholder">Enter text below to preview</string>
     <string name="ttb_result_placeholder">Conversion result will appear here</string>
-    <!-- Block Paint (1x1 block plane painting) -->
+    <!-- 方块绘画（1×1 方块平面绘画） -->
     <string name="tool_block_paint">Block Paint</string>
     <string name="tool_block_paint_subtitle">Paint blueprints block by block</string>
     <string name="bp_section_palette">Block Palette</string>
@@ -110,7 +110,7 @@
     <string name="bp_zoom_reset">Reset zoom</string>
     <string name="tool_qr_scan">Scan to Connect</string>
     <string name="tool_not_implemented">Coming soon</string>
-    <!-- Image to Blueprint -->
+    <!-- 图片转蓝图画 -->
     <string name="itb_title">Image to Blueprint</string>
     <string name="itb_select_image">Select Image</string>
     <string name="itb_select_image_hint">Tap to select an image</string>
@@ -558,7 +558,7 @@
     <string name="terms_section_3_body">The resource packs integrated by this application (Minecraft vanilla, third-party mods) come from Mojang official and Modrinth communities, and follow their respective open-source licenses.\nThe application does not bundle any game resources; all rendering resources are downloaded and stored locally by the user.\nMojang trademarks, third-party mod trademarks, and their related resources are owned by their respective rights holders; this application is not officially affiliated with them.</string>
     <string name="terms_section_4_title">4. Community Data Crawling</string>
     <string name="terms_section_4_body">The \"Community\" feature of this application uses crawler technology to access third-party blueprint sharing sites (mcschematic.top, www.creativemechanicserver.com, etc.) to aggregate publicly-available information.\nThe application does not store, modify, or commercialize any content from third-party websites; all listings/details/files are fetched from their source sites in real time.\nUsers shall comply with the source sites\' terms of use and copyright requirements; downloaded blueprints are copyrighted by their original authors.\nIf the rights holder of a source site wishes to stop being accessed by this application, please contact the developer.</string>
-    <!-- Privacy terms (per Bugly SDK compliance guide) -->
+    <!-- 隐私条款（按 Bugly SDK 合规指南） -->
     <string name="terms_section_5_title">5. Local Data &amp; Storage</string>
     <string name="terms_section_5_body">All blueprints, settings, and downloaded resource files managed by this application are stored locally on your device.
 We do NOT operate any cloud server for blueprint storage, account sync, or remote backup. Your data never leaves your device unless you explicitly use the optional PC-bridge feature to download a blueprint from your local PC.
@@ -653,7 +653,7 @@ You may clear all locally stored data at any time via Settings → Storage → C
         <item quantity="one">%1$d</item>
         <item quantity="other">%1$d</item>
     </plurals>
-    <!-- i18n migration: these keys previously only existed in values-en, Chinese added -->
+    <!-- i18n migration: 这些 key 之前只存在于 values-en, 已补中文 -->
     <string name="about_link_bmcl">BMCLAPI Mirror</string>
     <string name="about_link_cms">CMS Blueprint Site</string>
     <string name="about_link_github">GitHub Repository</string>

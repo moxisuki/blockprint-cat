@@ -797,4 +797,15 @@ You may clear all locally stored data at any time via Settings → Storage → C
     <string name="snackbar_upload_failed">Upload failed: %1$s (%2$s)</string>
     <string name="snackbar_uploaded">Uploaded: %1$s</string>
     <string name="terms_gate_title">Terms of Use</string>
+    <string name="import_preview_title">Import Preview</string>
+    <string name="import_preview_loading">Parsing file…</string>
+    <string name="import_preview_filename">File name</string>
+    <string name="import_preview_author">Author</string>
+    <string name="import_preview_unknown">Unknown</string>
+    <string name="import_preview_regions">Regions</string>
+    <string name="import_preview_block_count">Blocks</string>
+    <string name="import_preview_hint">After import, the file will be saved to the SAF folder you picked on Home. Tap \"Confirm import\" if everything looks right.</string>
+    <string name="import_preview_confirm">Confirm import</string>
+    <string name="import_preview_failed_title">Can\'t parse this file</string>
+    <string name="intent_label_open_blueprint">Open blueprint with BlockPrint Cat</string>
 </resources>

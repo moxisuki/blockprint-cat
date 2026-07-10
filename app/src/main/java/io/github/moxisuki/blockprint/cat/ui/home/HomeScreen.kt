@@ -133,6 +133,7 @@ fun HomeScreen(
     onRequestSafFolder: () -> Unit = {},
     onRefresh: (tab: Int) -> Unit = {},
     onBlueprintSelected: ((BlueprintMeta) -> Unit)? = null,
+    onImportSafer: (Uri) -> Unit = {},
 ) {
     val managementState by managementViewModel.uiState.collectAsState()
     val scanning by viewModel.scanning.collectAsState()
@@ -198,7 +199,10 @@ fun HomeScreen(
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
-        uri?.let { managementViewModel.loadWithContext(context, it); visibleCount = PAGE_SIZE }
+        // Forward to the import-preview sheet via the activity's flow.
+        // The user will see name/author/region/blocks before confirming,
+        // which gives them a chance to cancel picking the wrong file.
+        uri?.let { onImportSafer(it) }
     }
 
     LaunchedEffect(managementState.error) {

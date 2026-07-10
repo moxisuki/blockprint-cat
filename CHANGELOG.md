@@ -2,6 +2,34 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
+## v1.4.0 · 2026-07-11
+
+### 新增
+
+- **从外部直接打开蓝图文件**：在文件管理器、聊天、浏览器等场景下点击 `.litematic` / `.schem` / `.schematic` / `.nbt` 文件，可直接用 BlockPrint Cat 打开；打开流程经过预览页面（显示文件名、作者、区域数、方块数、文件大小、格式），确认后才导入
+- **首页内导入也走预览**：顶部「上传」图标选择本地蓝图文件后，同样先弹出预览确认面板，让用户在写入 SAF 文件夹前审视
+
+### Intent / 权限
+
+- `MainActivity` 加 `android:launchMode="singleTop"`，保证 ACTION_VIEW 经 `onNewIntent` 走并保留原 Activity 的 URI 授权
+- 新增多个 `<intent-filter>`（V1 alias 同样复制）覆盖 content:// + file:// 两种 scheme，按扩展名 pathPattern + `*/*` MIME 兜底，所以旧文件浏览器也能匹配
+- Uri 通过 `LocalPendingImportUri` CompositionLocal 透传到页面，全程不 stringify、不 `Uri.parse`，保留 ACTION_VIEW 自带的临时读权限
+- 文件名通过 `OpenableColumns.DISPLAY_NAME` 查询（部分第三方 provider 用 docId 当 lastPathSegment，会退化为「随机数」），正确显示原始文件名 + 后缀
+
+### UI
+
+- 预览 UI 用 `ModalBottomSheet`，浮在主页/PC/社区任何 tab 之上，不离开当前页面；保留 scrim 让用户感知上下文
+- 格式 chip 和 HomeBlueprintCard 完全一致：中文标签 + 按 `BadgeColor.Primary/Secondary/Outline` 上色
+
+### 修复
+
+- MT Manager / Solid Explorer / Google Drive 这类用 docId 当 lastPathSegment 的 provider，原先会显示一串 UUID；现在通过 `OpenableColumns.DISPLAY_NAME` 拿到真实文件名
+- `Activity` 的 `enableEdgeToEdge` + `singleTop` 协同下，外部分享文件不再丢 ACTION_VIEW 授权导致 `SecurityException: Permission Denial`
+
+### 重构
+
+- 抽离 `ui/import_/ImportPreviewSheet.kt`：之前是 `Scaffold + TopAppBar` 整页面，现在改成 `ModalBottomSheet`，既支持 ACTION_VIEW 也支持 HomeScreen 内 picker 走同一条路径
+
 ## v1.3.0 · 2026-07-10
 
 ### 新增

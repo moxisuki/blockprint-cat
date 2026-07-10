@@ -76,6 +76,8 @@ import io.github.moxisuki.blockprint.cat.ui.community.LoginWebViewScreen
 import io.github.moxisuki.blockprint.cat.ui.component.AppTopBar
 import io.github.moxisuki.blockprint.cat.ui.detail.BlueprintDetailScreen
 import io.github.moxisuki.blockprint.cat.ui.home.HomeScreen
+import io.github.moxisuki.blockprint.cat.ui.import_.ImportPreviewSheetContent
+import io.github.moxisuki.blockprint.cat.ui.navigation.LocalPendingImportUri
 import io.github.moxisuki.blockprint.cat.ui.preview.PreviewScreen
 import io.github.moxisuki.blockprint.cat.ui.qr.QrScannerScreen
 import io.github.moxisuki.blockprint.cat.ui.render.RenderManagerScreen
@@ -232,8 +234,16 @@ internal fun AppNavGraph(
     detailTitle: String,
     onDetailTitleChange: (String) -> Unit,
     communityEnabled: Boolean,
+    onImportDismissed: () -> Unit = {},
 ) {
     val isExpanded = LocalConfiguration.current.screenWidthDp >= 840
+
+    // The import-preview sheet is rendered at the AppNavGraph root after the
+    // Scaffold so it overlays every tab (Local / PC / community / etc.). Its
+    // visibility is driven by LocalPendingImportUri (provided by the
+    // activity via CompositionLocalProvider); the sheet auto-shows when
+    // MainActivity captures an ACTION_VIEW intent.
+    //
     // Hoist all the cross-branch state into one place; see NavGraphFlags.
     val flags = rememberNavGraphFlags(navController, bridgeVm, communityVm)
     if (isExpanded) {
@@ -267,6 +277,27 @@ internal fun AppNavGraph(
             detailTitle = detailTitle,
             onDetailTitleChange = onDetailTitleChange,
             communityEnabled = communityEnabled,
+        )
+    }
+
+    // Modal import-preview sheet — anchored at the AppNavGraph root so it
+    // overlays whichever tab is active (Local / PC / community). Auto-shows
+    // when LocalPendingImportUri flips to non-null, hides when the user
+    // confirms, cancels, or hits back. After confirm we navigate to Home
+    // so the new blueprint shows in the refreshed list.
+    val pendingImportUri = LocalPendingImportUri.current
+    if (pendingImportUri != null) {
+        android.util.Log.d("BlockPrintImport", "AppNavGraph: rendering sheet for $pendingImportUri")
+        ImportPreviewSheetContent(
+            uri = pendingImportUri,
+            onDismissed = onImportDismissed,
+            onConfirmSuccess = {
+                navController.popBackStack(NavRoutes.HOME, inclusive = false)
+                navController.navigate(NavRoutes.HOME) {
+                    popUpTo(NavRoutes.HOME) { inclusive = true }
+                    launchSingleTop = true
+                }
+            },
         )
     }
 }
@@ -410,7 +441,7 @@ private fun PadLayout(
                     composable(NavRoutes.HOME) {
                         Row(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(0.4f)) {
-                                HomeScreen(navController = navController, bridgeVm = bridgeVm, snackbarHostState = snackbarHostState, onRequestSafFolder = onRequestSafFolder, onRefresh = onRefresh, onBlueprintSelected = remember { { bp -> selectedBlueprintUuid = bp.uuid } })
+                                HomeScreen(navController = navController, bridgeVm = bridgeVm, snackbarHostState = snackbarHostState, onRequestSafFolder = onRequestSafFolder, onRefresh = onRefresh, onBlueprintSelected = remember { { bp -> selectedBlueprintUuid = bp.uuid } }, onImportSafer = onImportSafer)
                             }
                             HorizontalDivider(modifier = Modifier.fillMaxHeight().width(1.dp))
                             Box(Modifier.weight(0.6f)) {
@@ -851,6 +882,7 @@ private fun CompactLayout(
                         snackbarHostState = snackbarHostState,
                         onRequestSafFolder = onRequestSafFolder,
                         onRefresh = onRefresh,
+                        onImportSafer = onImportSafer,
                     )
                 }
                 composable(NavRoutes.COMMUNITY) {

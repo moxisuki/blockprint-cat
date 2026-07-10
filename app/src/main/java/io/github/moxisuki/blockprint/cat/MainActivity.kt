@@ -1,7 +1,9 @@
 package io.github.moxisuki.blockprint.cat
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -37,6 +40,7 @@ import io.github.moxisuki.blockprint.cat.ui.bridge.ConnectionState
 import io.github.moxisuki.blockprint.cat.ui.community.CommunityViewModel
 import io.github.moxisuki.blockprint.cat.ui.community.DownloadEvent
 import io.github.moxisuki.blockprint.cat.ui.navigation.AppNavGraph
+import io.github.moxisuki.blockprint.cat.ui.navigation.LocalPendingImportUri
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.ui.preview.PreviewFullscreenController
 import io.github.moxisuki.blockprint.cat.ui.settings.TermsGate
@@ -59,9 +63,21 @@ class MainActivity : AppCompatActivity() {
 
     private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    /**
+     * Latest blueprint URI handed to us via ACTION_VIEW. Captured in
+     * [onCreate] / [onNewIntent]; AppNavGraph observes this in a
+     * LaunchedEffect and pushes the import-preview route when a new URI
+     * arrives. Leaving the StateFlow nullable means the UI can both read
+     * the current intent (cold start) and react to new intents (warm
+     * start, singleTask reuse) without manual callback plumbing.
+     */
+    private val pendingImportUri = MutableStateFlow<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        captureIncomingBlueprintUri(intent)
 
         val safFolderLauncher = registerForActivityResult(
             ActivityResultContracts.OpenDocumentTree(),
@@ -99,14 +115,6 @@ class MainActivity : AppCompatActivity() {
                     themeManager = themeManager,
                     communityConfigManager = communityConfigManager,
                     onRequestSafFolder = { safFolderLauncher.launch(null) },
-                    // Tab-aware refresh:
-                    //   tab 0 (Local) → re-hydrate the on-disk blueprint list.
-                    //   tab 1 (PC)    → ask the bridge for a fresh server listing.
-                    //                   PC refresh MUST NOT touch the local
-                    //                   on-disk list — the user is looking at
-                    //                   remote blueprints, local rehydration
-                    //                   would be wasted IO + could mask a stale
-                    //                   local list behind the loading spinner.
                     onRefresh = { tab ->
                         activityScope.launch(Dispatchers.IO) {
                             when (tab) {
@@ -116,15 +124,57 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                     onImportSafer = { uri ->
-                        activityScope.launch(Dispatchers.IO) {
-                            val name = uri.lastPathSegment?.substringAfterLast('/') ?: "untitled.litematic"
-                            val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@launch
-                            blueprintManager.ingest(name, bytes)
-                        }
+                        // The Home tab's SAF picker routes through the same
+                        // ImportPreview sheet as ACTION_VIEW — we publish the
+                        // Uri into the activity's pendingImportUri flow and
+                        // let the sheet auto-show. The previous
+                        // loadWithContext() bypass is gone: the sheet gives
+                        // the user a chance to review metadata before the
+                        // file lands in their SAF folder.
+                        pendingImportUri.value = uri
                     },
+                    pendingImportUri = pendingImportUri,
+                    onImportHandled = { pendingImportUri.value = null },
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureIncomingBlueprintUri(intent)
+        // pendingImportUri is already a StateFlow — observers in Compose
+        // re-fire the moment we set it.
+    }
+
+    private fun captureIncomingBlueprintUri(intent: Intent?) {
+        if (intent == null) {
+            android.util.Log.d("BlockPrintImport", "capture: null intent")
+            return
+        }
+        android.util.Log.d(
+            "BlockPrintImport",
+            "capture: action=${intent.action} data=${intent.data} type=${intent.type}",
+        )
+        if (intent.action != Intent.ACTION_VIEW) {
+            android.util.Log.d("BlockPrintImport", "capture: not ACTION_VIEW, skip")
+            return
+        }
+        val uri = intent.data ?: run {
+            android.util.Log.d("BlockPrintImport", "capture: ACTION_VIEW but no data, skip")
+            return
+        }
+        // Do NOT mutate the Uri via buildUpon() — some file providers
+        // (MT Manager, Solid Explorer) key the ACTION_VIEW grant on the
+        // exact Uri instance returned from intent.data. Canonicalising or
+        // stripping the fragment here drops the grant and surfaces a
+        // SecurityException when ContentResolver.openInputStream fires.
+        android.util.Log.d("BlockPrintImport", "capture: storing uri=$uri")
+        pendingImportUri.value = uri
+        // Consume so a config change doesn't replay the same intent.
+        intent.action = null
+        intent.data = null
     }
 }
 
@@ -147,6 +197,8 @@ fun BlockPrintCatAppContent(
     onRequestSafFolder: () -> Unit = {},
     onImportSafer: (Uri) -> Unit = {},
     onRefresh: (tab: Int) -> Unit = {},
+    pendingImportUri: kotlinx.coroutines.flow.StateFlow<Uri?> = MutableStateFlow(null),
+    onImportHandled: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -249,6 +301,12 @@ fun BlockPrintCatAppContent(
         }
     }
 
+    // Wrap the entire content tree in a CompositionLocalProvider carrying
+    // the current pending import Uri. The ImportPreviewSheet (anchored at
+    // the AppNavGraph root) reads from this local — both ACTION_VIEW intents
+    // and the Home tab's SAF picker route through the same flow.
+    val currentPendingImportUri by pendingImportUri.collectAsState()
+    CompositionLocalProvider(LocalPendingImportUri provides currentPendingImportUri) {
     AppNavGraph(
         navController = navController,
         bridgeVm = bridgeVm,
@@ -262,5 +320,7 @@ fun BlockPrintCatAppContent(
         detailTitle = detailTitle,
         onDetailTitleChange = { detailTitle = it },
         communityEnabled = communityEnabled,
+        onImportDismissed = onImportHandled,
     )
+    }
 }

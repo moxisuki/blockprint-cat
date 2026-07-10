@@ -1,6 +1,7 @@
 package io.github.moxisuki.blockprint.cat.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -153,8 +154,10 @@ internal fun LocalBlueprintList(
         Column(modifier = modifier.fillMaxSize()) {
             AnimatedVisibility(
                 visible = filterVisible,
-                enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(180)),
-                exit = shrinkVertically(animationSpec = tween(280)) + fadeOut(animationSpec = tween(220)),
+                enter = expandVertically(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
+                        fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing)),
+                exit = shrinkVertically(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
+                       fadeOut(animationSpec = tween(140, easing = FastOutSlowInEasing)),
             ) {
                 HomeFilterPanel(
                     query = filterQuery,

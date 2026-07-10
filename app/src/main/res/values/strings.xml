@@ -348,6 +348,7 @@
     <string name="cookie_manual_hint">Enter manually (copy from browser DevTools)</string>
     <string name="action_save">Save</string>
     <string name="action_delete">Delete</string>
+    <string name="action_new">新建</string>
     <string name="dialog_delete_title">Confirm delete</string>
     <string name="dialog_delete_msg">Delete %1$s? This cannot be undone.</string>
     <string name="dialog_rename_title">Rename file</string>

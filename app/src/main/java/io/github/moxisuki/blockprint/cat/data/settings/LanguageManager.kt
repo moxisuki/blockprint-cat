@@ -14,7 +14,7 @@ import javax.inject.Singleton
 @Singleton
 class LanguageManager @Inject constructor(@ApplicationContext context: Context) {
 
-    enum class Mode { SYSTEM, ZH_CN, EN }
+    enum class Mode { SYSTEM, ZH_CN, EN, RU }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val _mode = MutableStateFlow(loadMode())
@@ -26,6 +26,7 @@ class LanguageManager @Inject constructor(@ApplicationContext context: Context) 
             Mode.SYSTEM -> ""
             Mode.ZH_CN -> "zh-CN"
             Mode.EN -> "en"
+            Mode.RU -> "ru"
         }
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
         _mode.value = mode

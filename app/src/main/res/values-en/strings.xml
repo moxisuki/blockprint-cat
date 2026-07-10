@@ -30,6 +30,7 @@
     <string name="settings_language_subtitle_system">Follow system</string>
     <string name="settings_language_subtitle_zh">Simplified Chinese</string>
     <string name="settings_language_subtitle_en">English</string>
+    <string name="settings_language_subtitle_ru">Русский</string>
     <!-- 顶部栏标题 -->
     <string name="nav_title_home">Blueprints</string>
     <string name="nav_title_community">Community</string>

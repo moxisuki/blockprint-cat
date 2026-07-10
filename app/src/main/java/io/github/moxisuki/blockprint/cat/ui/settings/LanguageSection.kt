@@ -52,6 +52,7 @@ fun LanguageSection() {
         LanguageManager.Mode.SYSTEM -> stringResource(R.string.settings_language_subtitle_system)
         LanguageManager.Mode.ZH_CN -> stringResource(R.string.settings_language_subtitle_zh)
         LanguageManager.Mode.EN -> stringResource(R.string.settings_language_subtitle_en)
+        LanguageManager.Mode.RU -> stringResource(R.string.settings_language_subtitle_ru)
     }
 
     SettingsCard(
@@ -83,6 +84,7 @@ fun LanguageSection() {
                             LanguageManager.Mode.SYSTEM -> stringResource(R.string.settings_language_subtitle_system)
                             LanguageManager.Mode.ZH_CN -> stringResource(R.string.settings_language_subtitle_zh)
                             LanguageManager.Mode.EN -> stringResource(R.string.settings_language_subtitle_en)
+                            LanguageManager.Mode.RU -> stringResource(R.string.settings_language_subtitle_ru)
                         }
                         val selected = mode == m
                         Surface(

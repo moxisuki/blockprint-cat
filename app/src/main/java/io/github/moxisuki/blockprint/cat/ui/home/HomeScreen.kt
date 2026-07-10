@@ -148,6 +148,9 @@ fun HomeScreen(
 
     val allBlueprints by viewModel.displayedBlueprints.collectAsStateWithLifecycle()
     val multi by viewModel.multi.collectAsStateWithLifecycle()
+    val safFolderName = viewModel.safFolderName()
+    // 还没选 SAF 文件夹时, 整个分类区隐藏(避免"还没有分类"和"暂无蓝图"双提示打架)
+    val hasSafFolder = safFolderName != null
     var visibleCount by remember { mutableIntStateOf(PAGE_SIZE) }
 
     val visibleBlueprints by remember {
@@ -388,27 +391,29 @@ fun HomeScreen(
                 when (page) {
                     0 -> {
                         Column(modifier = Modifier.fillMaxSize()) {
-                            CategoryHomeSection(
-                                vm = viewModel,
-                                onCategoryClick = { row ->
-                                    when (row) {
-                                        CategoryRow.All -> viewModel.selectCategory(null)
-                                        is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
-                                    }
-                                },
-                                onCategoryLongClick = { row ->
-                                    if (row is CategoryRow.Real) editCategoryFor = row.entity
-                                },
-                                onAddClick = { showNewDialog = true },
-                                showEmpty = viewModel.categories.value.size <= 1,
-                            )
+                            if (hasSafFolder) {
+                                CategoryHomeSection(
+                                    vm = viewModel,
+                                    onCategoryClick = { row ->
+                                        when (row) {
+                                            CategoryRow.All -> viewModel.selectCategory(null)
+                                            is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
+                                        }
+                                    },
+                                    onCategoryLongClick = { row ->
+                                        if (row is CategoryRow.Real) editCategoryFor = row.entity
+                                    },
+                                    onAddClick = { showNewDialog = true },
+                                    showEmpty = viewModel.categories.value.size <= 1,
+                                )
+                            }
                             LocalBlueprintList(
                                 modifier = Modifier.weight(1f),
                                 allBlueprints = allBlueprints,
                                 scanning = scanning,
                                 visibleCount = visibleCount,
                                 onVisibleCountChange = { visibleCount = it },
-                                safFolderName = viewModel.safFolderName(),
+                                safFolderName = safFolderName,
                                 onRequestSafFolder = onRequestSafFolder,
                                 navController = navController,
                                 onBlueprintSelected = { bp ->

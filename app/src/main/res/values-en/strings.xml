@@ -58,7 +58,7 @@
     <string name="bottom_nav_connection">Connection</string>
     <string name="bottom_nav_tools">Tools</string>
     <string name="nav_title_tools">Tools</string>
-    <string name="tool_image_to_blueprint">Image to Blueprint</string>
+    <string name="tool_image_to_blueprint">Image To Block Blueprint</string>
     <string name="tool_image_to_blueprint_subtitle">Convert image to block blueprint</string>
     <string name="tool_text_to_blueprint">Text to Blueprint</string>
     <string name="tool_text_to_blueprint_subtitle">Generate block blueprint from text</string>

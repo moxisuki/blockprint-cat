@@ -316,6 +316,7 @@
     <string name="backup_done">Backup complete</string>
     <string name="backup_failed">Backup failed: %1$s</string>
     <string name="action_close">Close</string>
+    <string name="action_edit">Edit</string>
     <string name="backup_file_count">Files: %1$d</string>
     <string name="backup_size">Bundle size: %1$s</string>
     <string name="backup_location">Saved to: Downloads root</string>
@@ -351,6 +352,9 @@
     <string name="action_save">Save</string>
     <string name="action_delete">Delete</string>
     <string name="action_new">新建</string>
+    <string name="home_category_manage">管理分类</string>
+    <string name="cat_dialog_manage_title">管理分类</string>
+    <string name="cat_dialog_manage_new">+ 新建分类</string>
     <string name="dialog_delete_title">Confirm delete</string>
     <string name="dialog_delete_msg">Delete %1$s? This cannot be undone.</string>
     <string name="dialog_rename_title">Rename file</string>

@@ -92,6 +92,7 @@ import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
 import io.github.moxisuki.blockprint.cat.ui.home.MultiSelectState
 import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.ui.home.components.EmptyPcState
+import io.github.moxisuki.blockprint.cat.ui.home.components.ManageCategoriesDialog
 import io.github.moxisuki.blockprint.cat.ui.home.components.PcHeader
 import io.github.moxisuki.blockprint.cat.ui.home.util.hasUnsafeWorldEditChars
 import io.github.moxisuki.blockprint.cat.ui.home.util.safeWorldEditName
@@ -168,6 +169,7 @@ fun HomeScreen(
 
     // Category dialog state
     var showNewDialog by rememberSaveable { mutableStateOf(false) }
+    var showManageDialog by rememberSaveable { mutableStateOf(false) }
     var editCategoryFor by remember { mutableStateOf<CategoryEntity?>(null) }
     var deleteCategoryFor by remember { mutableStateOf<CategoryEntity?>(null) }
     var showMoveDialog by remember { mutableStateOf(false) }
@@ -438,16 +440,18 @@ fun HomeScreen(
                                 onFilterFormatChange = { localFilterFormat = it; visibleCount = PAGE_SIZE },
                                 categories = categories,
                                 selectedCategoryId = selectedCategoryId,
-                                onCategorySelect = { row ->
+                                onCategorySelect = { pageIndex ->
+                                    val row = categories.getOrNull(pageIndex)
                                     when (row) {
-                                        is CategoryRow.All -> viewModel.selectCategory(null)
+                                        null, is CategoryRow.All -> viewModel.selectCategory(null)
                                         is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
                                     }
                                 },
-                                onCategoryLongClick = { row ->
+                                onCategoryLongClick = { pageIndex ->
+                                    val row = categories.getOrNull(pageIndex)
                                     if (row is CategoryRow.Real) editCategoryFor = row.entity
                                 },
-                                onAddCategory = { showNewDialog = true },
+                                onManageCategoryClick = { showManageDialog = true },
                                 onClearCategoryFilter = { viewModel.selectCategory(null) },
                                 onLongPress = viewModel::enterMultiSelect,
                                 isSelected = { uuid ->
@@ -652,6 +656,26 @@ fun HomeScreen(
             onConfirm = { name, color, pattern ->
                 scope.launch { viewModel.createCategory(name, color, pattern) }
                 showNewDialog = false
+            },
+        )
+    }
+
+    if (showManageDialog) {
+        ManageCategoriesDialog(
+            rows = categories,
+            counts = viewModel.counts.value,
+            onDismiss = { showManageDialog = false },
+            onCreate = {
+                showManageDialog = false
+                showNewDialog = true
+            },
+            onEdit = { cat ->
+                showManageDialog = false
+                editCategoryFor = cat
+            },
+            onDelete = { cat ->
+                showManageDialog = false
+                deleteCategoryFor = cat
             },
         )
     }

@@ -15,11 +15,16 @@ not-skippable composables must be fixed before shipping.
 
 ## i18n
 
-User-facing strings live in `res/values*/strings.xml`
-(default zh, plus `values-en/` and `values-zh-rCN/`). Never hardcode
-Chinese or English in composables, ViewModels, or error messages — use
-`stringResource(R.string.x)` or `context.getString`. Add the key to
-all three locales in the same commit.
+User-facing strings live in `res/values*/strings.xml`.
+- `res/values/strings.xml` — **source language: Simplified Chinese (zh)**
+- `res/values-en/strings.xml` — English translation
+
+Never hardcode Chinese or English in composables, ViewModels, or error
+messages — use `stringResource(R.string.x)` or `context.getString`.
+Add the key to **both locales in the same commit**.
+
+For new translation targets (ja, ko, de, fr, etc.), add a corresponding
+`res/values-{locale}/` directory mirroring the source structure.
 
 ## UI structure
 

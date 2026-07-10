@@ -2,6 +2,22 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
+## v1.3.0 (unreleased)
+
+### Added
+
+- Blueprint categories: a new horizontal layer on the Home screen lets you organize local blueprints into named, color-coded buckets with 8-color palette × 8-pattern cover designs.
+- Long-press a blueprint card to enter multi-select mode for bulk reassignment and deletion.
+- Edit existing categories (rename, recolor, repaint) and delete them — blueprints automatically revert to "未分类" via Room's ON DELETE SET NULL.
+
+### Changed
+
+- Database schema bumped to v10. Existing users will lose cached blueprint metadata on first launch after upgrade (one-time rescan rebuilds it).
+
+### Notes
+
+- No breaking changes for users who never create a category: the rail shows an empty-state hint and the lower blueprint list behaves exactly as before.
+
 ## [1.2.0] · 2026-07-10
 
 ### 新增

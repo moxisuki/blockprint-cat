@@ -59,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,14 +75,24 @@ import androidx.navigation.NavController
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.data.blueprint.BlueprintMeta
 import io.github.moxisuki.blockprint.cat.data.bridge.RemoteBlueprint
+import io.github.moxisuki.blockprint.cat.data.category.CategoryEntity
+import io.github.moxisuki.blockprint.cat.data.category.CategoryRow
 import io.github.moxisuki.blockprint.cat.ui.animation.AnimSpec
 import io.github.moxisuki.blockprint.cat.ui.bridge.BridgeViewModel
 import io.github.moxisuki.blockprint.cat.ui.bridge.ConnectionState
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcActionSheet
 import io.github.moxisuki.blockprint.cat.ui.bridge.PcBlueprintCard
 import io.github.moxisuki.blockprint.cat.ui.bridge.TransferProgressBar
+import io.github.moxisuki.blockprint.cat.ui.category.CategoryMoveDialog
+import io.github.moxisuki.blockprint.cat.ui.category.EditCategoryDialog
+import io.github.moxisuki.blockprint.cat.ui.category.MultiSelectAppBar
+import io.github.moxisuki.blockprint.cat.ui.category.MultiSelectBottomBar
+import io.github.moxisuki.blockprint.cat.ui.category.NewCategoryDialog
 import io.github.moxisuki.blockprint.cat.ui.format.FormatFilter
+import io.github.moxisuki.blockprint.cat.ui.home.MultiSelectState
+import io.github.moxisuki.blockprint.cat.ui.navigation.NavRoutes
 import io.github.moxisuki.blockprint.cat.ui.home.components.EmptyPcState
+import io.github.moxisuki.blockprint.cat.ui.home.components.ManageCategoriesDialog
 import io.github.moxisuki.blockprint.cat.ui.home.components.PcHeader
 import io.github.moxisuki.blockprint.cat.ui.home.util.hasUnsafeWorldEditChars
 import io.github.moxisuki.blockprint.cat.ui.home.util.safeWorldEditName
@@ -135,7 +146,12 @@ fun HomeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val allBlueprints by viewModel.blueprints.collectAsState(initial = viewModel.blueprints.value)
+    val allBlueprints by viewModel.displayedBlueprints.collectAsStateWithLifecycle()
+    val blueprintCount by viewModel.blueprintCount.collectAsStateWithLifecycle()
+    val multi by viewModel.multi.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val selectedCategoryId by viewModel.selectedCategoryId.collectAsStateWithLifecycle()
+    val safFolderName = viewModel.safFolderName()
     var visibleCount by remember { mutableIntStateOf(PAGE_SIZE) }
 
     val visibleBlueprints by remember {
@@ -151,6 +167,13 @@ fun HomeScreen(
     var pendingUploadAfterRename by remember { mutableStateOf<BlueprintMeta?>(null) }
     var worldEditWarningBlueprint by remember { mutableStateOf<BlueprintMeta?>(null) }
     var sheetTarget by remember { mutableStateOf<RemoteBlueprint?>(null) }
+
+    // Category dialog state
+    var showNewDialog by rememberSaveable { mutableStateOf(false) }
+    var showManageDialog by rememberSaveable { mutableStateOf(false) }
+    var editCategoryFor by remember { mutableStateOf<CategoryEntity?>(null) }
+    var deleteCategoryFor by remember { mutableStateOf<CategoryEntity?>(null) }
+    var showMoveDialog by remember { mutableStateOf(false) }
     // 单一数据源：pagerState 是真理。savedInitialPage 仅承担 rememberSaveable
     // 持久化职责（旋转 / 进程重启时恢复 tab）。
     var savedInitialPage by rememberSaveable { mutableStateOf(0) }
@@ -185,11 +208,13 @@ fun HomeScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            when (val m = multi) {
+            MultiSelectState.Off -> Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             BoxWithConstraints(
                 modifier = Modifier
                     .width(CapsuleWidth)
@@ -330,6 +355,13 @@ fun HomeScreen(
                 }
             }
         }
+            is MultiSelectState.On -> MultiSelectAppBar(
+                selectedCount = m.selected.size,
+                allSelected = m.selected.size == allBlueprints.size,
+                onCancel = viewModel::exitMulti,
+                onToggleSelectAll = viewModel::selectAll,
+            )
+        }
 
         val transfers by bridgeVm.transfers.collectAsState()
         AnimatedVisibility(
@@ -360,43 +392,73 @@ fun HomeScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 when (page) {
                     0 -> {
-                        LocalBlueprintList(
-                            allBlueprints = allBlueprints,
-                            scanning = scanning,
-                            visibleCount = visibleCount,
-                            onVisibleCountChange = { visibleCount = it },
-                            safFolderName = viewModel.safFolderName(),
-                            onRequestSafFolder = onRequestSafFolder,
-                            navController = navController,
-                            onBlueprintSelected = onBlueprintSelected,
-                            onDeleteTarget = { deleteTarget = it },
-                            onRenameTarget = { bp -> renameTarget = bp; renameText = bp.fileName },
-                            onUpload = { bp ->
-                                val isSponge = bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Sponge
-                                if (isSponge && hasUnsafeWorldEditChars(bp.fileName)) {
-                                    worldEditWarningBlueprint = bp
-                                } else {
-                                    scope.launch {
-                                        val bytes = managementViewModel.readBytes(bp.uuid)
-                                        if (bytes != null) {
-                                            bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
-                                        } else {
-                                            snackbarHostState.showSnackbar(
-                                                context.getString(R.string.action_sync_failed, bp.fileName)
-                                            )
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            LocalBlueprintList(
+                                modifier = Modifier.weight(1f),
+                                allBlueprints = allBlueprints,
+                                totalBlueprintCount = blueprintCount,
+                                scanning = scanning,
+                                visibleCount = visibleCount,
+                                onVisibleCountChange = { visibleCount = it },
+                                safFolderName = safFolderName,
+                                onRequestSafFolder = onRequestSafFolder,
+                                navController = navController,
+                                onBlueprintSelected = { bp ->
+                                    // In multi-select mode, tap toggles selection instead of opening detail.
+                                    if (multi is MultiSelectState.On) {
+                                        viewModel.toggleSelected(bp.uuid)
+                                    } else if (onBlueprintSelected != null) {
+                                        onBlueprintSelected.invoke(bp)
+                                    } else {
+                                        navController.navigate(NavRoutes.detailRoute(bp.uuid))
+                                    }
+                                },
+                                onDeleteTarget = { deleteTarget = it },
+                                onRenameTarget = { bp -> renameTarget = bp; renameText = bp.fileName },
+                                onUpload = { bp ->
+                                    val isSponge = bp.format == io.github.moxisuki.blockprint.core.SchematicFormat.Sponge
+                                    if (isSponge && hasUnsafeWorldEditChars(bp.fileName)) {
+                                        worldEditWarningBlueprint = bp
+                                    } else {
+                                        scope.launch {
+                                            val bytes = managementViewModel.readBytes(bp.uuid)
+                                            if (bytes != null) {
+                                                bridgeVm.requestUpload(bp.fileName, bytes, overwrite = true)
+                                            } else {
+                                                snackbarHostState.showSnackbar(
+                                                    context.getString(R.string.action_sync_failed, bp.fileName)
+                                                )
+                                            }
                                         }
                                     }
-                                }
-                            },
-                            bridgeConnected = isBridgeConnected,
-                            canTransfer = canTransfer,
-                            snackbarHostState = snackbarHostState,
-                            filterVisible = localFilterVisible,
-                            filterQuery = localFilterQuery,
-                            onFilterQueryChange = { localFilterQuery = it; visibleCount = PAGE_SIZE },
-                            filterFormat = localFilterFormat,
-                            onFilterFormatChange = { localFilterFormat = it; visibleCount = PAGE_SIZE },
-                        )
+                                },
+                                bridgeConnected = isBridgeConnected,
+                                canTransfer = canTransfer,
+                                snackbarHostState = snackbarHostState,
+                                filterVisible = localFilterVisible,
+                                filterQuery = localFilterQuery,
+                                onFilterQueryChange = { localFilterQuery = it; visibleCount = PAGE_SIZE },
+                                filterFormat = localFilterFormat,
+                                onFilterFormatChange = { localFilterFormat = it; visibleCount = PAGE_SIZE },
+                                categories = categories,
+                                selectedCategoryId = selectedCategoryId,
+                                onCategorySelect = { row ->
+                                    when (row) {
+                                        is CategoryRow.All -> viewModel.selectCategory(null)
+                                        is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
+                                    }
+                                },
+                                onCategoryEdit = { row ->
+                                    if (row is CategoryRow.Real) editCategoryFor = row.entity
+                                },
+                                onManageCategoryClick = { showManageDialog = true },
+                                onClearCategoryFilter = { viewModel.selectCategory(null) },
+                                onLongPress = viewModel::enterMultiSelect,
+                                isSelected = { uuid ->
+                                    (multi as? MultiSelectState.On)?.selected?.contains(uuid) == true
+                                },
+                            )
+                        }
                     }
                     1 -> {
                         if (pcSession == null && !isBridgeConnecting) {
@@ -450,6 +512,23 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+        }
+
+        val m = multi
+        if (m is MultiSelectState.On) {
+            MultiSelectBottomBar(
+                onMove = { showMoveDialog = true },
+                onDelete = {
+                    scope.launch {
+                        m.selected.forEach { uuid ->
+                            managementViewModel.delete(context, uuid)
+                        }
+                        visibleCount = PAGE_SIZE
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 
@@ -567,5 +646,106 @@ fun HomeScreen(
     }
     sheetTarget?.let { bp ->
         PcActionSheet(blueprint = bp, onDownload = { bridgeVm.requestDownload(bp.fileName, bp.source) }, enabled = canTransfer, onDismiss = { sheetTarget = null })
+    }
+
+    // --- Category dialogs ---
+
+    if (showNewDialog) {
+        NewCategoryDialog(
+            onDismiss = { showNewDialog = false },
+            onConfirm = { name, color, pattern ->
+                scope.launch { viewModel.createCategory(name, color, pattern) }
+                showNewDialog = false
+            },
+        )
+    }
+
+    if (showManageDialog) {
+        ManageCategoriesDialog(
+            rows = categories,
+            counts = viewModel.counts.value,
+            onDismiss = { showManageDialog = false },
+            onCreate = {
+                showManageDialog = false
+                showNewDialog = true
+            },
+            onEdit = { cat ->
+                showManageDialog = false
+                editCategoryFor = cat
+            },
+            onDelete = { cat ->
+                showManageDialog = false
+                deleteCategoryFor = cat
+            },
+        )
+    }
+
+    editCategoryFor?.let { cat ->
+        EditCategoryDialog(
+            category = cat,
+            blueprintCount = viewModel.counts.value[cat.id] ?: 0,
+            onDismiss = { editCategoryFor = null },
+            onConfirm = { name, color, pattern ->
+                scope.launch {
+                    viewModel.renameCategory(cat.id, name)
+                    viewModel.changeCover(cat.id, color, pattern)
+                }
+                editCategoryFor = null
+            },
+            onDelete = { deleteCategoryFor = cat },
+        )
+    }
+
+    deleteCategoryFor?.let { cat ->
+        AlertDialog(
+            onDismissRequest = { deleteCategoryFor = null },
+            title = { Text(stringResource(R.string.cat_dialog_delete_title, cat.name)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.cat_dialog_delete_body,
+                        viewModel.counts.value[cat.id] ?: 0,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            viewModel.deleteCategory(cat.id)
+                            viewModel.selectCategory(null)
+                        }
+                        deleteCategoryFor = null
+                        editCategoryFor = null
+                    },
+                ) {
+                    Text(
+                        stringResource(R.string.action_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteCategoryFor = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
+    if (showMoveDialog) {
+        val m = multi as? MultiSelectState.On
+        if (m != null) {
+            CategoryMoveDialog(
+                count = m.selected.size,
+                rows = viewModel.categories.value.filterIsInstance<CategoryRow.Real>(),
+                onDismiss = { showMoveDialog = false },
+                onPick = { picked ->
+                    val targetId = (picked as? CategoryRow.Real)?.entity?.id
+                    scope.launch { viewModel.moveSelectedTo(targetId) }
+                    showMoveDialog = false
+                },
+            )
+        }
     }
 }

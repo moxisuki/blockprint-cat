@@ -34,4 +34,7 @@ interface BlueprintMetaDao {
 
     @Query("DELETE FROM blueprints")
     suspend fun deleteAll()
+
+    @Query("UPDATE blueprints SET categoryId = :targetId WHERE uuid IN (:uuids)")
+    suspend fun reassignCategory(uuids: List<String>, targetId: String?)
 }

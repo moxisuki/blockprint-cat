@@ -128,8 +128,16 @@ class BlueprintManager @Inject constructor(
                         runCatching {
                             val bytes = storage.read(docId)
                             val lit = BlockPrintReader.readLenient(bytes)
-                            val meta = metaFromLit(lit, docId, entry.name)
-                            metaDao.upsert(meta.copy(lastScannedAt = now).toEntity())
+                            val newEntity = metaFromLit(lit, docId, entry.name)
+                            // Preserve uuid + categoryId across rescans: metaFromLit
+                            // always mints a fresh UUID, which would otherwise create a
+                            // duplicate row and wipe the user's category assignment.
+                            val toInsert = newEntity.copy(
+                                lastScannedAt = now,
+                                uuid = existing?.uuid ?: newEntity.uuid,
+                                categoryId = existing?.categoryId,
+                            ).toEntity()
+                            metaDao.upsert(toInsert)
                             Log.d(TAG, "refresh: upsert ${entry.name}")
                         }.onFailure { Log.e(TAG, "refresh: fail ${entry.name}", it) }
                     }
@@ -301,6 +309,7 @@ class BlueprintManager @Inject constructor(
         displayName = displayName, author = author, regionCount = regionCount,
         blockCount = blockCount,
         format = runCatching { SchematicFormat.valueOf(format) }.getOrDefault(SchematicFormat.Unknown),
+        categoryId = categoryId,
     )
 
     private fun BlueprintMetaEntity.toEntity() = this

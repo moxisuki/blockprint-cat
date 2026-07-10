@@ -5,26 +5,20 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -32,16 +26,14 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -88,30 +80,35 @@ internal fun CategoryListHeader(
     onManageClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (rows.isEmpty()) return  // 防御: 没有任何 All 行时不要渲染
+    if (rows.isEmpty()) return
 
-    val totalPages = rows.size + 1  // +1 是管理页
-    val selectedIndex = rows.indexOfFirst { it == selectedRow }.coerceAtLeast(0)
-    val pagerState = rememberPagerState(
-        initialPage = selectedIndex.coerceIn(0, rows.size - 1),
-    ) { totalPages }
+    val totalPages = rows.size + 1  // +1 管理页
+    val initPage = rows.indexOfFirst { it == selectedRow }.coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = initPage) { totalPages }
 
-    // 外部 selectedRow 变化时同步 pager 位置
+    // rememberUpdatedState: LaunchedEffect 闭包里始终读到最新值，避免 stale capture
+    // https://developer.android.com/jetpack/compose/side-effects#rememberupdatedstate
+    val latestRows by rememberUpdatedState(rows)
+    val latestSelectedRow by rememberUpdatedState(selectedRow)
+    val latestOnSelect by rememberUpdatedState(onSelect)
+    val latestOnEdit by rememberUpdatedState(onEdit)
+    val latestOnClearFilter by rememberUpdatedState(onClearFilter)
+
+    // 外部 selectedRow 变化 → 同步 pager 位置
     LaunchedEffect(selectedRow) {
-        val target = rows.indexOfFirst { it == selectedRow }.coerceAtLeast(0)
-        if (target in 0 until rows.size && target != pagerState.currentPage) {
+        val target = latestRows.indexOfFirst { it == selectedRow }.coerceAtLeast(0)
+        if (target in 0 until latestRows.size && target != pagerState.currentPage) {
             pagerState.animateScrollToPage(target)
         }
     }
 
-    // 滑动结束立即切换分类 (currentPage 变化 + 不在拖动中)
-    // isScrollInProgress 保证动画中间帧不触发回调, 避免快速滑动时反复切
+    // 滑动 settle → 切分类（currentPage 变化且 isScrollInProgress=false）
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage to pagerState.isScrollInProgress }
             .collect { (page, scrolling) ->
-                if (!scrolling && page < rows.size) {
-                    val row = rows[page]
-                    if (row != selectedRow) onSelect(row)
+                if (!scrolling && page < latestRows.size) {
+                    val row = latestRows[page]
+                    if (row != latestSelectedRow) latestOnSelect(row)
                 }
             }
     }
@@ -133,14 +130,14 @@ internal fun CategoryListHeader(
         },
     ) { page ->
         if (page < rows.size) {
-            val isSelectedPage = page == selectedIndex
+            val isActivePage = page == pagerState.currentPage
             HeaderCard(
                 row = rows[page],
-                selected = isSelectedPage,
-                count = if (isSelectedPage) visibleCount else rows[page].count,
-                showClear = !isSelectedPage && isRealCategory(rows[page]),
-                onClick = { onEdit(rows[page]) },  // 点击 = 编辑
-                onClear = onClearFilter,
+                selected = isActivePage,
+                count = rows[page].count,
+                showClear = isActivePage && isRealCategory(rows[page]),
+                onClick = { latestOnEdit(rows[page]) },
+                onClear = { latestOnClearFilter() },
             )
         } else {
             ManageCard(onClick = onManageClick)
@@ -151,9 +148,9 @@ internal fun CategoryListHeader(
 private fun isRealCategory(row: CategoryRow): Boolean = row is CategoryRow.Real
 
 /**
- * Single category card. Visual: rounded surfaceVariant bg, cover/icon on
- * the left, name + count on the right, optional clear ✕ button. Animated
- * border + content transition on selection.
+ * Single category card. No background, no border — blends into the app
+ * background. Selection is indicated by primary text color + SemiBold.
+ * Left/right padded 16.dp to align with the LazyColumn below.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -165,102 +162,87 @@ private fun HeaderCard(
     onClick: () -> Unit,
     onClear: () -> Unit,
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    val nameColor = if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface
+    val countColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                     else MaterialTheme.colorScheme.onSurfaceVariant
 
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxSize()
+            .padding(horizontal = 16.dp)
             .combinedClickable(onClick = onClick, onLongClick = {})
-            .padding(2.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer
-                else Color.Transparent,
-        border = if (selected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-                 else null,
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        // Cover / icon
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            // Cover/icon container
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                AnimatedContent(
-                    targetState = row,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(HEADER_ANIM_MS)) togetherWith
-                                fadeOut(animationSpec = tween(HEADER_ANIM_MS / 2)))
-                    },
-                    label = "headerCover",
-                ) { r ->
-                    when (r) {
-                        is CategoryRow.All -> Icon(
-                            imageVector = Icons.Filled.FolderOpen,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp),
-                        )
-                        is CategoryRow.Real -> CategoryCoverView(
-                            colorIdx = r.colorIdx,
-                            patternIdx = r.patternIdx,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
+            AnimatedContent(
+                targetState = row,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(HEADER_ANIM_MS)) togetherWith
+                            fadeOut(animationSpec = tween(HEADER_ANIM_MS / 2)))
+                },
+                label = "headerCover",
+            ) { r ->
+                when (r) {
+                    is CategoryRow.All -> Icon(
+                        imageVector = Icons.Filled.FolderOpen,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    is CategoryRow.Real -> CategoryCoverView(
+                        colorIdx = r.colorIdx,
+                        patternIdx = r.patternIdx,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
             }
-            Spacer(Modifier.size(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                AnimatedContent(
-                    targetState = row,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(HEADER_ANIM_MS)) togetherWith
-                                fadeOut(animationSpec = tween(HEADER_ANIM_MS / 2)))
-                    },
-                    label = "headerName",
-                ) { r ->
-                    val name = when (r) {
-                        is CategoryRow.All -> stringResource(R.string.home_category_all)
-                        is CategoryRow.Real -> r.entity.name
-                    }
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                                 else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                    )
+        }
+        Spacer(Modifier.size(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            AnimatedContent(
+                targetState = row,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(HEADER_ANIM_MS)) togetherWith
+                            fadeOut(animationSpec = tween(HEADER_ANIM_MS / 2)))
+                },
+                label = "headerName",
+            ) { r ->
+                val name = when (r) {
+                    is CategoryRow.All -> stringResource(R.string.home_category_all)
+                    is CategoryRow.Real -> r.entity.name
                 }
                 Text(
-                    text = pluralStringResource(R.plurals.category_count, count, count),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
-                             else MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = nameColor,
+                    maxLines = 1,
                 )
             }
-            // ✕ 清空按钮: 只在 "其他" 真实分类页面显示
-            if (showClear) {
-                IconButton(
-                    onClick = onClear,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.home_list_header_clear),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
+            Text(
+                text = pluralStringResource(R.plurals.category_count, count, count),
+                style = MaterialTheme.typography.labelSmall,
+                color = countColor,
+            )
+        }
+        // ✕ clear button — only when this category is active
+        if (showClear) {
+            IconButton(
+                onClick = onClear,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.home_list_header_clear),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
     }
@@ -273,23 +255,19 @@ private fun ManageCard(onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 16.dp)
             .combinedClickable(onClick = onClick, onLongClick = {})
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.08f)),
+            modifier = Modifier.size(40.dp),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Filled.Add,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -298,7 +276,7 @@ private fun ManageCard(onClick: () -> Unit) {
             text = stringResource(R.string.home_category_manage),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }

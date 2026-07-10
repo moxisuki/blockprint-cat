@@ -21,10 +21,8 @@ User-facing strings live in `res/values*/strings.xml`.
 
 Never hardcode Chinese or English in composables, ViewModels, or error
 messages — use `stringResource(R.string.x)` or `context.getString`.
-Add the key to **both locales in the same commit**.
-
-For new translation targets (ja, ko, de, fr, etc.), add a corresponding
-`res/values-{locale}/` directory mirroring the source structure.
+Add the key to **both `values/` and `values-en/` in the same commit**.
+Other locales (ru, ja, ko, …) are managed via Crowdin — do not edit them locally.
 
 ## UI structure
 

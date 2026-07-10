@@ -827,4 +827,15 @@
     <string name="snackbar_upload_failed">上传失败: %1$s (%2$s)</string>
     <string name="snackbar_uploaded">已上传: %1$s</string>
     <string name="terms_gate_title">使用条款</string>
+    <string name="import_preview_title">导入预览</string>
+    <string name="import_preview_loading">正在解析文件…</string>
+    <string name="import_preview_filename">文件名</string>
+    <string name="import_preview_author">作者</string>
+    <string name="import_preview_unknown">未知</string>
+    <string name="import_preview_regions">区域数</string>
+    <string name="import_preview_block_count">方块数</string>
+    <string name="import_preview_hint">导入后，文件将保存到你在「首页」选择的 SAF 文件夹中。检查无误后点击「确认导入」即可。</string>
+    <string name="import_preview_confirm">确认导入</string>
+    <string name="import_preview_failed_title">无法解析此文件</string>
+    <string name="intent_label_open_blueprint">用 BlockPrint Cat 打开蓝图</string>
 </resources>

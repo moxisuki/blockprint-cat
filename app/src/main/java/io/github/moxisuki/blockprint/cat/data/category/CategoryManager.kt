@@ -28,11 +28,14 @@ sealed interface CategoryRow {
     val colorIdx: Int
     val patternIdx: Int
 
-    data object All : CategoryRow {
+    data class All(override val count: Int) : CategoryRow {
         override val id: String? = null
-        override val count: Int = 0
         override val colorIdx: Int = 0
         override val patternIdx: Int = 0
+
+        override fun equals(other: Any?): Boolean = other is All
+        override fun hashCode(): Int = "All".hashCode()
+        override fun toString(): String = "All(count=$count)"
     }
 
     data class Real(
@@ -68,11 +71,12 @@ class CategoryManager @Inject internal constructor(
         categoryDao.observeCountsByCategory(),
     ) { rows, counts ->
         val countsMap = counts.associate { it.categoryId to it.cnt }
+        val totalAll = countsMap.values.sum()
         val real = rows.map { entity ->
             CategoryRow.Real(entity, countsMap[entity.id] ?: 0)
         }
-        listOf<CategoryRow>(CategoryRow.All) + real
-    }.stateIn(scope, SharingStarted.Eagerly, listOf(CategoryRow.All))
+        listOf<CategoryRow>(CategoryRow.All(totalAll)) + real
+    }.stateIn(scope, SharingStarted.Eagerly, listOf(CategoryRow.All(0)))
 
     /** Map from categoryId (or null = uncategorized) to blueprint count. */
     val counts: StateFlow<Map<String?, Int>> = categoryDao.observeCountsByCategory()

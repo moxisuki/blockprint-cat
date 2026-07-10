@@ -22,7 +22,6 @@ fun CategoryHomeSection(
     onCategoryClick: (CategoryRow) -> Unit,
     onCategoryLongClick: (CategoryRow) -> Unit,
     onAddClick: () -> Unit,
-    showEmpty: Boolean,
 ) {
     val rows by vm.categories.collectAsStateWithLifecycle()
     val selectedId by vm.selectedCategoryId.collectAsStateWithLifecycle()
@@ -32,6 +31,5 @@ fun CategoryHomeSection(
         onCategoryClick = onCategoryClick,
         onCategoryLongClick = onCategoryLongClick,
         onAddClick = onAddClick,
-        showEmpty = showEmpty,
     )
 }

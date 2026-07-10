@@ -396,7 +396,7 @@ fun HomeScreen(
                                     vm = viewModel,
                                     onCategoryClick = { row ->
                                         when (row) {
-                                            CategoryRow.All -> viewModel.selectCategory(null)
+                                            is CategoryRow.All -> viewModel.selectCategory(null)
                                             is CategoryRow.Real -> viewModel.selectCategory(row.entity.id)
                                         }
                                     },
@@ -404,7 +404,6 @@ fun HomeScreen(
                                         if (row is CategoryRow.Real) editCategoryFor = row.entity
                                     },
                                     onAddClick = { showNewDialog = true },
-                                    showEmpty = viewModel.categories.value.size <= 1,
                                 )
                             }
                             LocalBlueprintList(

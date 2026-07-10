@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -37,7 +35,6 @@ fun CategoryRail(
     onCategoryClick: (CategoryRow) -> Unit,
     onCategoryLongClick: (CategoryRow) -> Unit = {},
     onAddClick: () -> Unit,
-    showEmpty: Boolean = false,
 ) {
     Column(modifier = modifier) {
         Row(
@@ -66,18 +63,19 @@ fun CategoryRail(
                 )
             }
         }
+        // "全部" 自身就是有效分类, 不强求用户创建更多. 顶部的 + 按钮即足够.
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(rows, key = { row ->
                 when (row) {
-                    CategoryRow.All -> "cat-all"
+                    is CategoryRow.All -> "cat-all"
                     is CategoryRow.Real -> "cat-${row.entity.id}"
                 }
             }) { row ->
                 val isSelected = when (row) {
-                    CategoryRow.All -> selectedId == null
+                    is CategoryRow.All -> selectedId == null
                     is CategoryRow.Real -> selectedId == row.entity.id
                 }
                 CategoryCard(
@@ -88,27 +86,5 @@ fun CategoryRail(
                 )
             }
         }
-        if (showEmpty && rows.size <= 1) {
-            CategoryEmptyState(modifier = Modifier.fillMaxWidth())
-        }
-    }
-}
-
-@Composable
-private fun CategoryEmptyState(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = stringResource(R.string.home_category_empty_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.home_category_empty_sub),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }

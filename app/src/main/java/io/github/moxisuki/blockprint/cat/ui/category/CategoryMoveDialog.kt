@@ -112,7 +112,7 @@ private fun CategoryPickCell(row: CategoryRow, onClick: () -> Unit) {
         ) {
             Text(
                 text = when (row) {
-                    CategoryRow.All -> stringResource(R.string.home_category_all)
+                    is CategoryRow.All -> stringResource(R.string.home_category_all)
                     is CategoryRow.Real -> row.entity.name
                 },
                 style = MaterialTheme.typography.labelSmall,

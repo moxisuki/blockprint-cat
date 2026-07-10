@@ -59,7 +59,7 @@ fun CategoryCard(
                     .height(72.dp),
             ) {
                 when (row) {
-                    CategoryRow.All -> {
+                    is CategoryRow.All -> {
                         CategoryCoverView(colorIdx = 0, patternIdx = 0, modifier = Modifier.fillMaxSize())
                     }
                     is CategoryRow.Real -> {
@@ -74,7 +74,7 @@ fun CategoryCard(
             Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
                 Text(
                     text = when (row) {
-                        CategoryRow.All -> stringResource(R.string.home_category_all)
+                        is CategoryRow.All -> stringResource(R.string.home_category_all)
                         is CategoryRow.Real -> row.entity.name
                     },
                     fontWeight = FontWeight.SemiBold,

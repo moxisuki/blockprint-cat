@@ -27,3 +27,7 @@ local.properties
 
 
 /tools
+
+# Legacy reference
+reference/
+.codex-tmp/

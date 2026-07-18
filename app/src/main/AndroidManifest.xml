@@ -1,204 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="29" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
-        android:name=".BlockPrintCatApp"
+        android:name=".app.BlockPrintCatApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BlockPrintCat">
 
-        <!-- Bugly crash reporting (AppID is injected via BuildConfig from local.properties) -->
-        <meta-data
-            android:name="BUGLY_APPID"
-            android:value="${BUGLY_APP_ID}" />
-        <meta-data
-            android:name="BUGLY_APP_CHANNEL"
-            android:value="blockprint-cat" />
-        <meta-data
-            android:name="BUGLY_ENABLE_DEBUG"
-            android:value="false" />
-
         <activity
             android:name=".MainActivity"
-            android:enabled="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|fontScale"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTop"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|fontScale"
             android:theme="@style/Theme.BlockPrintCat">
-            <!--
-                Accept blueprint files opened from other apps (file managers,
-                browsers, chat apps). All extensions the blockprint-core
-                reader supports.
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
-                WHY THIS IS SPLIT INTO MULTIPLE intent-filter BLOCKS:
-                  Android matches a single intent-filter as an atomic unit —
-                  if ANY <data> child mismatches the intent, the whole filter
-                  is rejected. Mixing content:// + file:// + pathPattern in
-                  one filter breaks pathPattern matching on some OEMs. So we
-                  separate by scheme + by MIME type, one filter per shape.
-
-                WHY NO RAW .json / .nbt IN pathPattern:
-                  *.json and *.nbt path matching would make us absorb every
-                  JSON/NBT file in the system, which is too greedy. We claim
-                  those only via mimeType below, where the user (or file
-                  manager) makes the call.
-            -->
-
-            <!-- content:// URIs (FileProvider / SAF) for .litematic + .schem -->
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:host="*" />
-                <data android:pathPattern=".*\\.litematic" />
-                <data android:pathPattern=".*\\.schem" />
-                <data android:pathPattern=".*\\.schematic" />
-                <data android:pathPattern=".*\\.nbt" />
-            </intent-filter>
-
-            <!-- content:// URIs as a generic catch-all — covers MIME-only senders
-                 that don't include a recognized path. -->
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-
-            <!-- file:// URIs (legacy file managers) for the same extensions -->
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="file" />
-                <data android:host="*" />
-                <data android:pathPattern=".*\\.litematic" />
-                <data android:pathPattern=".*\\.schem" />
-                <data android:pathPattern=".*\\.schematic" />
-                <data android:pathPattern=".*\\.nbt" />
-            </intent-filter>
-
-            <!-- file:// URIs generic catch-all -->
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="file" />
-                <data android:mimeType="*/*" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity-alias
-            android:name=".MainActivityV1"
-            android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_launcher_default"
-            android:roundIcon="@mipmap/ic_launcher_default_round"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <!--
-                Aliases do NOT inherit intent-filters from their targetActivity
-                — each alias must declare its own. V1 is the only enabled
-                launcher entry, so it has to mirror the parent's VIEW filters
-                for the "Open with" dialog to surface BlockPrint Cat.
-            -->
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:host="*" />
-                <data android:pathPattern=".*\\.litematic" />
-                <data android:pathPattern=".*\\.schem" />
-                <data android:pathPattern=".*\\.schematic" />
-                <data android:pathPattern=".*\\.nbt" />
-            </intent-filter>
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="file" />
-                <data android:host="*" />
-                <data android:pathPattern=".*\\.litematic" />
-                <data android:pathPattern=".*\\.schem" />
-                <data android:pathPattern=".*\\.schematic" />
-                <data android:pathPattern=".*\\.nbt" />
-            </intent-filter>
-            <intent-filter android:label="@string/intent_label_open_blueprint">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="file" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityV2"
-            android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_launcher_blue"
-            android:roundIcon="@mipmap/ic_launcher_blue_round"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityV3"
-            android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_launcher_purple"
-            android:roundIcon="@mipmap/ic_launcher_purple_round"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityV4"
-            android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_launcher_v4"
-            android:roundIcon="@mipmap/ic_launcher_v4_round"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
 
 </manifest>

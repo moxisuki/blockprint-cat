@@ -7,6 +7,7 @@ import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguageManager
 import io.github.moxisuki.blockprint.cat.app.core.network.AppNetworkResult
 import io.github.moxisuki.blockprint.cat.app.feature.about.data.AboutRepository
 import io.github.moxisuki.blockprint.cat.app.feature.about.data.HitokotoQuote
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,7 @@ class AboutViewModel @Inject constructor(
     )
     val state: StateFlow<AboutState> = _state.asStateFlow()
     private var hasLoadedHitokoto = false
+    private var hitokotoJob: Job? = null
 
     init {
         onAction(AboutAction.Opened)
@@ -46,7 +48,9 @@ class AboutViewModel @Inject constructor(
     }
 
     private fun loadHitokoto() {
-        viewModelScope.launch {
+        hitokotoJob?.cancel()
+        hitokotoJob = viewModelScope.launch {
+            _state.update { it.copy(hitokoto = AboutHitokotoState.Loading) }
             val hitokotoState = when (val result = repository.loadHitokoto()) {
                 is AppNetworkResult.Success -> result.value.toAboutState()
                 is AppNetworkResult.Failure -> AboutHitokotoState.Unavailable

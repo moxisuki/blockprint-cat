@@ -120,6 +120,11 @@ android {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -158,6 +163,7 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.bugly.crashreport)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.zxing.core)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

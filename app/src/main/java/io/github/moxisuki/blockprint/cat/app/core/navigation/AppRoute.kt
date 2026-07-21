@@ -12,7 +12,16 @@ sealed interface AppRoute : NavKey {
     data object Settings : AppTopLevelRoute
 
     @Serializable
+    data object ThemeSettings : AppRoute
+
+    @Serializable
+    data class BlueprintDetail(val blueprintId: String) : AppRoute
+
+    @Serializable
     data object About : AppRoute
+
+    @Serializable
+    data object Debug : AppRoute
 }
 
 sealed interface AppTopLevelRoute : AppRoute
@@ -32,7 +41,10 @@ internal fun appTopLevelRouteFromId(routeId: String): AppTopLevelRoute =
 
 fun AppRoute.topLevelRoute(): AppTopLevelRoute = when (this) {
     AppRoute.Home -> AppRoute.Home
+    is AppRoute.BlueprintDetail -> AppRoute.Home
     AppRoute.Settings,
+    AppRoute.ThemeSettings,
     AppRoute.About,
+    AppRoute.Debug,
     -> AppRoute.Settings
 }

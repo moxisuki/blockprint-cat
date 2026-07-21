@@ -1,16 +1,25 @@
 package io.github.moxisuki.blockprint.cat.app.feature.settings
 
-import androidx.compose.ui.graphics.Color
-import io.github.moxisuki.blockprint.cat.app.core.design.AppThemeColorSource
-import io.github.moxisuki.blockprint.cat.app.core.design.AppThemeMode
 import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguage
 
 sealed interface SettingsAction {
     data object Opened : SettingsAction
+    data object ThemeSettingsClicked : SettingsAction
     data object AboutClicked : SettingsAction
-    data class ThemeModeSelected(val mode: AppThemeMode) : SettingsAction
-    data class ThemeColorSourceSelected(val colorSource: AppThemeColorSource) : SettingsAction
-    data class ThemeSeedColorSelected(val color: Color) : SettingsAction
-    data class ThemePaletteExpansionChanged(val expanded: Boolean) : SettingsAction
     data class LanguageSelected(val language: AppLanguage) : SettingsAction
+    data object BlueprintDirectoryClicked : SettingsAction
+    data object BlueprintDirectoryPickerDismissed : SettingsAction
+    data class BlueprintDirectorySelected(
+        val treeUri: String,
+        val treeDocumentId: String?,
+    ) : SettingsAction
+    data object BackupClicked : SettingsAction
+    data class BackupPermissionDenied(val message: String) : SettingsAction
+    data class RestoreFilePicked(
+        val uri: String,
+        val displayName: String?,
+    ) : SettingsAction
+    data object RestoreConfirmed : SettingsAction
+    data object RestoreConfirmDismissed : SettingsAction
+    data object BackupRestoreFeedbackDismissed : SettingsAction
 }

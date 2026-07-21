@@ -15,6 +15,17 @@ enum class AppThemeColorSource {
     Custom,
 }
 
+enum class AppThemeAccentColor(val color: Color?) {
+    Default(null),
+    Red(Color(0xFFE5484D)),
+    Pink(Color(0xFFE93D82)),
+    Purple(Color(0xFF8E4EC6)),
+    DeepPurple(Color(0xFF6E56CF)),
+    Indigo(Color(0xFF3E63DD)),
+    Blue(Color(0xFF3482FF)),
+    Cyan(Color(0xFF00A2C7)),
+}
+
 internal fun AppThemeMode.toColorSchemeMode(colorSource: AppThemeColorSource): ColorSchemeMode = when (colorSource) {
     AppThemeColorSource.Default -> when (this) {
         AppThemeMode.System -> ColorSchemeMode.System

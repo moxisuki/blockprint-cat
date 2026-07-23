@@ -25,6 +25,7 @@ fun SettingsRoute(
     onThemeClick: () -> Unit,
     onAboutClick: () -> Unit,
     onDebugClick: () -> Unit,
+    onResourcePacksClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -100,6 +101,9 @@ fun SettingsRoute(
                 SettingsAction.ThemeSettingsClicked -> onThemeClick()
                 SettingsAction.AboutClicked -> onAboutClick()
                 is SettingsAction.LanguageSelected,
+                is SettingsAction.CommunityEnabledChanged,
+                is SettingsAction.McsCookiesChanged,
+                SettingsAction.ClearMcsCookiesClicked,
                 SettingsAction.Opened,
                 SettingsAction.BlueprintDirectoryClicked,
                 SettingsAction.BlueprintDirectoryPickerDismissed,
@@ -127,6 +131,7 @@ fun SettingsRoute(
             )
         },
         onDebugClick = onDebugClick,
+        onResourcePacksClick = onResourcePacksClick,
         modifier = modifier,
     )
 }

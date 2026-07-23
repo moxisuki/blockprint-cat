@@ -17,6 +17,7 @@ import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
 import io.github.moxisuki.blockprint.cat.app.core.design.appScrollEndHaptic
 import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguage
+import io.github.moxisuki.blockprint.cat.app.feature.settings.components.SettingsCommunitySection
 import io.github.moxisuki.blockprint.cat.app.feature.settings.components.SettingsStorageSection
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -36,6 +37,7 @@ internal fun SettingsScreen(
     onAction: (SettingsAction) -> Unit,
     onPickBlueprintDirectory: () -> Unit,
     onRestoreBackup: () -> Unit,
+    onResourcePacksClick: () -> Unit,
     onDebugClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,6 +76,20 @@ internal fun SettingsScreen(
                 onClick = { onAction(SettingsAction.ThemeSettingsClicked) },
             )
         }
+        item(key = "resourcepacks-entry") {
+            ArrowPreference(
+                title = stringResource(R.string.settings_resource_packs_title),
+                summary = if (state.installedResourcePackCount == 0) {
+                    stringResource(R.string.settings_resource_packs_subtitle_empty)
+                } else {
+                    stringResource(
+                        R.string.settings_resource_packs_subtitle_count,
+                        state.installedResourcePackCount,
+                    )
+                },
+                onClick = onResourcePacksClick,
+            )
+        }
         item(key = "language-title") {
             SectionTitle(
                 text = stringResource(R.string.settings_language_title),
@@ -107,6 +123,27 @@ internal fun SettingsScreen(
                 onBackupClick = { onAction(SettingsAction.BackupClicked) },
                 onRestoreClick = onRestoreBackup,
                 onDismissFeedback = { onAction(SettingsAction.BackupRestoreFeedbackDismissed) },
+            )
+        }
+        item(key = "community-title") {
+            SectionTitle(
+                text = stringResource(R.string.settings_community_card_title),
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+        item(key = "community") {
+            SettingsCommunitySection(
+                communityEnabled = state.communityEnabled,
+                mcsAuthCookies = state.mcsAuthCookies,
+                onCommunityEnabledChange = {
+                    onAction(SettingsAction.CommunityEnabledChanged(it))
+                },
+                onMcsCookiesChange = {
+                    onAction(SettingsAction.McsCookiesChanged(it))
+                },
+                onClearMcsCookiesClick = {
+                    onAction(SettingsAction.ClearMcsCookiesClicked)
+                },
             )
         }
         item(key = "about-title") {
@@ -218,6 +255,7 @@ private fun SettingsScreenPreview() {
             onAction = {},
             onPickBlueprintDirectory = {},
             onRestoreBackup = {},
+            onResourcePacksClick = {},
             onDebugClick = {},
         )
     }

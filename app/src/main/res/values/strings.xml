@@ -11,6 +11,9 @@
     <!-- 设置页 -->
     <string name="settings_title">设置</string>
     <string name="settings_theme_title">主题</string>
+    <string name="settings_resource_packs_title">资源包</string>
+    <string name="settings_resource_packs_subtitle_empty">管理原版纹理与 Mod 资源</string>
+    <string name="settings_resource_packs_subtitle_count">已安装 %1$d 个</string>
     <string name="settings_theme_subtitle_light">浅色模式</string>
     <string name="settings_theme_subtitle_dark">深色模式</string>
     <string name="settings_theme_subtitle_system">跟随系统</string>
@@ -475,6 +478,17 @@
     <string name="community_filter_label">过滤: %1$s</string>
     <string name="community_total_x">共 %1$d 个蓝图</string>
     <string name="community_loaded_x">已加载 %1$d 个</string>
+    <string name="community_stat_total">社区库存</string>
+    <string name="community_stat_loaded">本页载入</string>
+    <string name="community_section_topics">热门标签</string>
+    <string name="community_section_featured">最新蓝图</string>
+    <string name="community_metric_downloads">下载</string>
+    <string name="community_metric_blocks">方块</string>
+    <string name="community_metric_heat">热度</string>
+    <string name="community_preview_mcs">预览</string>
+    <string name="community_preview_cms">网页</string>
+    <string name="community_preview_cms_cover">封面</string>
+    <string name="community_refreshing">正在刷新</string>
     <string name="community_empty">暂无数据</string>
     <string name="community_cms_need_verify">CMS 站需要浏览器验证 Cloudflare</string>
     <string name="community_cms_open_verify">打开 CMS 站验证</string>
@@ -497,10 +511,13 @@
     <string name="community_login_title">登录 mcschematic.top</string>
     <string name="community_login_desc">通过 QQ 一键登录后可浏览、下载社区蓝图</string>
     <string name="community_login_qq">QQ 登录</string>
+    <string name="community_login_scan_hint_title">请保持登录页可见</string>
+    <string name="community_login_scan_hint_summary">QQ 扫码登录不能切到后台完成。请使用小窗、分屏，或用另一台设备扫码。</string>
     <string name="community_login_privacy_notice">登录过程中不会存储任何 OAuth 数据（如 QQ 的 access_token、refresh_token 等）。仅 mcschematic.top 的鉴权 Cookie（uuid、user_auth、cf_clearance）会保存在本机，可随时在 设置 → 社区配置 中清除。</string>
 
     <!-- CommunityDetailScreen -->
     <string name="cdl_download">下载</string>
+    <string name="cdl_open_web">打开网页</string>
     <string name="cdl_downloaded">已下载</string>
     <string name="cdl_downloading_pct">下载中… %1$d%%</string>
     <string name="cdl_redownload">重新下载</string>

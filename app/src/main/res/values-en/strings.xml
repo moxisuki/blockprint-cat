@@ -10,6 +10,9 @@
     <!-- 设置页 -->
     <string name="settings_title">Settings</string>
     <string name="settings_theme_title">Theme</string>
+    <string name="settings_resource_packs_title">Resource Packs</string>
+    <string name="settings_resource_packs_subtitle_empty">Manage vanilla textures and mod resources</string>
+    <string name="settings_resource_packs_subtitle_count">%1$d installed</string>
     <string name="settings_theme_subtitle_light">Light mode</string>
     <string name="settings_theme_subtitle_dark">Dark mode</string>
     <string name="settings_theme_subtitle_system">Follow system</string>
@@ -455,6 +458,17 @@
     <string name="community_filter_label">Filter: %1$s</string>
     <string name="community_total_x">%1$d blueprints total</string>
     <string name="community_loaded_x">%1$d loaded</string>
+    <string name="community_stat_total">Catalog</string>
+    <string name="community_stat_loaded">Loaded</string>
+    <string name="community_section_topics">Trending tags</string>
+    <string name="community_section_featured">Latest blueprints</string>
+    <string name="community_metric_downloads">Downloads</string>
+    <string name="community_metric_blocks">Blocks</string>
+    <string name="community_metric_heat">Heat</string>
+    <string name="community_preview_mcs">Preview</string>
+    <string name="community_preview_cms">Web</string>
+    <string name="community_preview_cms_cover">Cover</string>
+    <string name="community_refreshing">Refreshing</string>
     <string name="community_empty">No data</string>
     <string name="community_cms_need_verify">CMS requires browser verification (Cloudflare)</string>
     <string name="community_cms_open_verify">Open CMS site to verify</string>
@@ -477,9 +491,12 @@
     <string name="community_login_title">Sign in to mcschematic.top</string>
     <string name="community_login_desc">Sign in via QQ to browse and download community blueprints</string>
     <string name="community_login_qq">Sign in with QQ</string>
+    <string name="community_login_scan_hint_title">Keep this page visible</string>
+    <string name="community_login_scan_hint_summary">QQ scan login cannot complete in the background. Use floating window, split screen, or scan with another device.</string>
     <string name="community_login_privacy_notice">No OAuth data is stored during sign-in (no QQ access_token, refresh_token, etc.). Only mcschematic.top auth cookies (uuid, user_auth, cf_clearance) are kept locally and can be cleared any time at Settings → Community Settings.</string>
     <!-- CommunityDetailScreen -->
     <string name="cdl_download">Download</string>
+    <string name="cdl_open_web">Open web</string>
     <string name="cdl_downloaded">Downloaded</string>
     <string name="cdl_downloading_pct">Downloading... %1$d%%</string>
     <string name="cdl_redownload">Re-download</string>

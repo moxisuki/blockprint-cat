@@ -58,7 +58,6 @@ fun AppShell() {
     }
     var showThemeAppBarTitle by remember { mutableStateOf(false) }
     var showAboutAppBarTitle by remember { mutableStateOf(false) }
-    var showResourcePacksAppBarTitle by remember { mutableStateOf(false) }
 
     LaunchedEffect(communityEnabled, currentTopLevelRoute) {
         if (!communityEnabled && currentTopLevelRoute == AppRoute.Community) {
@@ -72,9 +71,6 @@ fun AppShell() {
         }
         if (navigator.currentRoute != AppRoute.About) {
             showAboutAppBarTitle = false
-        }
-        if (navigator.currentRoute != AppRoute.ResourcePacks) {
-            showResourcePacksAppBarTitle = false
         }
     }
     val currentTitle = when (navigator.currentRoute) {
@@ -95,11 +91,7 @@ fun AppShell() {
             ""
         }
         AppRoute.Debug -> stringResource(R.string.nav_title_debug)
-        AppRoute.ResourcePacks -> if (showResourcePacksAppBarTitle) {
-            stringResource(R.string.resourcepacks_title)
-        } else {
-            ""
-        }
+        AppRoute.ResourcePacks -> ""  // ResourcePacksScreen owns its TopAppBar (with large title).
     }
     val entryProvider = remember {
         entryProvider<NavKey> {
@@ -193,11 +185,7 @@ fun AppShell() {
                 DebugRoute()
             }
             entry(AppRoute.ResourcePacks) {
-                ResourcePacksRoute(
-                    onAppBarTitleVisibleChange = { visible ->
-                        showResourcePacksAppBarTitle = visible
-                    },
-                )
+                ResourcePacksRoute()
             }
         }
     }

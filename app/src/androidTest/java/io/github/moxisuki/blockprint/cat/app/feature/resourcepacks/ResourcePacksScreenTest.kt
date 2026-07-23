@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
@@ -21,21 +22,21 @@ class ResourcePacksScreenTest {
 
     @get:Rule val compose = createAndroidComposeRule<androidx.activity.ComponentActivity>()
 
-    @Test fun emptyState_rendersHeroTitle_andAddModButton_andClearAll() {
+    @Test fun emptyState_rendersHeroTitle_andSections() {
         compose.setContent {
             ResourcePacksScreen(state = ResourcePacksState(), onAction = {})
         }
-        // Hero title (content area, anchored at top).
+        // Hero title from the TopAppBar's largeTitle.
         compose.onNodeWithText("资源包管理").assertExists()
-        // Section headers — each appears exactly once.
+        // Section headers.
         compose.onNodeWithText("原版资源包").assertExists()
         compose.onNodeWithText("Mod 资源").assertExists()
-        // Empty-state hint for the Mod list.
+        // Empty-state hint.
         compose.onNodeWithText("还没有 Mod 资源，点击下方按钮添加").assertExists()
-        // Primary CTA.
-        compose.onNodeWithText("添加 Mod 资源").assertExists()
-        // Clear-all (now a bottom button inside the LazyColumn).
-        compose.onNodeWithText("清理全部").assertExists()
+        // Clear-all is on the top app bar action — content description is set.
+        compose.onNodeWithContentDescription("清理全部").assertExists()
+        // FAB is the "add Mod" entry point — content description is set.
+        compose.onNodeWithContentDescription("添加 Mod 资源").assertExists()
     }
 
     @Test fun installedVanilla_doesNotRemoveClearAllButton() {
@@ -46,8 +47,7 @@ class ResourcePacksScreenTest {
         compose.onAllNodesWithText("原版资源包").fetchSemanticsNodes().also { nodes ->
             assertThat(nodes).isNotEmpty()
         }
-        // Still has destructive action even with installed entry.
-        compose.onNodeWithText("清理全部").assertExists()
+        compose.onNodeWithContentDescription("清理全部").assertExists()
     }
 
     @Test fun installedMod_rendersModRow_andCountBadge() {
@@ -70,7 +70,6 @@ class ResourcePacksScreenTest {
         )
         compose.setContent { ResourcePacksScreen(state = s, onAction = {}) }
         compose.onNodeWithText("Create").assertExists()
-        // Mod count badge ("1") shown in the section header.
         compose.onNodeWithText("1").assertExists()
     }
 
@@ -91,9 +90,6 @@ class ResourcePacksScreenTest {
             ),
         )
         compose.setContent { ResourcePacksScreen(state = s, onAction = {}) }
-        // Banner shows the mod display name (in the active install card).
-        // The mod isn't installed yet, so a second "Create" can appear once the
-        // banner is shown. Either presence confirms the banner is up.
         compose.onAllNodesWithText("Create").fetchSemanticsNodes().also { nodes ->
             assertThat(nodes.isNotEmpty()).isTrue()
         }
@@ -117,5 +113,3 @@ class ResourcePacksScreenTest {
         hasAssets = true,
     )
 }
-
-private const val PackProgressExtractionProbe = "create-1.0.jar"

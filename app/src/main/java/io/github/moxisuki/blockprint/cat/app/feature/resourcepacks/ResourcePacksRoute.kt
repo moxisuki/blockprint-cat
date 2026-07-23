@@ -9,14 +9,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun ResourcePacksRoute(
     modifier: Modifier = Modifier,
-    onAppBarTitleVisibleChange: (Boolean) -> Unit = {},
     viewModel: ResourcePacksViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ResourcePacksScreen(
-        state = state,
-        onAction = viewModel::onAction,
-        onAppBarTitleVisibleChange = onAppBarTitleVisibleChange,
-        modifier = modifier,
-    )
+    ResourcePacksScreen(state = state, onAction = viewModel::onAction, modifier = modifier)
 }

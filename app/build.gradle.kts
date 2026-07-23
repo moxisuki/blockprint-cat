@@ -14,6 +14,26 @@ val localProps = Properties().apply {
     if (f.exists()) load(f.inputStream())
 }
 
+private fun String.toBuildConfigStringLiteral(): String = buildString(length + 2) {
+    append('"')
+    this@toBuildConfigStringLiteral.forEach { char ->
+        when (char) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\n' -> append("\\n")
+            '\r' -> Unit
+            '\t' -> append("\\t")
+            else -> append(char)
+        }
+    }
+    append('"')
+}
+
+val changelogText = rootProject.file("CHANGELOG.md")
+    .takeIf { it.exists() }
+    ?.readText(Charsets.UTF_8)
+    .orEmpty()
+
 // Compose Compiler Reports — 开启稳定性推断 + 重组次数统计
 // 输出到 app/build/compose_reports/ + app/build/compose_metrics/
 // 加 `-Pplugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=...`
@@ -69,6 +89,7 @@ android {
         buildConfigField("String", "PROFILE_INSTALLER_VERSION", "\"${libs.versions.profileInstaller.get()}\"")
         buildConfigField("String", "BUGLY_VERSION", "\"${libs.versions.bugly.get()}\"")
         buildConfigField("String", "ZXING_VERSION", "\"${libs.versions.zxing.get()}\"")
+        buildConfigField("String", "CHANGELOG", changelogText.toBuildConfigStringLiteral())
         // Bugly 崩溃上报 — 从 local.properties 读取（不入 git，避免开源泄露）
         val buglyAppId = localProps.getProperty("BUGLY_APP_ID", "")
         buildConfigField("String", "BUGLY_APP_ID", "\"$buglyAppId\"")
@@ -145,6 +166,8 @@ dependencies {
     implementation(libs.miuix.preference.android)
     implementation(libs.miuix.icons.android)
     implementation(libs.miuix.navigation3.ui.android)
+    implementation(libs.markdown.renderer.android)
+    implementation(libs.markdown.renderer.m3)
     implementation(libs.androidx.startup.runtime)
     implementation(libs.androidx.profileinstaller)
     implementation(libs.blockprint.core)
@@ -176,6 +199,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.truth)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)

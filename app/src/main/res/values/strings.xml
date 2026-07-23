@@ -935,6 +935,7 @@
     <string name="import_preview_failed_title">无法解析此文件</string>
     <string name="intent_label_open_blueprint">用 BlockPrint Cat 打开蓝图</string>
     <string name="resourcepacks_title">资源包管理</string>
+    <string name="resourcepacks_subtitle">为 Minecraft 3D 预览提供纹理与模型</string>
     <string name="resourcepacks_section_vanilla">原版资源包</string>
     <string name="resourcepacks_section_mod">Mod 资源</string>
     <string name="resourcepacks_vanilla_not_installed">未下载原版资源包</string>

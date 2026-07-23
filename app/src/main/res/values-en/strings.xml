@@ -897,6 +897,7 @@ You may clear all locally stored data at any time via Settings → Storage → C
     <string name="import_preview_failed_title">Can\'t parse this file</string>
     <string name="intent_label_open_blueprint">Open blueprint with BlockPrint Cat</string>
     <string name="resourcepacks_title">Resource Packs</string>
+    <string name="resourcepacks_subtitle">Provides textures and models for Minecraft 3D preview</string>
     <string name="resourcepacks_section_vanilla">Vanilla</string>
     <string name="resourcepacks_section_mod">Mod Resources</string>
     <string name="resourcepacks_vanilla_not_installed">Vanilla assets not downloaded</string>

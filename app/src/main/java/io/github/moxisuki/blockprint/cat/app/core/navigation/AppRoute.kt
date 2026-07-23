@@ -1,12 +1,39 @@
 package io.github.moxisuki.blockprint.cat.app.core.navigation
 
 import androidx.navigation3.runtime.NavKey
+import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintFormat
 import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface AppRoute : NavKey {
     @Serializable
     data object Home : AppTopLevelRoute
+
+    @Serializable
+    data object Community : AppTopLevelRoute
+
+    @Serializable
+    data object CommunityLogin : AppRoute
+
+    @Serializable
+    data class CommunityDetail(
+        val source: String,
+        val blueprintId: String,
+        val title: String,
+        val author: String,
+        val format: BlueprintFormat,
+        val description: String,
+        val heat: Int? = null,
+        val downloads: Int? = null,
+        val dimensions: String? = null,
+        val sizeText: String? = null,
+        val stress: String? = null,
+        val updateTime: String = "",
+        val coverUrl: String? = null,
+        val tags: List<String> = emptyList(),
+        val downloadable: Boolean = true,
+        val webUrl: String? = null,
+    ) : AppRoute
 
     @Serializable
     data object Settings : AppTopLevelRoute
@@ -22,17 +49,22 @@ sealed interface AppRoute : NavKey {
 
     @Serializable
     data object Debug : AppRoute
+
+    @Serializable
+    data object ResourcePacks : AppRoute
 }
 
 sealed interface AppTopLevelRoute : AppRoute
 
 internal val AppTopLevelRoutes = listOf<AppTopLevelRoute>(
     AppRoute.Home,
+    AppRoute.Community,
     AppRoute.Settings,
 )
 
 internal fun AppTopLevelRoute.routeId(): String = when (this) {
     AppRoute.Home -> "home"
+    AppRoute.Community -> "community"
     AppRoute.Settings -> "settings"
 }
 
@@ -41,10 +73,15 @@ internal fun appTopLevelRouteFromId(routeId: String): AppTopLevelRoute =
 
 fun AppRoute.topLevelRoute(): AppTopLevelRoute = when (this) {
     AppRoute.Home -> AppRoute.Home
+    AppRoute.Community,
+    AppRoute.CommunityLogin,
+    is AppRoute.CommunityDetail,
+    -> AppRoute.Community
     is AppRoute.BlueprintDetail -> AppRoute.Home
     AppRoute.Settings,
     AppRoute.ThemeSettings,
     AppRoute.About,
     AppRoute.Debug,
+    AppRoute.ResourcePacks,
     -> AppRoute.Settings
 }

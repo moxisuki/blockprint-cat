@@ -934,4 +934,24 @@
     <string name="import_preview_confirm">确认导入</string>
     <string name="import_preview_failed_title">无法解析此文件</string>
     <string name="intent_label_open_blueprint">用 BlockPrint Cat 打开蓝图</string>
+    <string name="resourcepacks_title">资源包管理</string>
+    <string name="resourcepacks_section_vanilla">原版资源包</string>
+    <string name="resourcepacks_section_mod">Mod 资源</string>
+    <string name="resourcepacks_vanilla_not_installed">未下载原版资源包</string>
+    <string name="resourcepacks_vanilla_installed">已安装 v%1$s · %2$d 文件 · %3$s</string>
+    <string name="resourcepacks_mod_add">添加 Mod 资源</string>
+    <string name="resourcepacks_mod_none">还没有 Mod 资源，点击下方按钮添加</string>
+    <string name="resourcepacks_mod_empty_pack">该 Mod 不含资源包</string>
+    <string name="resourcepacks_delete_all">清理全部</string>
+    <string name="resourcepacks_search_title">搜索 Modrinth</string>
+    <string name="resourcepacks_search_hint">输入项目名称</string>
+    <string name="resourcepacks_versions_title">选择版本</string>
+    <string name="resourcepacks_search_empty">没有匹配结果</string>
+    <string name="resourcepacks_search_no_version">未找到兼容版本</string>
+    <string name="resourcepacks_progress_installing">下载中 %1$s — %2$d%%</string>
+    <string name="resourcepacks_progress_extracting">解压中…</string>
+    <string name="resourcepacks_search_cancel">取消</string>
+    <string name="resourcepacks_search_install">安装</string>
+    <string name="resourcepacks_confirm_delete">删除该资源包？</string>
+    <string name="resourcepacks_failed">失败：%1$s</string>
 </resources>

@@ -896,4 +896,24 @@ You may clear all locally stored data at any time via Settings → Storage → C
     <string name="import_preview_confirm">Confirm import</string>
     <string name="import_preview_failed_title">Can\'t parse this file</string>
     <string name="intent_label_open_blueprint">Open blueprint with BlockPrint Cat</string>
+    <string name="resourcepacks_title">Resource Packs</string>
+    <string name="resourcepacks_section_vanilla">Vanilla</string>
+    <string name="resourcepacks_section_mod">Mod Resources</string>
+    <string name="resourcepacks_vanilla_not_installed">Vanilla assets not downloaded</string>
+    <string name="resourcepacks_vanilla_installed">Installed v%1$s · %2$d files · %3$s</string>
+    <string name="resourcepacks_mod_add">Add mod resource</string>
+    <string name="resourcepacks_mod_none">No mods yet, tap below to add</string>
+    <string name="resourcepacks_mod_empty_pack">Mod has no resource pack</string>
+    <string name="resourcepacks_delete_all">Delete all</string>
+    <string name="resourcepacks_search_title">Search Modrinth</string>
+    <string name="resourcepacks_search_hint">Enter project name</string>
+    <string name="resourcepacks_versions_title">Pick version</string>
+    <string name="resourcepacks_search_empty">No results</string>
+    <string name="resourcepacks_search_no_version">No compatible version</string>
+    <string name="resourcepacks_progress_installing">Downloading %1$s — %2$d%%</string>
+    <string name="resourcepacks_progress_extracting">Extracting…</string>
+    <string name="resourcepacks_search_cancel">Cancel</string>
+    <string name="resourcepacks_search_install">Install</string>
+    <string name="resourcepacks_confirm_delete">Delete this resource pack?</string>
+    <string name="resourcepacks_failed">Failed: %1$s</string>
 </resources>

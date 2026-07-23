@@ -8,10 +8,11 @@ class FakeAppHttpClient(
     private val jsonResponses: Map<String, String> = emptyMap(),
     private val jsonFailures: Set<String> = emptySet(),
     private val bytesResponses: Map<String, ByteArray> = emptyMap(),
+    private val stringResponses: Map<String, String> = emptyMap(),
     private val progressRecorder: ((Float) -> Unit)? = null,
 ) : AppHttpClient {
     override suspend fun getString(url: String): AppNetworkResult<String> =
-        AppNetworkResult.Success("")
+        AppNetworkResult.Success(stringResponses[url] ?: "")
 
     override suspend fun getJson(url: String, userAgent: String?): AppNetworkResult<JSONObject> {
         val body = jsonResponses[url] ?: return AppNetworkResult.Failure(message = "no fake for $url")

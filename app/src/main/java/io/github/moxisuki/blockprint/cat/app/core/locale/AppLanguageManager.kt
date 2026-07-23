@@ -55,6 +55,15 @@ class AppLanguageManager @Inject constructor(
 
     fun getLanguage(): AppLanguage = cachedLanguage
 
+    fun toBcp47Tag(): String = when (getLanguage()) {
+        AppLanguage.System -> {
+            val raw = Resources.getSystem().configuration.locales[0]?.toLanguageTag() ?: "en-US"
+            if (raw.lowercase().startsWith("zh")) "zh_cn" else raw.lowercase().replace('-', '_')
+        }
+        AppLanguage.Chinese -> "zh_cn"
+        AppLanguage.English -> "en_us"
+    }
+
     fun setLanguage(language: AppLanguage) {
         cachedLanguage = language
         _language.value = language

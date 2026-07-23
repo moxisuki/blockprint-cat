@@ -40,6 +40,7 @@ import io.github.moxisuki.blockprint.cat.app.feature.community.CommunityRoute
 import io.github.moxisuki.blockprint.cat.app.feature.detail.BlueprintDetailRoute
 import io.github.moxisuki.blockprint.cat.app.feature.debug.DebugRoute
 import io.github.moxisuki.blockprint.cat.app.feature.home.HomeRoute
+import io.github.moxisuki.blockprint.cat.app.feature.resourcepacks.ResourcePacksRoute
 import io.github.moxisuki.blockprint.cat.app.feature.settings.SettingsRoute
 import io.github.moxisuki.blockprint.cat.app.feature.settings.theme.ThemeSettingsRoute
 
@@ -182,6 +183,9 @@ fun AppShell() {
             }
             entry(AppRoute.Debug) {
                 DebugRoute()
+            }
+            entry(AppRoute.ResourcePacks) {
+                ResourcePacksRoute()
             }
         }
     }

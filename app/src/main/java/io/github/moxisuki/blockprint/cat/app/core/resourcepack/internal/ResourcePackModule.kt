@@ -2,6 +2,7 @@ package io.github.moxisuki.blockprint.cat.app.core.resourcepack.internal
 
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.ResourcePackAssetLocator
@@ -12,7 +13,19 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ResourcePackModule {
-    @Binds @Singleton abstract fun bindRepository(impl: DefaultResourcePackRepository): ResourcePackRepository
-    @Binds @Singleton abstract fun bindLocator(impl: DefaultResourcePackAssetLocator): ResourcePackAssetLocator
-    @Binds @Singleton abstract fun bindObserver(impl: DefaultResourcePackObserver): ResourcePackObserver
+
+    @Binds @Singleton
+    abstract fun bindRepository(impl: DefaultResourcePackRepository): ResourcePackRepository
+
+    @Binds @Singleton
+    abstract fun bindLocator(impl: DefaultResourcePackAssetLocator): ResourcePackAssetLocator
+
+    @Binds @Singleton
+    abstract fun bindObserver(impl: DefaultResourcePackObserver): ResourcePackObserver
+
+    companion object {
+        /** AssetExtractor is a pure stateless object; expose it via DI for the installers. */
+        @Provides @Singleton
+        fun provideAssetExtractor(): AssetExtractor = AssetExtractor
+    }
 }

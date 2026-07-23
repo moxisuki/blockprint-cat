@@ -7,8 +7,10 @@ import io.github.moxisuki.blockprint.cat.app.core.data.backup.BlueprintBackupRep
 import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguage
 import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguageManager
 import io.github.moxisuki.blockprint.cat.app.core.persistence.AppSettingsRepository
+import io.github.moxisuki.blockprint.cat.app.core.resourcepack.ResourcePackRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +22,7 @@ class SettingsViewModel @Inject constructor(
     private val languageManager: AppLanguageManager,
     private val settingsRepository: AppSettingsRepository,
     private val backupRepository: BlueprintBackupRepository,
+    private val resourcePackRepository: ResourcePackRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -38,13 +41,25 @@ class SettingsViewModel @Inject constructor(
             combine(
                 settingsRepository.localBlueprintTreeUri,
                 settingsRepository.localBlueprintTreeDocumentId,
-            ) { treeUri, treeDocumentId ->
-                treeUri to treeDocumentId
-            }.collect { (treeUri, treeDocumentId) ->
+                settingsRepository.communityEnabled,
+                settingsRepository.mcsAuthCookies,
+                resourcePackRepository.installedPacks.map { it.size },
+            ) { treeUri, treeDocumentId, communityEnabled, mcsAuthCookies, packsSize ->
+                SettingsState(
+                    localBlueprintTreeUri = treeUri,
+                    localBlueprintTreeDocumentId = treeDocumentId,
+                    communityEnabled = communityEnabled,
+                    mcsAuthCookies = mcsAuthCookies,
+                    installedResourcePackCount = packsSize,
+                )
+            }.collect { persistedState ->
                 _state.update {
                     it.copy(
-                        localBlueprintTreeUri = treeUri,
-                        localBlueprintTreeDocumentId = treeDocumentId,
+                        localBlueprintTreeUri = persistedState.localBlueprintTreeUri,
+                        localBlueprintTreeDocumentId = persistedState.localBlueprintTreeDocumentId,
+                        communityEnabled = persistedState.communityEnabled,
+                        mcsAuthCookies = persistedState.mcsAuthCookies,
+                        installedResourcePackCount = persistedState.installedResourcePackCount,
                     )
                 }
             }
@@ -58,6 +73,24 @@ class SettingsViewModel @Inject constructor(
             SettingsAction.ThemeSettingsClicked,
             SettingsAction.AboutClicked,
             -> Unit
+
+            is SettingsAction.CommunityEnabledChanged -> {
+                viewModelScope.launch {
+                    settingsRepository.setCommunityEnabled(action.enabled)
+                }
+            }
+
+            is SettingsAction.McsCookiesChanged -> {
+                viewModelScope.launch {
+                    settingsRepository.setMcsAuthCookies(action.cookies)
+                }
+            }
+
+            SettingsAction.ClearMcsCookiesClicked -> {
+                viewModelScope.launch {
+                    settingsRepository.clearMcsAuthCookies()
+                }
+            }
 
             is SettingsAction.LanguageSelected -> {
                 languageManager.setLanguage(action.language)

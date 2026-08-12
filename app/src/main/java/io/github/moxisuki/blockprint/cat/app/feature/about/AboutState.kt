@@ -9,6 +9,7 @@ data class AboutState(
     val appVersionCode: Int = BuildConfig.VERSION_CODE,
     val applicationId: String = BuildConfig.APPLICATION_ID,
     val blockPrintCoreVersion: String = BuildConfig.BLOCKPRINT_CORE_VERSION,
+    val changelog: String = BuildConfig.CHANGELOG,
     val hitokoto: AboutHitokotoState = AboutHitokotoState.Unavailable,
     val isChineseLocale: Boolean = true,
     val libraries: List<AboutLibrary> = defaultAboutLibraries(),
@@ -61,8 +62,6 @@ private fun defaultAboutLibraries(): List<AboutLibrary> = listOf(
     AboutLibrary("Coil", BuildConfig.COIL_VERSION, AboutLibraryLicense.Apache20, "https://coil-kt.github.io/coil/"),
     AboutLibrary("OkHttp", BuildConfig.OKHTTP_VERSION, AboutLibraryLicense.Apache20, "https://square.github.io/okhttp/"),
     AboutLibrary("SceneView", BuildConfig.SCENEVIEW_VERSION, AboutLibraryLicense.Apache20, "https://github.com/SceneView/sceneview-android"),
-    AboutLibrary("ZXing", BuildConfig.ZXING_VERSION, AboutLibraryLicense.Apache20, "https://github.com/zxing/zxing"),
-    AboutLibrary("Tencent Bugly", BuildConfig.BUGLY_VERSION, AboutLibraryLicense.VendorSdk, "https://bugly.qq.com/"),
 )
 
 private fun defaultExternalLinks(): List<AboutExternalLink> = listOf(

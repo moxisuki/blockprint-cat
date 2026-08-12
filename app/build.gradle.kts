@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.hilt.android.plugin)
 }
 
-// 读取 local.properties 中的 Bugly AppID（不入 git，避免开源泄露）
+// 读取 local.properties（签名配置等，不入 git，避免开源泄露）
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) load(f.inputStream())
@@ -71,13 +71,11 @@ android {
         buildConfigField("String", "ANDROIDX_CORE_KTX_VERSION", "\"${libs.versions.coreKtx.get()}\"")
         buildConfigField("String", "KOTLIN_VERSION", "\"${libs.versions.kotlin.get()}\"")
         buildConfigField("String", "COMPOSE_BOM_VERSION", "\"${libs.versions.composeBom.get()}\"")
-        buildConfigField("String", "NAVIGATION_COMPOSE_VERSION", "\"${libs.versions.navigationCompose.get()}\"")
         buildConfigField("String", "NAVIGATION3_VERSION", "\"${libs.versions.navigation3.get()}\"")
         buildConfigField("String", "NAVIGATION_EVENT_VERSION", "\"${libs.versions.navigationEvent.get()}\"")
         buildConfigField("String", "LIFECYCLE_VERSION", "\"${libs.versions.lifecycleRuntimeKtx.get()}\"")
         buildConfigField("String", "APP_COMPAT_VERSION", "\"${libs.versions.appcompat.get()}\"")
         buildConfigField("String", "COIL_VERSION", "\"${libs.versions.coil.get()}\"")
-        buildConfigField("String", "CAMERAX_VERSION", "\"${libs.versions.camerax.get()}\"")
         buildConfigField("String", "OKHTTP_VERSION", "\"${libs.versions.okhttp.get()}\"")
         buildConfigField("String", "ROOM_VERSION", "\"${libs.versions.room.get()}\"")
         buildConfigField("String", "HILT_VERSION", "\"${libs.versions.hilt.get()}\"")
@@ -85,15 +83,7 @@ android {
         buildConfigField("String", "SCENEVIEW_VERSION", "\"${libs.versions.sceneview.get()}\"")
         buildConfigField("String", "BLOCKPRINT_CORE_VERSION", "\"${libs.versions.blockprint.get()}\"")
         buildConfigField("String", "MIUIX_VERSION", "\"${libs.versions.miuix.get()}\"")
-        buildConfigField("String", "STARTUP_VERSION", "\"${libs.versions.startup.get()}\"")
-        buildConfigField("String", "PROFILE_INSTALLER_VERSION", "\"${libs.versions.profileInstaller.get()}\"")
-        buildConfigField("String", "BUGLY_VERSION", "\"${libs.versions.bugly.get()}\"")
-        buildConfigField("String", "ZXING_VERSION", "\"${libs.versions.zxing.get()}\"")
         buildConfigField("String", "CHANGELOG", changelogText.toBuildConfigStringLiteral())
-        // Bugly 崩溃上报 — 从 local.properties 读取（不入 git，避免开源泄露）
-        val buglyAppId = localProps.getProperty("BUGLY_APP_ID", "")
-        buildConfigField("String", "BUGLY_APP_ID", "\"$buglyAppId\"")
-        manifestPlaceholders["BUGLY_APP_ID"] = buglyAppId
     }
 
     signingConfigs {
@@ -157,8 +147,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigationevent)
     implementation(libs.androidx.compose.material.icons.extended)
@@ -168,8 +156,6 @@ dependencies {
     implementation(libs.miuix.navigation3.ui.android)
     implementation(libs.markdown.renderer.android)
     implementation(libs.markdown.renderer.m3)
-    implementation(libs.androidx.startup.runtime)
-    implementation(libs.androidx.profileinstaller)
     implementation(libs.blockprint.core)
     implementation(libs.coil.compose)
     implementation(libs.okhttp)
@@ -180,14 +166,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     ksp(libs.room.compiler)
-    implementation(libs.accompanist.permissions)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-    implementation(libs.bugly.crashreport)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.zxing.core)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)

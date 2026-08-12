@@ -3,8 +3,3 @@
 
 ## Location of the Android SDK (required)
 sdk.dir=/path/to/Android/Sdk
-
-## Bugly crash reporting AppID (optional)
-## Get yours at https://bugly.qq.com after creating an Android product.
-## If left empty, crash reporting is disabled (BuildConfig.BUGLY_APP_ID == "").
-BUGLY_APP_ID=

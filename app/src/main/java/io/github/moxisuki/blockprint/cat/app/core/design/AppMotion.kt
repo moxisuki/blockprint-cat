@@ -150,6 +150,24 @@ object AppMotion {
             animationSpec = spatialOffsetSpec(Duration.BottomBarExitMillis),
         )
 
+    fun railEnterTransition(): EnterTransition =
+        fadeIn(
+            initialAlpha = 0.94f,
+            animationSpec = fadeEnterSpec(Duration.BottomBarEnterMillis),
+        ) + slideInHorizontally(
+            initialOffsetX = { -it / 5 },
+            animationSpec = spatialOffsetSpec(Duration.BottomBarEnterMillis),
+        )
+
+    fun railExitTransition(): ExitTransition =
+        fadeOut(
+            targetAlpha = 0.0f,
+            animationSpec = fadeExitSpec(Duration.BottomBarExitMillis),
+        ) + slideOutHorizontally(
+            targetOffsetX = { -it / 5 },
+            animationSpec = spatialOffsetSpec(Duration.BottomBarExitMillis),
+        )
+
     fun topLevelEnterSpec(durationMillis: Int = Duration.TabEnterMillis): FiniteAnimationSpec<Float> =
         tween(durationMillis = durationMillis, easing = DecelerateEasing(1.5f))
 

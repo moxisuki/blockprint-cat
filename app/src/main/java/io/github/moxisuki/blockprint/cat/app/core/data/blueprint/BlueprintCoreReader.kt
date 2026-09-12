@@ -10,8 +10,10 @@ import javax.inject.Singleton
 @Singleton
 class BlueprintCoreReader @Inject constructor() {
 
+    internal fun readDocument(bytes: ByteArray) = BlockPrintReader.readLenient(bytes)
+
     internal fun read(bytes: ByteArray, fileName: String): ParsedBlueprint {
-        val document = BlockPrintReader.readLenient(bytes)
+        val document = readDocument(bytes)
         val fileStem = fileName.substringBeforeLast('.', fileName)
         val displayName = document.name
             .takeIf { it.isNotBlank() }

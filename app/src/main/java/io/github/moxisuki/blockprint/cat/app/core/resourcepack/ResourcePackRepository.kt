@@ -3,6 +3,7 @@ package io.github.moxisuki.blockprint.cat.app.core.resourcepack
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ActiveInstall
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ModSearchHit
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ModVersionInfo
+import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ResourcePackInstallRequest
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ResourcePackEntry
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ResourcePackId
 import kotlinx.coroutines.flow.Flow
@@ -12,8 +13,13 @@ interface ResourcePackRepository {
     val activeInstalls: Flow<Map<ResourcePackId, ActiveInstall>>
 
     suspend fun searchMods(query: String, limit: Int = 10): List<ModSearchHit>
+    suspend fun searchModResources(query: String, limit: Int = 10): List<ModSearchHit> =
+        searchMods(query, limit)
     suspend fun fetchModVersions(slug: String, mcVersion: String?): List<ModVersionInfo>
+    suspend fun fetchModVersions(hit: ModSearchHit, mcVersion: String?): List<ModVersionInfo> =
+        fetchModVersions(hit.slug, mcVersion)
 
+    suspend fun install(request: ResourcePackInstallRequest): ResourcePackId
     suspend fun installVanilla(): ResourcePackId
     suspend fun installMod(hit: ModSearchHit, version: ModVersionInfo): ResourcePackId
     suspend fun reinstall(id: ResourcePackId)

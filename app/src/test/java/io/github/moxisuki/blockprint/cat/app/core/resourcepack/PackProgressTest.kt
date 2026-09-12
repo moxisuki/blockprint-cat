@@ -11,6 +11,18 @@ class PackProgressTest {
         assertThat(p.fraction).isAtMost(1f)
     }
 
+    @Test fun `Installing carries install progress`() {
+        val p = PackProgress.Installing(
+            label = "minecraft/models/block/stone.json",
+            fraction = 0.25f,
+            installedFiles = 1,
+            totalFiles = 4,
+        )
+        assertThat(p.installedFiles).isEqualTo(1)
+        assertThat(p.totalFiles).isEqualTo(4)
+        assertThat(p.fraction).isEqualTo(0.25f)
+    }
+
     @Test fun `Done carries an immutable entry reference`() {
         val entry = io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ResourcePackEntry(
             id = io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ResourcePackId.Vanilla,

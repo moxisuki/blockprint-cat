@@ -1,16 +1,12 @@
 package io.github.moxisuki.blockprint.cat.app.feature.resourcepacks
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,21 +21,23 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.moxisuki.blockprint.cat.R
+import io.github.moxisuki.blockprint.cat.app.core.design.appMaxContentWidth
 import io.github.moxisuki.blockprint.cat.app.core.design.appScrollEndHaptic
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.ActiveInstall
 import io.github.moxisuki.blockprint.cat.app.core.resourcepack.model.PackProgress
@@ -52,16 +50,19 @@ import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.FileDownloads
+import top.yukonga.miuix.kmp.icon.extended.GridView
+import top.yukonga.miuix.kmp.icon.extended.Layers
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Store
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -69,41 +70,41 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 internal fun ResourcePacksScreen(
     state: ResourcePacksState,
     onAction: (ResourcePacksAction) -> Unit,
+    onAppBarTitleVisibleChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    val scrollBehavior = MiuixScrollBehavior()
-    val mods = state.installed.filterNot { it.id.isVanilla }
+    val titleThresholdPx = with(LocalDensity.current) { 44.dp.toPx() }
+    val showAppBarTitle by remember(listState, titleThresholdPx) {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > titleThresholdPx
+        }
+    }
+    LaunchedEffect(showAppBarTitle) {
+        onAppBarTitleVisibleChange(showAppBarTitle)
+    }
+
+    val mods = remember(state.installed) { state.installed.filterNot { it.id.isVanilla } }
+    val vanilla = remember(state.installed) { state.installed.firstOrNull { it.id == ResourcePackId.Vanilla } }
+    val activeInstalls = remember(state.activeInstalls) {
+        state.activeInstalls.values.sortedBy { it.packId.value }
+    }
+    val metrics = remember(state.installed, mods) {
+        ResourcePackMetrics(
+            installedCount = state.installed.size,
+            modCount = mods.size,
+            totalSize = state.installed.sumOf { it.totalSize },
+        )
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = "",
-                largeTitle = stringResource(R.string.resourcepacks_title),
-                navigationIcon = {
-                    IconButton(onClick = { onAction(ResourcePacksAction.VanillaDelete) /* not used; back wired by AppShell */ }) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = "back",
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { onAction(ResourcePacksAction.DeleteAllClicked) }) {
-                        Icon(
-                            imageVector = MiuixIcons.Delete,
-                            contentDescription = stringResource(R.string.resourcepacks_delete_all),
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
-        },
+        topBar = {},
         floatingActionButton = {
-            FloatingActionButton(onClick = { onAction(ResourcePacksAction.ModSearchOpen) }) {
+            FloatingActionButton(onClick = { onAction(ResourcePacksAction.ModSearchOpen()) }) {
                 Icon(
-                    imageVector = MiuixIcons.Add,
+                    imageVector = MiuixIcons.Store,
                     contentDescription = stringResource(R.string.resourcepacks_mod_add),
                     tint = MiuixTheme.colorScheme.onPrimary,
                 )
@@ -116,86 +117,84 @@ internal fun ResourcePacksScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MiuixTheme.colorScheme.surface)
-                .appScrollEndHaptic(),
+                .appScrollEndHaptic()
+                .appMaxContentWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(
-                start = 20.dp, end = 20.dp,
-                top = innerPadding.calculateTopPadding() + 8.dp,
+                start = 20.dp,
+                end = 20.dp,
+                top = innerPadding.calculateTopPadding() + 18.dp,
                 bottom = innerPadding.calculateBottomPadding() + 96.dp,
             ),
         ) {
-            // ── Active install banners — staggered fade/expand entry. ──
-            state.activeInstalls.forEach { (id, install) ->
-                item(key = "active-${id.value}") {
-                    var visible by remember { mutableStateOf(false) }
-                    LaunchedEffect(id) { visible = true }
-                    AnimatedVisibility(
-                        visible = visible,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                    ) {
-                        ActiveInstallBanner(
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                            install = install,
-                            onCancel = { onAction(ResourcePacksAction.ModCancel(id)) },
-                        )
-                    }
+            item(key = "summary") {
+                ResourceSummaryPanel(
+                    metrics = metrics,
+                    onDeleteAll = { onAction(ResourcePacksAction.DeleteAllClicked) },
+                )
+            }
+
+            state.feedback?.let { feedback ->
+                item(key = "feedback") {
+                    FeedbackCard(
+                        feedback = feedback,
+                        onDismiss = { onAction(ResourcePacksAction.FeedbackDismissed) },
+                    )
                 }
             }
 
-            // ── Vanilla ──
-            item(key = "vanilla-section-header") {
-                Text(
-                    text = stringResource(R.string.resourcepacks_section_vanilla),
-                    color = MiuixTheme.colorScheme.onSurface,
-                    style = MiuixTheme.textStyles.body1,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 12.dp),
-                )
+            if (activeInstalls.isNotEmpty()) {
+                item(key = "active-title") {
+                    SectionTitle(R.string.resourcepacks_progress_preparing)
+                }
+                items(items = activeInstalls, key = { "active-${it.packId.value}" }) { install ->
+                    ActiveInstallBanner(
+                        install = install,
+                        onCancel = {
+                            if (install.packId.isVanilla) {
+                                onAction(ResourcePacksAction.VanillaCancel)
+                            } else {
+                                onAction(ResourcePacksAction.ModCancel(install.packId))
+                            }
+                        },
+                        onRetry = {
+                            if (install.packId.isVanilla) {
+                                onAction(ResourcePacksAction.VanillaRedownload)
+                            } else {
+                                onAction(ResourcePacksAction.ModRedownload(install.packId))
+                            }
+                        },
+                    )
+                }
+            }
+
+            item(key = "vanilla-section") {
+                SectionTitle(R.string.resourcepacks_section_vanilla)
             }
             item(key = "vanilla-card") {
-                VanillaHeroCard(
-                    entry = state.installed.firstOrNull { it.id == ResourcePackId.Vanilla },
+                VanillaPackItem(
+                    entry = vanilla,
+                    isInstalling = state.activeInstalls.containsKey(ResourcePackId.Vanilla),
                     onDownload = { onAction(ResourcePacksAction.VanillaDownload) },
                     onRedownload = { onAction(ResourcePacksAction.VanillaRedownload) },
+                    onDelete = { onAction(ResourcePacksAction.VanillaDelete) },
                     onCancel = { onAction(ResourcePacksAction.VanillaCancel) },
                 )
             }
 
-            // ── Mods section ──
-            item(key = "mods-header") {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.resourcepacks_section_mod),
-                        color = MiuixTheme.colorScheme.onSurface,
-                        style = MiuixTheme.textStyles.body1,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    if (mods.isNotEmpty()) {
-                        Text(
-                            text = "${mods.size}",
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            style = MiuixTheme.textStyles.body2,
-                        )
-                    }
-                }
+            item(key = "mods-section") {
+                SectionHeaderWithCount(
+                    titleRes = R.string.resourcepacks_section_mod,
+                    count = mods.size,
+                )
             }
             if (mods.isEmpty()) {
                 item(key = "mods-empty") {
-                    Text(
-                        text = stringResource(R.string.resourcepacks_mod_none),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        style = MiuixTheme.textStyles.body2,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
+                    EmptyModsCard(onAdd = { onAction(ResourcePacksAction.ModSearchOpen()) })
                 }
             } else {
                 items(items = mods, key = { it.id.value }) { entry ->
-                    ModRow(
-                        modifier = Modifier.padding(top = 8.dp),
+                    ModPackItem(
                         entry = entry,
                         onRedownload = { onAction(ResourcePacksAction.ModRedownload(entry.id)) },
                         onDelete = { onAction(ResourcePacksAction.ModDelete(entry.id)) },
@@ -203,7 +202,6 @@ internal fun ResourcePacksScreen(
                 }
             }
 
-            // A small breathing room before the FAB.
             item(key = "tail-spacer") {
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -211,7 +209,11 @@ internal fun ResourcePacksScreen(
     }
 
     ModSearchSheet(state = state.modSearch, onAction = onAction)
-
+    PendingDeleteConfirmDialog(
+        pendingDelete = state.pendingDelete,
+        onConfirm = { onAction(ResourcePacksAction.PendingDeleteConfirm) },
+        onDismiss = { onAction(ResourcePacksAction.PendingDeleteDismiss) },
+    )
     DeleteAllConfirmDialog(
         visible = state.isDeleteAllConfirmVisible,
         onConfirm = { onAction(ResourcePacksAction.DeleteAllConfirm) },
@@ -220,112 +222,273 @@ internal fun ResourcePacksScreen(
 }
 
 @Composable
-private fun VanillaHeroCard(
-    entry: ResourcePackEntry?,
-    onDownload: () -> Unit,
-    onRedownload: () -> Unit,
-    onCancel: () -> Unit,
-) {
+private fun ResourceSummaryPanel(metrics: ResourcePackMetrics, onDeleteAll: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         cornerRadius = 24.dp,
-        insideMargin = PaddingValues(horizontal = 22.dp, vertical = 22.dp),
+        insideMargin = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            VanillaIcon()
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            HeroResourceMark()
+            Column(
+                modifier = Modifier.weight(1f).padding(top = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
                 Text(
-                    text = entry?.displayName ?: "Minecraft 原版",
+                    text = stringResource(R.string.resourcepacks_title),
                     color = MiuixTheme.colorScheme.onSurface,
-                    style = MiuixTheme.textStyles.title3,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    style = MiuixTheme.textStyles.title2,
+                    fontWeight = FontWeight.Bold,
                 )
-                val subtitle = if (entry != null) {
-                    stringResource(
-                        R.string.resourcepacks_vanilla_installed,
-                        entry.version, entry.fileCount, formatBytes(entry.totalSize),
-                    )
-                } else {
-                    stringResource(R.string.resourcepacks_vanilla_not_installed)
-                }
                 Text(
-                    text = subtitle,
+                    text = stringResource(R.string.resourcepacks_subtitle),
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     style = MiuixTheme.textStyles.body2,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            IconButton(onClick = onDeleteAll) {
+                Icon(
+                    imageVector = MiuixIcons.Delete,
+                    contentDescription = stringResource(R.string.resourcepacks_delete_all),
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
+        Spacer(modifier = Modifier.height(18.dp))
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            onClick = if (entry != null) onRedownload else onDownload,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = if (entry != null) {
-                    stringResource(R.string.render_redownload)
-                } else {
-                    stringResource(R.string.render_check_update)
-                },
+            HeroMetric(
+                value = metrics.installedCount.toString(),
+                label = stringResource(R.string.resourcepacks_metric_installed),
+                modifier = Modifier.weight(1f),
             )
+            HeroMetric(
+                value = metrics.modCount.toString(),
+                label = stringResource(R.string.resourcepacks_metric_mods),
+                modifier = Modifier.weight(1f),
+            )
+            if (metrics.totalSize > 0L) {
+                HeroMetric(
+                    value = formatBytes(metrics.totalSize),
+                    label = stringResource(R.string.resourcepacks_metric_size),
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        TextButton(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onCancel,
-            text = stringResource(android.R.string.cancel),
-        )
     }
 }
 
 @Composable
-private fun VanillaIcon() {
+private fun HeroResourceMark() {
+    val primary = MiuixTheme.colorScheme.primary
+    val secondary = MiuixTheme.colorScheme.secondary
     Box(
-        modifier = Modifier.size(56.dp),
+        modifier = Modifier
+            .size(68.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(primary.copy(alpha = 0.13f)),
         contentAlignment = Alignment.Center,
     ) {
-        // Base block (dirt-ish surface container).
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MiuixTheme.colorScheme.surfaceContainer),
-        )
-        // Top grass band — saturated primary for contrast.
-        Box(
-            modifier = Modifier
-                .size(width = 56.dp, height = 14.dp)
-                .background(MiuixTheme.colorScheme.primary),
+        Row(
+            modifier = Modifier.align(Alignment.BottomStart).padding(9.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Box(Modifier.size(9.dp, 19.dp).clip(RoundedCornerShape(3.dp)).background(primary.copy(alpha = 0.42f)))
+            Box(Modifier.size(9.dp, 28.dp).clip(RoundedCornerShape(3.dp)).background(primary.copy(alpha = 0.72f)))
+            Box(Modifier.size(9.dp, 14.dp).clip(RoundedCornerShape(3.dp)).background(secondary.copy(alpha = 0.68f)))
+        }
+        Icon(
+            imageVector = MiuixIcons.GridView,
+            contentDescription = null,
+            tint = primary,
+            modifier = Modifier.size(28.dp),
         )
     }
 }
 
 @Composable
-private fun ModRow(
-    entry: ResourcePackEntry,
+private fun HeroMetric(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.48f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = value,
+            color = MiuixTheme.colorScheme.onSurface,
+            style = MiuixTheme.textStyles.body1,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = label,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.body2,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun SectionTitle(resourceId: Int, modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(resourceId),
+        color = MiuixTheme.colorScheme.onSurface,
+        style = MiuixTheme.textStyles.body1,
+        fontWeight = FontWeight.SemiBold,
+        modifier = modifier.padding(top = 14.dp, bottom = 2.dp),
+    )
+}
+
+@Composable
+private fun SectionHeaderWithCount(titleRes: Int, count: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SectionTitle(titleRes, modifier = Modifier.weight(1f).padding(top = 0.dp, bottom = 0.dp))
+        StatusChip(text = count.toString(), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    }
+}
+
+@Composable
+private fun StatusChip(text: String, color: Color = MiuixTheme.colorScheme.primary) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(color.copy(alpha = 0.12f))
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    ) {
+        Text(
+            text = text,
+            color = color,
+            style = MiuixTheme.textStyles.body2,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun FeedbackCard(feedback: ResourcePacksFeedback, onDismiss: () -> Unit) {
+    val isError = feedback is ResourcePacksFeedback.Error
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 16.dp,
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = when (feedback) {
+                    is ResourcePacksFeedback.Info -> feedback.message
+                    is ResourcePacksFeedback.Error -> feedback.message
+                },
+                modifier = Modifier.weight(1f),
+                color = if (isError) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurface,
+                style = MiuixTheme.textStyles.body2,
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(MiuixIcons.Close, contentDescription = stringResource(R.string.action_dismiss))
+            }
+        }
+    }
+}
+
+@Composable
+private fun VanillaPackItem(
+    entry: ResourcePackEntry?,
+    isInstalling: Boolean,
+    onDownload: () -> Unit,
     onRedownload: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
+    onCancel: () -> Unit,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        cornerRadius = 18.dp,
-        insideMargin = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-    ) {
+    ResourcePackCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ModIcon(slug = entry.id.modSlug)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            VanillaIcon(isInstalled = entry != null)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.resourcepacks_vanilla_name),
+                    color = MiuixTheme.colorScheme.onSurface,
+                    style = MiuixTheme.textStyles.body1,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = if (entry != null) {
+                        stringResource(
+                            R.string.resourcepacks_vanilla_installed,
+                            entry.version,
+                            entry.fileCount,
+                            formatBytes(entry.totalSize),
+                        )
+                    } else {
+                        stringResource(R.string.resourcepacks_vanilla_not_installed)
+                    },
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.body2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (entry != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = MiuixIcons.Delete,
+                        contentDescription = stringResource(R.string.action_delete),
+                        tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        if (isInstalling) {
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onCancel,
+                text = stringResource(android.R.string.cancel),
+            )
+        } else {
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = if (entry != null) onRedownload else onDownload,
+            ) {
+                Text(if (entry != null) stringResource(R.string.render_redownload) else stringResource(R.string.render_check_update))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModPackItem(entry: ResourcePackEntry, onRedownload: () -> Unit, onDelete: () -> Unit) {
+    ResourcePackCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ModIcon(entry.id.modSlug)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     text = entry.displayName,
                     color = MiuixTheme.colorScheme.onSurface,
@@ -335,26 +498,77 @@ private fun ModRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = if (entry.fileCount == 0) {
-                        stringResource(R.string.resourcepacks_mod_empty_pack)
-                    } else {
-                        "v${entry.version} · ${entry.fileCount} files · ${entry.namespaces.joinToString(",")}"
-                    },
+                    text = modDetails(entry),
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     style = MiuixTheme.textStyles.body2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = MiuixIcons.Delete,
+                    contentDescription = stringResource(R.string.action_delete),
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(12.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(modifier = Modifier.weight(1f), onClick = onRedownload, text = stringResource(R.string.render_redownload))
-            TextButton(modifier = Modifier.weight(1f), onClick = onDelete, text = stringResource(R.string.action_delete))
+            TextButton(
+                onClick = onRedownload,
+                text = stringResource(R.string.render_redownload),
+            )
         }
+    }
+}
+
+@Composable
+private fun ResourcePackCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 18.dp,
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+        content = content,
+    )
+}
+
+@Composable
+private fun EmptyModsCard(onAdd: () -> Unit) {
+    ResourcePackCard {
+        Text(
+            text = stringResource(R.string.resourcepacks_mod_none),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.body2,
+        )
+        TextButton(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            onClick = onAdd,
+            text = stringResource(R.string.resourcepacks_mod_add),
+        )
+    }
+}
+
+@Composable
+private fun VanillaIcon(isInstalled: Boolean) {
+    val iconColor = if (isInstalled) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary
+    Box(
+        modifier = Modifier
+            .size(52.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(iconColor.copy(alpha = if (isInstalled) 0.14f else 0.08f))
+            .border(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.24f), RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = MiuixIcons.Layers,
+            contentDescription = null,
+            tint = iconColor,
+            modifier = Modifier.size(28.dp),
+        )
     }
 }
 
@@ -364,20 +578,16 @@ private fun ModIcon(slug: String) {
     Box(
         modifier = Modifier
             .size(40.dp)
-            .clip(CircleShape)
-            .background(MiuixTheme.colorScheme.surfaceContainer)
-            .border(
-                width = 1.dp,
-                color = MiuixTheme.colorScheme.outline.copy(alpha = 0.4f),
-                shape = CircleShape,
-            ),
+            .clip(RoundedCornerShape(12.dp))
+            .background(MiuixTheme.colorScheme.secondary.copy(alpha = 0.14f))
+            .border(1.dp, MiuixTheme.colorScheme.outline.copy(alpha = 0.28f), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = initial,
-            color = MiuixTheme.colorScheme.onSurfaceContainer,
-            style = MiuixTheme.textStyles.body1,
-            fontWeight = FontWeight.SemiBold,
+        Icon(
+            imageVector = MiuixIcons.FileDownloads,
+            contentDescription = initial,
+            tint = MiuixTheme.colorScheme.secondary,
+            modifier = Modifier.size(22.dp),
         )
     }
 }
@@ -386,40 +596,23 @@ private fun ModIcon(slug: String) {
 private fun ActiveInstallBanner(
     install: ActiveInstall,
     onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
+    onRetry: () -> Unit,
 ) {
     val progress by install.progress.collectAsStateWithLifecycle(initialValue = PackProgress.Idle)
-    val determinate: Float? = when (val p = progress) {
-        is PackProgress.Downloading -> p.fraction
-        is PackProgress.Extracting -> 0.99f
-        else -> null
-    }
-    val animatedFraction by animateFloatAsState(
-        targetValue = (determinate ?: 0f).coerceIn(0f, 1f),
-        label = "installProgress",
+    val snapshot = taskProgressSnapshot(progress)
+    val animatedOverall by animateFloatAsState(
+        targetValue = snapshot.overallFraction ?: 0f,
+        label = "resourceInstallProgress",
     )
-    val statusText = when (val p = progress) {
-        is PackProgress.Downloading -> stringResource(
-            R.string.resourcepacks_progress_installing,
-            p.fileName,
-            (p.fraction * 100).toInt(),
-        )
-        is PackProgress.Extracting -> stringResource(R.string.resourcepacks_progress_extracting)
-        is PackProgress.FetchingManifest -> p.label
-        is PackProgress.Failed -> stringResource(R.string.resourcepacks_failed, p.message)
-        else -> ""
-    }
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        cornerRadius = 22.dp,
-        insideMargin = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-    ) {
+    val isFailure = progress is PackProgress.Failed
+
+    ResourcePackCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Text(
                     text = install.displayName,
                     color = MiuixTheme.colorScheme.onSurface,
@@ -428,27 +621,138 @@ private fun ActiveInstallBanner(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (statusText.isNotEmpty()) {
-                    Text(
-                        text = statusText,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        style = MiuixTheme.textStyles.body2,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Text(
+                    text = snapshot.statusText,
+                    color = if (isFailure) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.body2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                ProgressLine(
+                    label = stringResource(R.string.resourcepacks_task_progress),
+                    progress = snapshot.overallFraction?.let { animatedOverall },
+                    detail = snapshot.progressDetail,
+                )
+                if (isFailure) {
+                    TextButton(onClick = onRetry, text = stringResource(R.string.action_retry))
                 }
-                // Always show a progress bar; null = indeterminate.
-                LinearProgressIndicator(
-                    progress = determinate?.let { animatedFraction },
-                    modifier = Modifier.fillMaxWidth(),
+            }
+            if (!isFailure && progress !is PackProgress.Done && progress !is PackProgress.Cancelled) {
+                IconButton(onClick = onCancel) {
+                    Icon(MiuixIcons.Close, contentDescription = stringResource(android.R.string.cancel))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressLine(label: String, progress: Float?, detail: String?) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.body2,
+            )
+            detail?.let {
+                Text(
+                    text = it,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    style = MiuixTheme.textStyles.body2,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = onCancel) {
-                Icon(
-                    imageVector = MiuixIcons.Close,
-                    contentDescription = stringResource(android.R.string.cancel),
-                )
-            }
+        }
+        LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun taskProgressSnapshot(progress: PackProgress): ResourceTaskProgressSnapshot =
+    when (progress) {
+        PackProgress.Idle -> ResourceTaskProgressSnapshot(
+            statusText = stringResource(R.string.resourcepacks_progress_preparing),
+            overallFraction = null,
+        )
+        is PackProgress.Preparing -> ResourceTaskProgressSnapshot(
+            statusText = progress.label,
+            overallFraction = null,
+        )
+        is PackProgress.FetchingManifest -> ResourceTaskProgressSnapshot(
+            statusText = progress.label,
+            overallFraction = null,
+        )
+        is PackProgress.Downloading -> {
+            val fraction = progress.fraction.coerceIn(0f, 1f)
+            ResourceTaskProgressSnapshot(
+                statusText = stringResource(
+                    R.string.resourcepacks_progress_installing,
+                    progress.fileName,
+                    (fraction * 100).toInt(),
+                ),
+                overallFraction = fraction * DOWNLOAD_WEIGHT,
+                progressDetail = if (progress.bytesRead >= 0L && progress.totalBytes > 0L) {
+                    "${formatBytes(progress.bytesRead)} / ${formatBytes(progress.totalBytes)}"
+                } else {
+                    "${(fraction * 100).toInt()}%"
+                },
+            )
+        }
+        is PackProgress.Installing -> ResourceTaskProgressSnapshot(
+            statusText = stringResource(
+                R.string.resourcepacks_progress_extracting_files,
+                progress.installedFiles,
+                progress.label,
+            ),
+            overallFraction = DOWNLOAD_WEIGHT + (progress.fraction?.coerceIn(0f, 1f) ?: 0f) * INSTALL_WEIGHT,
+            progressDetail = progress.totalFiles?.let { total -> "${progress.installedFiles} / $total" }
+                ?: progress.installedFiles.takeIf { it > 0 }?.toString(),
+        )
+        is PackProgress.Extracting -> ResourceTaskProgressSnapshot(
+            statusText = stringResource(
+                R.string.resourcepacks_progress_extracting_files,
+                progress.extracted,
+                progress.currentPath,
+            ),
+            overallFraction = DOWNLOAD_WEIGHT,
+            progressDetail = progress.extracted.toString(),
+        )
+        is PackProgress.Failed -> ResourceTaskProgressSnapshot(
+            statusText = stringResource(R.string.resourcepacks_failed, progress.message),
+            overallFraction = null,
+        )
+        PackProgress.Cancelled -> ResourceTaskProgressSnapshot(
+            statusText = stringResource(R.string.resourcepacks_progress_cancelled),
+            overallFraction = null,
+        )
+        is PackProgress.Done -> ResourceTaskProgressSnapshot(
+            statusText = stringResource(R.string.resourcepacks_progress_done),
+            overallFraction = 1f,
+            progressDetail = progress.entry.fileCount.toString(),
+        )
+    }
+
+@Composable
+private fun PendingDeleteConfirmDialog(
+    pendingDelete: PendingResourcePackDelete?,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    OverlayDialog(
+        show = pendingDelete != null,
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.resourcepacks_confirm_delete),
+        summary = pendingDelete?.displayName.orEmpty(),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(modifier = Modifier.weight(1f), onClick = onDismiss, text = stringResource(android.R.string.cancel))
+            TextButton(modifier = Modifier.weight(1f), onClick = onConfirm, text = stringResource(android.R.string.ok))
         }
     }
 }
@@ -459,18 +763,53 @@ private fun DeleteAllConfirmDialog(visible: Boolean, onConfirm: () -> Unit, onDi
         show = visible,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.resourcepacks_delete_all),
-        summary = "",
+        summary = stringResource(R.string.resourcepacks_subtitle),
     ) {
-        TextButton(onClick = onConfirm, text = stringResource(android.R.string.ok))
-        TextButton(onClick = onDismiss, text = stringResource(android.R.string.cancel))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(modifier = Modifier.weight(1f), onClick = onDismiss, text = stringResource(android.R.string.cancel))
+            TextButton(modifier = Modifier.weight(1f), onClick = onConfirm, text = stringResource(android.R.string.ok))
+        }
     }
 }
+
+@Composable
+private fun modDetails(entry: ResourcePackEntry): String =
+    if (entry.fileCount == 0) {
+        stringResource(R.string.resourcepacks_mod_empty_pack)
+    } else {
+        stringResource(
+            R.string.resourcepacks_mod_details,
+            entry.version,
+            entry.fileCount,
+            entry.namespaces.joinToString(", "),
+        )
+    }
 
 private fun formatBytes(bytes: Long): String {
     if (bytes < 1024L) return "$bytes B"
     val units = listOf("KB", "MB", "GB")
-    var value = bytes.toDouble()
+    var value = bytes.toDouble() / 1024.0
     var i = 0
-    while (value >= 1024.0 && i < units.lastIndex) { value /= 1024.0; i++ }
+    while (value >= 1024.0 && i < units.lastIndex) {
+        value /= 1024.0
+        i++
+    }
     return "%.1f %s".format(value, units[i])
 }
+
+@Immutable
+private data class ResourcePackMetrics(
+    val installedCount: Int,
+    val modCount: Int,
+    val totalSize: Long,
+)
+
+@Immutable
+private data class ResourceTaskProgressSnapshot(
+    val statusText: String,
+    val overallFraction: Float?,
+    val progressDetail: String? = null,
+)
+
+private const val DOWNLOAD_WEIGHT = 0.55f
+private const val INSTALL_WEIGHT = 0.45f

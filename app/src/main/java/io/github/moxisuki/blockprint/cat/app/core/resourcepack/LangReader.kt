@@ -29,6 +29,43 @@ object LangReader {
             ?: blockId
     }
 
+    /** Resolves the first matching translation from the supplied locale files. */
+    fun chooseDisplayName(
+        localizedJsons: List<String?>,
+        blockId: String,
+    ): String? {
+        val colon = blockId.indexOf(':')
+        if (colon <= 0 || colon == blockId.lastIndex) return null
+        val namespace = blockId.substring(0, colon)
+        val key = blockId.substring(colon + 1)
+        return localizedJsons
+            .asSequence()
+            .mapNotNull { json ->
+                resolveFrom(
+                    runCatching { JSONObject(json ?: "{}") }.getOrNull(),
+                    namespace,
+                    key,
+                )
+            }
+            .map { it.replace(Regex("§[0-9a-fk-or]"), "") }
+            .firstOrNull()
+    }
+
+    fun chooseDisplayNameFromObjects(
+        localizedJsons: List<JSONObject?>,
+        blockId: String,
+    ): String? {
+        val colon = blockId.indexOf(':')
+        if (colon <= 0 || colon == blockId.lastIndex) return null
+        val namespace = blockId.substring(0, colon)
+        val key = blockId.substring(colon + 1)
+        return localizedJsons
+            .asSequence()
+            .mapNotNull { lang -> resolveFrom(lang, namespace, key) }
+            .map { it.replace(Regex("§[0-9a-fk-or]"), "") }
+            .firstOrNull()
+    }
+
     /**
      * Loads a lang JSON from disk and returns its content. Caches per (namespace, locale).
      */
@@ -53,6 +90,8 @@ object LangReader {
             "item.minecraft.$key",
             key,
         )
-        return candidates.firstNotNullOfOrNull { lang.optString(it, null) }
+        return candidates.firstNotNullOfOrNull { candidate ->
+            lang.optString(candidate).takeIf { it.isNotBlank() }
+        }
     }
 }

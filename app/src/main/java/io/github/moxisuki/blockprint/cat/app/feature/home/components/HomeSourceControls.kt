@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.moxisuki.blockprint.cat.R
+import io.github.moxisuki.blockprint.cat.app.core.pcbridge.PcBridgeConnection
 import io.github.moxisuki.blockprint.cat.app.feature.home.HomeBlueprintSource
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -66,6 +68,7 @@ private val SourceTabsInset = 3.dp
 internal fun HomeTopControls(
     selectedSource: HomeBlueprintSource,
     sourceSlideProgress: Float,
+    pcConnection: PcBridgeConnection,
     onSourceSelected: (HomeBlueprintSource) -> Unit,
     isSearchExpanded: Boolean,
     searchQuery: String,
@@ -108,6 +111,7 @@ internal fun HomeTopControls(
             SourceTabs(
                 selectedSource = selectedSource,
                 slideProgress = sourceSlideProgress,
+                pcConnection = pcConnection,
                 onSourceSelected = onSourceSelected,
             )
             Spacer(modifier = Modifier.weight(1f))
@@ -179,6 +183,7 @@ private fun AnimatedToolButtonVisibility(
 private fun SourceTabs(
     selectedSource: HomeBlueprintSource,
     slideProgress: Float,
+    pcConnection: PcBridgeConnection,
     onSourceSelected: (HomeBlueprintSource) -> Unit,
 ) {
     val tabs = listOf(
@@ -218,6 +223,16 @@ private fun SourceTabs(
                     } else {
                         normalizedSlideProgress
                     },
+                    indicatorColor = if (index == 1) {
+                        pcConnection.indicatorColor()
+                    } else {
+                        null
+                    },
+                    indicatorScale = if (index == 1) {
+                        pcConnection.indicatorScale()
+                    } else {
+                        0f
+                    },
                     onClick = {
                         onSourceSelected(
                             when (index) {
@@ -239,6 +254,8 @@ private fun SourceTabs(
 private fun SourceTabButton(
     text: String,
     selectionProgress: Float,
+    indicatorColor: androidx.compose.ui.graphics.Color? = null,
+    indicatorScale: Float = 0f,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -263,7 +280,43 @@ private fun SourceTabButton(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (indicatorColor != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 6.dp, end = 6.dp)
+                    .size(7.dp)
+                    .scale(indicatorScale.coerceIn(0.7f, 1.2f))
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(indicatorColor),
+            )
+        }
     }
+}
+
+@Composable
+private fun PcBridgeConnection.indicatorColor(): androidx.compose.ui.graphics.Color = when (this) {
+    PcBridgeConnection.Disconnected -> MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.45f)
+    is PcBridgeConnection.Connecting -> MiuixTheme.colorScheme.primary
+    is PcBridgeConnection.Connected -> MiuixTheme.colorScheme.primary
+    is PcBridgeConnection.Failed -> MiuixTheme.colorScheme.error
+}
+
+@Composable
+private fun PcBridgeConnection.indicatorScale(): Float = when (this) {
+    is PcBridgeConnection.Connecting -> {
+        val transition = rememberInfiniteTransition(label = "pcTabIndicator")
+        val scale by transition.animateFloat(
+            initialValue = 0.82f,
+            targetValue = 1.18f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 700, easing = LinearEasing),
+            ),
+            label = "pcTabIndicatorScale",
+        )
+        scale
+    }
+    else -> 1f
 }
 
 @Composable

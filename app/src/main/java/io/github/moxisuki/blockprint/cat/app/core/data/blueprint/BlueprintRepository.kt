@@ -1,6 +1,10 @@
 package io.github.moxisuki.blockprint.cat.app.core.data.blueprint
 
 import io.github.moxisuki.blockprint.cat.app.core.persistence.AppSettingsRepository
+import io.github.moxisuki.blockprint.core.BlockPrintConverter
+import io.github.moxisuki.blockprint.core.SchematicFormat
+import io.github.moxisuki.blockprint.core.model.BlockPrintDocument
+import java.io.ByteArrayInputStream
 import java.io.OutputStream
 import java.util.UUID
 import javax.inject.Inject
@@ -82,6 +86,19 @@ class BlueprintRepository @Inject constructor(
         )
     }
 
+    /** Reads the original document only when a feature needs the full structure. */
+    suspend fun loadBlueprintDocument(id: String): BlockPrintDocument = withContext(Dispatchers.IO) {
+        val treeUri = settingsRepository.localBlueprintTreeUri.first()
+            ?: throw IllegalStateException("SAF directory is not selected")
+        val blueprint = dao.getBlueprint(id)
+            ?: throw NoSuchElementException("Blueprint not found: $id")
+        val bytes = storage.readFile(
+            treeUriString = treeUri,
+            documentId = blueprint.documentId,
+        )
+        reader.readDocument(bytes)
+    }
+
     suspend fun importBlueprint(preview: BlueprintImportPreview) {
         var imported = false
         refreshMutex.withLock {
@@ -119,6 +136,82 @@ class BlueprintRepository @Inject constructor(
         if (imported) {
             refreshLocalBlueprints()
         }
+    }
+
+    suspend fun importDownloadedBlueprint(
+        fileName: String,
+        bytes: ByteArray,
+    ) {
+        refreshMutex.withLock {
+            val treeUri = settingsRepository.localBlueprintTreeUri.first()
+                ?: throw IllegalStateException("SAF directory is not selected")
+            val treeDocumentId = settingsRepository.localBlueprintTreeDocumentId.first()
+            val safeFileName = fileName.toSafeBlueprintFileName()
+            require(isSupportedBlueprintFile(safeFileName)) {
+                "Unsupported blueprint file: $safeFileName"
+            }
+
+            _isRefreshing.value = true
+            try {
+                withContext(Dispatchers.IO) {
+                    val parsed = reader.read(bytes, safeFileName)
+                    val importedFile = storage.writeStreamToBlueprintFolder(
+                        treeUriString = treeUri,
+                        treeDocumentId = treeDocumentId,
+                        displayName = safeFileName,
+                        input = ByteArrayInputStream(bytes),
+                    )
+                    upsertParsedBlueprint(
+                        file = importedFile,
+                        parsed = parsed,
+                        blueprintId = UUID.randomUUID().toString(),
+                        category = "",
+                        sizeBytes = if (importedFile.sizeBytes >= 0L) {
+                            importedFile.sizeBytes
+                        } else {
+                            bytes.size.toLong()
+                        },
+                    )
+                }
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+        refreshLocalBlueprints()
+    }
+
+    suspend fun convertBlueprint(
+        id: String,
+        target: BlueprintFormat,
+    ): String {
+        val targetFormat = target.toCoreConversionFormat()
+        val outputName = refreshMutex.withLock {
+            val treeUri = settingsRepository.localBlueprintTreeUri.first()
+                ?: throw IllegalStateException("SAF directory is not selected")
+            val treeDocumentId = settingsRepository.localBlueprintTreeDocumentId.first()
+            val blueprint = dao.getBlueprint(id)
+                ?: throw NoSuchElementException("Blueprint not found: $id")
+            val bytes = withContext(Dispatchers.IO) {
+                storage.readFile(
+                    treeUriString = treeUri,
+                    documentId = blueprint.documentId,
+                )
+            }
+            val document = reader.readDocument(bytes)
+            val outputName = convertedFileName(blueprint.fileName, targetFormat)
+
+            withContext(Dispatchers.IO) {
+                storage.writeGeneratedBlueprintToFolder(
+                    treeUriString = treeUri,
+                    treeDocumentId = treeDocumentId,
+                    displayName = outputName,
+                ) { output ->
+                    BlockPrintConverter.convert(document, targetFormat, output)
+                }
+            }.name
+        }
+        refreshLocalBlueprints()
+        return outputName
     }
 
     suspend fun moveBlueprintsToCategory(ids: List<String>, category: String) {
@@ -256,6 +349,32 @@ class BlueprintRepository @Inject constructor(
         return candidate
     }
 
+    private fun String.toSafeBlueprintFileName(): String =
+        trim()
+            .replace('\\', '_')
+            .replace('/', '_')
+            .replace(':', '_')
+            .replace('*', '_')
+            .replace('?', '_')
+            .replace('"', '_')
+            .replace('<', '_')
+            .replace('>', '_')
+            .replace('|', '_')
+            .take(96)
+            .ifBlank { "community_blueprint.litematic" }
+
+    private fun convertedFileName(
+        sourceFileName: String,
+        target: SchematicFormat,
+    ): String {
+        val stem = sourceFileName
+            .substringBeforeLast('.', sourceFileName)
+            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            .take(72)
+            .ifBlank { "blueprint" }
+        return "${stem}_converted.${target.fileExtension()}"
+    }
+
     private suspend fun upsertParsedBlueprint(
         file: BlueprintFileEntry,
         parsed: ParsedBlueprint,
@@ -286,4 +405,20 @@ class BlueprintRepository @Inject constructor(
         }
         dao.upsertBlueprintWithMaterials(blueprint, materials)
     }
+}
+
+private fun BlueprintFormat.toCoreConversionFormat(): SchematicFormat = when (this) {
+    BlueprintFormat.Litematica -> SchematicFormat.Litematica
+    BlueprintFormat.Schematic -> SchematicFormat.Sponge
+    BlueprintFormat.Nbt -> SchematicFormat.Structure
+    BlueprintFormat.BuildingHelper,
+    BlueprintFormat.Unknown,
+    -> throw IllegalArgumentException("Unsupported conversion target: $this")
+}
+
+private fun SchematicFormat.fileExtension(): String = when (this) {
+    SchematicFormat.Litematica -> "litematic"
+    SchematicFormat.Sponge -> "schem"
+    SchematicFormat.Structure -> "nbt"
+    else -> error("Unsupported conversion target: $this")
 }

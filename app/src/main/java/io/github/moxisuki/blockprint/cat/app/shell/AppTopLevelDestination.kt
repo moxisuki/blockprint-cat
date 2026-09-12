@@ -2,12 +2,15 @@ package io.github.moxisuki.blockprint.cat.app.shell
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.app.core.navigation.AppTopLevelRoute
 import io.github.moxisuki.blockprint.cat.app.core.navigation.AppRoute
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.File
+import top.yukonga.miuix.kmp.icon.extended.GridView
 import top.yukonga.miuix.kmp.icon.extended.Settings
 
 @Immutable
@@ -24,6 +27,18 @@ internal val AppTopLevelDestinations = listOf(
         titleRes = R.string.nav_title_home,
         labelRes = R.string.bottom_nav_home,
         icon = MiuixIcons.File,
+    ),
+    AppTopLevelDestination(
+        route = AppRoute.Tools,
+        titleRes = R.string.nav_title_tools,
+        labelRes = R.string.bottom_nav_tools,
+        icon = MiuixIcons.GridView,
+    ),
+    AppTopLevelDestination(
+        route = AppRoute.Community,
+        titleRes = R.string.nav_title_community,
+        labelRes = R.string.bottom_nav_community,
+        icon = Icons.Filled.Public,
     ),
     AppTopLevelDestination(
         route = AppRoute.Settings,

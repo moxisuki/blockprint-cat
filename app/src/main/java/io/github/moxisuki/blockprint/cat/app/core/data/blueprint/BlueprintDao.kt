@@ -10,7 +10,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 abstract class BlueprintDao {
 
-    @Query("SELECT * FROM blueprints ORDER BY displayName COLLATE NOCASE ASC")
+    @Query(
+        "SELECT * FROM blueprints " +
+            "ORDER BY lastModifiedAt DESC, scannedAt DESC, displayName COLLATE NOCASE ASC",
+    )
     abstract fun observeLocalBlueprints(): Flow<List<BlueprintEntity>>
 
     @Query("SELECT * FROM blueprints WHERE id = :id LIMIT 1")
@@ -24,6 +27,9 @@ abstract class BlueprintDao {
 
     @Query("SELECT * FROM blueprints")
     abstract suspend fun getAllBlueprints(): List<BlueprintEntity>
+
+    @Query("SELECT COUNT(*) FROM blueprints")
+    abstract suspend fun countBlueprints(): Int
 
     @Query("SELECT * FROM blueprint_categories ORDER BY name COLLATE NOCASE ASC")
     abstract suspend fun getCategories(): List<BlueprintCategoryEntity>
@@ -48,6 +54,12 @@ abstract class BlueprintDao {
 
     @Query("DELETE FROM blueprints")
     abstract suspend fun deleteAllBlueprints()
+
+    @Query("DELETE FROM blueprint_materials")
+    protected abstract suspend fun deleteAllMaterials()
+
+    @Query("DELETE FROM blueprint_categories")
+    protected abstract suspend fun deleteAllCategories()
 
     @Query("DELETE FROM blueprint_categories WHERE name = :name")
     protected abstract suspend fun deleteCategoryEntity(name: String)
@@ -97,6 +109,13 @@ abstract class BlueprintDao {
         if (materials.isNotEmpty()) {
             upsertMaterials(materials)
         }
+    }
+
+    @Transaction
+    open suspend fun clearBlueprintMetadata() {
+        deleteAllMaterials()
+        deleteAllBlueprints()
+        deleteAllCategories()
     }
 
     @Transaction

@@ -37,7 +37,15 @@ class AppNavigator internal constructor(
 
         val topLevelRoute = route.topLevelRoute()
         selectedTopLevelRouteId.value = topLevelRoute.routeId()
-        topLevelBackStacks.getValue(topLevelRoute).add(route)
+        val backStack = topLevelBackStacks.getValue(topLevelRoute)
+        val current = backStack.lastOrNull()
+        when {
+            current == route -> Unit
+            current is AppRoute.ResourcePacks && route is AppRoute.ResourcePacks -> {
+                backStack[backStack.lastIndex] = route
+            }
+            else -> backStack.add(route)
+        }
     }
 
     fun navigateTopLevel(route: AppTopLevelRoute) {
@@ -60,13 +68,17 @@ fun rememberAppNavigator(
     startDestination: AppTopLevelRoute = AppRoute.Home,
 ): AppNavigator {
     val homeBackStack = rememberNavBackStack(AppRoute.Home)
+    val toolsBackStack = rememberNavBackStack(AppRoute.Tools)
+    val communityBackStack = rememberNavBackStack(AppRoute.Community)
     val settingsBackStack = rememberNavBackStack(AppRoute.Settings)
     val selectedTopLevelRouteId = rememberSaveable {
         androidx.compose.runtime.mutableStateOf(startDestination.routeId())
     }
-    val topLevelBackStacks = remember(homeBackStack, settingsBackStack) {
+    val topLevelBackStacks = remember(homeBackStack, toolsBackStack, communityBackStack, settingsBackStack) {
         mapOf<AppTopLevelRoute, MutableList<NavKey>>(
             AppRoute.Home to homeBackStack,
+            AppRoute.Tools to toolsBackStack,
+            AppRoute.Community to communityBackStack,
             AppRoute.Settings to settingsBackStack,
         )
     }

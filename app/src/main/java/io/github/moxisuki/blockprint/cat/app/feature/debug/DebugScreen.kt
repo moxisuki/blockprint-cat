@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
+import io.github.moxisuki.blockprint.cat.app.core.design.appMaxContentWidth
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
@@ -38,7 +39,8 @@ internal fun DebugScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(MiuixTheme.colorScheme.surface),
+            .background(MiuixTheme.colorScheme.surface)
+            .appMaxContentWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     ) {
         item(key = "app-title") {

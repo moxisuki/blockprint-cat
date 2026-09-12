@@ -185,6 +185,37 @@ class SafBlueprintStorage @Inject constructor(
         queryDocumentInfo(treeUri, documentId, fallbackName = displayName)
     }
 
+    internal suspend fun writeGeneratedBlueprintToFolder(
+        treeUriString: String,
+        treeDocumentId: String?,
+        displayName: String,
+        writer: (OutputStream) -> Unit,
+    ): BlueprintFileEntry = withContext(Dispatchers.IO) {
+        val treeUri = Uri.parse(treeUriString)
+        val folderDocumentId = ensureBlueprintFolder(
+            treeUri = treeUri,
+            treeDocumentId = treeDocumentId ?: DocumentsContract.getTreeDocumentId(treeUri),
+        )
+        val folderUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderDocumentId)
+        val createdUri = DocumentsContract.createDocument(
+            resolver,
+            folderUri,
+            "application/octet-stream",
+            displayName,
+        ) ?: throw IllegalStateException("Cannot create blueprint document: $displayName")
+
+        try {
+            resolver.openOutputStream(createdUri, "w")?.use(writer)
+                ?: throw IllegalStateException("Cannot write generated blueprint: $displayName")
+        } catch (t: Throwable) {
+            runCatching { DocumentsContract.deleteDocument(resolver, createdUri) }
+            throw t
+        }
+
+        val documentId = DocumentsContract.getDocumentId(createdUri)
+        queryDocumentInfo(treeUri, documentId, fallbackName = displayName)
+    }
+
     suspend fun deleteFile(treeUriString: String, documentId: String) = withContext(Dispatchers.IO) {
         val treeUri = Uri.parse(treeUriString)
         val documentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)

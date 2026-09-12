@@ -10,6 +10,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun BlueprintDetailRoute(
     blueprintId: String,
+    onPreviewClick: () -> Unit,
+    onRegeneratePreviewClick: () -> Unit = {},
+    onResourceNamespaceClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: BlueprintDetailViewModel = hiltViewModel(),
 ) {
@@ -17,9 +20,16 @@ fun BlueprintDetailRoute(
         viewModel.setBlueprintId(blueprintId)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val conversionState by viewModel.conversionState.collectAsStateWithLifecycle()
 
     BlueprintDetailScreen(
         state = state,
+        onPreviewClick = onPreviewClick,
+        onRegeneratePreviewClick = onRegeneratePreviewClick,
+        onResourceNamespaceClick = onResourceNamespaceClick,
+        conversionState = conversionState,
+        onConvert = viewModel::convert,
+        onDismissConversion = viewModel::dismissConversion,
         modifier = modifier,
     )
 }

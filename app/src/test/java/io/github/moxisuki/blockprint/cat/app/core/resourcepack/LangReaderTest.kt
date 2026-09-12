@@ -32,4 +32,23 @@ class LangReaderTest {
         val name = LangReader.chooseDisplayName("{}", "{}", "mymod:nonexistent", "zh_cn", "en_us")
         assertThat(name).isEqualTo("mymod:nonexistent")
     }
+
+    @Test fun `displayName checks locale candidates in order`() {
+        val name = LangReader.chooseDisplayName(
+            localizedJsons = listOf(
+                "{\"block.mymod.stone\":\"石头\"}",
+                "{\"block.mymod.stone\":\"Stone\"}",
+            ),
+            blockId = "mymod:stone",
+        )
+        assertThat(name).isEqualTo("石头")
+    }
+
+    @Test fun `displayName resolves item entries for mod namespaces`() {
+        val name = LangReader.chooseDisplayName(
+            localizedJsons = listOf("{\"item.create.wrench\":\"扳手\"}"),
+            blockId = "create:wrench",
+        )
+        assertThat(name).isEqualTo("扳手")
+    }
 }

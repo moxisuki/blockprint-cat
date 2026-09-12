@@ -54,6 +54,7 @@ import io.github.moxisuki.blockprint.cat.app.core.design.AppThemeColorSource
 import io.github.moxisuki.blockprint.cat.app.core.design.AppThemeMode
 import io.github.moxisuki.blockprint.cat.app.core.design.AppThemeState
 import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
+import io.github.moxisuki.blockprint.cat.app.core.design.appMaxContentWidth
 import io.github.moxisuki.blockprint.cat.app.core.design.appScrollEndHaptic
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.ColorPalette
@@ -91,7 +92,8 @@ internal fun ThemeSettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MiuixTheme.colorScheme.surface)
-            .appScrollEndHaptic(),
+            .appScrollEndHaptic()
+            .appMaxContentWidth(),
         contentPadding = PaddingValues(
             start = 20.dp,
             top = 8.dp,

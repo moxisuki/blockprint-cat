@@ -8,6 +8,11 @@ import javax.inject.Singleton
 import org.json.JSONObject
 
 private const val TAG = "MojangManifest"
+private val MANIFEST_URLS = listOf(
+    "${AssetMirrors.BMC_API}/mc/game/version_manifest.json",
+    "https://piston-meta.mojang.com/mc/game/version_manifest.json",
+    "https://launchermeta.mojang.com/mc/game/version_manifest.json",
+)
 
 /** Latest release metadata together with the official version metadata URL. */
 data class VanillaVersionInfo(
@@ -62,13 +67,33 @@ class MojangVersionManifestSource @Inject constructor(
      */
     suspend fun versionJson(url: String): AppNetworkResult<JSONObject> {
         val swapped = AssetMirrors.mojang(url)
-        Log.d(TAG, "versionJson() $url → $swapped")
-        return http.getJson(swapped, userAgent = AssetMirrors.BROWSER_UA)
+        val urls = listOf(swapped, url).distinct()
+        var lastFailure: AppNetworkResult.Failure? = null
+        for (candidate in urls) {
+            Log.d(TAG, "versionJson() $url → $candidate")
+            when (val result = http.getJson(candidate, userAgent = AssetMirrors.BROWSER_UA)) {
+                is AppNetworkResult.Success -> return result
+                is AppNetworkResult.Failure -> {
+                    Log.w(TAG, "version json source failed url=$candidate failure=$result")
+                    lastFailure = result
+                }
+            }
+        }
+        return lastFailure ?: AppNetworkResult.Failure(message = "version json unavailable")
     }
 
     private suspend fun fetchManifest(): AppNetworkResult<JSONObject> {
-        val url = "${AssetMirrors.BMC_API}/mc/game/version_manifest.json"
-        Log.d(TAG, "fetchManifest() $url")
-        return http.getJson(url, userAgent = AssetMirrors.BROWSER_UA)
+        var lastFailure: AppNetworkResult.Failure? = null
+        for (url in MANIFEST_URLS) {
+            Log.d(TAG, "fetchManifest() $url")
+            when (val result = http.getJson(url, userAgent = AssetMirrors.BROWSER_UA)) {
+                is AppNetworkResult.Success -> return result
+                is AppNetworkResult.Failure -> {
+                    Log.w(TAG, "manifest source failed url=$url failure=$result")
+                    lastFailure = result
+                }
+            }
+        }
+        return lastFailure ?: AppNetworkResult.Failure(message = "manifest unavailable")
     }
 }

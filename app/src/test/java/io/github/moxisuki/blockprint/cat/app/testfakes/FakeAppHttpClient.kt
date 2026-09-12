@@ -2,6 +2,7 @@ package io.github.moxisuki.blockprint.cat.app.testfakes
 
 import io.github.moxisuki.blockprint.cat.app.core.network.AppHttpClient
 import io.github.moxisuki.blockprint.cat.app.core.network.AppNetworkResult
+import java.io.File
 import org.json.JSONObject
 
 class FakeAppHttpClient(
@@ -31,5 +32,20 @@ class FakeAppHttpClient(
         progress?.invoke(1f)
         progressRecorder?.invoke(1f)
         return AppNetworkResult.Success(data)
+    }
+
+    override suspend fun downloadTo(
+        url: String,
+        destination: File,
+        userAgent: String?,
+        progress: ((Float) -> Unit)?,
+    ): AppNetworkResult<File> {
+        val data = bytesResponses[url] ?: return AppNetworkResult.Failure(message = "no fake bytes for $url")
+        destination.parentFile?.mkdirs()
+        destination.writeBytes(data)
+        progress?.invoke(0.5f)
+        progress?.invoke(1f)
+        progressRecorder?.invoke(1f)
+        return AppNetworkResult.Success(destination)
     }
 }

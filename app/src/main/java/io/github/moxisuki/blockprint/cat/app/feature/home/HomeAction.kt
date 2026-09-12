@@ -18,6 +18,33 @@ sealed interface HomeAction {
 
     data object RefreshClicked : HomeAction
 
+    data class PcHostChanged(val host: String) : HomeAction
+
+    data class PcPortChanged(val port: String) : HomeAction
+
+    data class PcTokenChanged(val token: String) : HomeAction
+
+    data class PcDeviceSelected(
+        val host: String,
+        val port: Int,
+    ) : HomeAction
+
+    data object PcConnectClicked : HomeAction
+
+    data object PcDisconnectClicked : HomeAction
+
+    data object PcRefreshClicked : HomeAction
+
+    data class PcDownloadClicked(
+        val blueprintId: String,
+    ) : HomeAction
+
+    data class PcTaskCancelClicked(
+        val taskId: String,
+    ) : HomeAction
+
+    data object PcErrorDismissed : HomeAction
+
     data class ImportFileSelected(val uri: String) : HomeAction
 
     data object ImportConfirmed : HomeAction
@@ -25,6 +52,8 @@ sealed interface HomeAction {
     data object ImportDismissed : HomeAction
 
     data object CategoryBarToggled : HomeAction
+
+    data class CategoryBarVisibilityChanged(val visible: Boolean) : HomeAction
 
     data class CategorySelected(val categoryId: String) : HomeAction
 

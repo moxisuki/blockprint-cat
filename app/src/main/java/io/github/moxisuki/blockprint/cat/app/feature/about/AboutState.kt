@@ -62,6 +62,7 @@ private fun defaultAboutLibraries(): List<AboutLibrary> = listOf(
     AboutLibrary("Coil", BuildConfig.COIL_VERSION, AboutLibraryLicense.Apache20, "https://coil-kt.github.io/coil/"),
     AboutLibrary("OkHttp", BuildConfig.OKHTTP_VERSION, AboutLibraryLicense.Apache20, "https://square.github.io/okhttp/"),
     AboutLibrary("SceneView", BuildConfig.SCENEVIEW_VERSION, AboutLibraryLicense.Apache20, "https://github.com/SceneView/sceneview-android"),
+    AboutLibrary("Tencent Bugly", BuildConfig.BUGLY_VERSION, AboutLibraryLicense.VendorSdk, "https://bugly.qq.com/v2/"),
 )
 
 private fun defaultExternalLinks(): List<AboutExternalLink> = listOf(

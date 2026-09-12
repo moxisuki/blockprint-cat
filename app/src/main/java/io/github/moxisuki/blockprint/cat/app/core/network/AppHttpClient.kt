@@ -1,6 +1,7 @@
 package io.github.moxisuki.blockprint.cat.app.core.network
 
 import org.json.JSONObject
+import java.io.File
 
 interface AppHttpClient {
     suspend fun getString(url: String): AppNetworkResult<String>
@@ -15,4 +16,11 @@ interface AppHttpClient {
         userAgent: String? = null,
         progress: ((Float) -> Unit)? = null,
     ): AppNetworkResult<ByteArray?>
+
+    suspend fun downloadTo(
+        url: String,
+        destination: File,
+        userAgent: String? = null,
+        progress: ((Float) -> Unit)? = null,
+    ): AppNetworkResult<File>
 }

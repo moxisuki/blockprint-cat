@@ -68,3 +68,7 @@
 # Preserve line numbers for crash reports
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# Bugly crash reporting
+-dontwarn com.tencent.bugly.**
+-keep public class com.tencent.bugly.** { *; }

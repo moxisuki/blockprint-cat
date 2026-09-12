@@ -20,11 +20,12 @@ class ModrinthSource @Inject constructor(
         val hits = body.optJSONArray("hits") ?: return emptyList()
         return (0 until hits.length()).map { i ->
             val h = hits.getJSONObject(i)
+            val slug = h.optString("slug").trim()
             ModSearchHit(
-                slug = h.optString("slug"),
+                slug = slug,
                 title = h.optString("title"),
                 description = h.optString("description").take(80),
-                projectId = h.optString("project_id"),
+                projectId = h.optString("project_id").ifBlank { slug },
                 downloads = h.optInt("downloads", 0),
                 iconUrl = h.optString("icon_url").takeIf { it.isNotBlank() },
             )
@@ -38,7 +39,7 @@ class ModrinthSource @Inject constructor(
         val rawText = (http.getString(url) as? AppNetworkResult.Success)?.value ?: return emptyList()
         val rawJsonArray = runCatching { JSONArray(rawText) }.getOrNull() ?: return emptyList()
         return runCatching {
-            (0 until rawJsonArray.length()).map { i ->
+            (0 until rawJsonArray.length()).mapNotNull { i ->
                 val v = rawJsonArray.getJSONObject(i)
                 val files = v.optJSONArray("files")
                 var primary: org.json.JSONObject? = null
@@ -49,7 +50,7 @@ class ModrinthSource @Inject constructor(
                 if (primary == null && files != null && files.length() > 0) primary = files.getJSONObject(0)
                 val gameVersions = v.optJSONArray("game_versions")
                 val versions = (0 until (gameVersions?.length() ?: 0)).map { gameVersions!!.getString(it) }
-                ModVersionInfo(
+                val version = ModVersionInfo(
                     id = v.optString("id"),
                     name = v.optString("name"),
                     gameVersions = versions,
@@ -57,6 +58,7 @@ class ModrinthSource @Inject constructor(
                     fileSize = primary?.optLong("size", -1L) ?: -1L,
                     fileUrl = primary?.optString("url") ?: "",
                 )
+                version.takeIf { it.id.isNotBlank() && it.fileName.isNotBlank() && it.fileUrl.isNotBlank() }
             }
         }.getOrElse { emptyList() }
     }

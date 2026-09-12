@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,16 +17,21 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,19 +41,28 @@ import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import io.github.moxisuki.blockprint.cat.R
+import io.github.moxisuki.blockprint.cat.app.core.preview.PreviewCacheInfo
 import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
+import io.github.moxisuki.blockprint.cat.app.feature.detail.BlueprintNamespaceItem
 import io.github.moxisuki.blockprint.cat.app.feature.home.HomeBlueprintFormat
 import io.github.moxisuki.blockprint.cat.app.feature.home.HomeBlueprintItem
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ChevronForward
+import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal data class BlueprintDetailMaterialItem(
     val name: String,
     val count: Int,
     val iconUrls: List<String> = emptyList(),
+    val displayName: String? = null,
 )
 
 @Composable
@@ -95,14 +110,23 @@ internal fun BlueprintDetailHeader(
 }
 
 @Composable
-internal fun BlueprintDetailActions(modifier: Modifier = Modifier) {
-    Row(
+internal fun BlueprintDetailActions(
+    onPreviewClick: () -> Unit,
+    onRegeneratePreviewClick: () -> Unit,
+    onConvertClick: () -> Unit,
+    previewCache: PreviewCacheInfo,
+    isConverting: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Button(
-            modifier = Modifier.weight(1f),
-            onClick = {},
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp),
+            onClick = onPreviewClick,
             colors = ButtonDefaults.buttonColorsPrimary(),
         ) {
             Icon(
@@ -112,27 +136,82 @@ internal fun BlueprintDetailActions(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = stringResource(R.string.detail_preview_button),
+                text = stringResource(
+                    if (previewCache.isReady) R.string.detail_view_cached
+                    else R.string.detail_generate,
+                ),
                 color = MiuixTheme.colorScheme.onPrimary,
                 style = MiuixTheme.textStyles.button,
             )
         }
-        Button(
-            modifier = Modifier.weight(1f),
-            onClick = {},
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MiuixTheme.colorScheme.surfaceContainer)
+                .heightIn(min = 52.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Filled.SwapHoriz,
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onSecondaryVariant,
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = stringResource(R.string.detail_convert_action),
-                color = MiuixTheme.colorScheme.onSecondaryVariant,
-                style = MiuixTheme.textStyles.button,
+            if (previewCache.isReady) {
+                DetailActionItem(
+                    modifier = Modifier.weight(1f),
+                    icon = MiuixIcons.Refresh,
+                    text = stringResource(R.string.detail_regenerate),
+                    contentColor = MiuixTheme.colorScheme.primary,
+                    onClick = onRegeneratePreviewClick,
+                )
+                Spacer(
+                    modifier = Modifier
+                        .height(24.dp)
+                        .width(1.dp)
+                        .background(MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.18f)),
+                )
+            }
+            DetailActionItem(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Filled.SwapHoriz,
+                text = stringResource(
+                    if (isConverting) R.string.detail_convert_running
+                    else R.string.detail_convert_action,
+                ),
+                contentColor = MiuixTheme.colorScheme.onSurfaceContainer,
+                enabled = !isConverting,
+                onClick = onConvertClick,
             )
         }
+    }
+}
+
+@Composable
+private fun DetailActionItem(
+    icon: ImageVector,
+    text: String,
+    contentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = contentColor.copy(alpha = if (enabled) 1f else 0.42f),
+        )
+        Spacer(modifier = Modifier.width(7.dp))
+        Text(
+            text = text,
+            color = contentColor.copy(alpha = if (enabled) 1f else 0.42f),
+            style = MiuixTheme.textStyles.button,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -214,16 +293,45 @@ internal fun BlueprintDetailMaterialsSection(
     materials: List<BlueprintDetailMaterialItem>,
     modifier: Modifier = Modifier,
 ) {
+    var showAll by androidx.compose.runtime.remember(materials.size) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    val visibleMaterials = if (showAll) materials else materials.take(MAX_COLLAPSED_MATERIALS)
+
     Card(
         modifier = modifier.fillMaxWidth(),
         insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
     ) {
-        Text(
-            text = stringResource(R.string.detail_material_top10),
-            color = MiuixTheme.colorScheme.onSurfaceContainer,
-            style = MiuixTheme.textStyles.body1,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (showAll) {
+                    stringResource(R.string.detail_material_all, materials.size)
+                } else {
+                    stringResource(R.string.detail_material_top10)
+                },
+                color = MiuixTheme.colorScheme.onSurfaceContainer,
+                style = MiuixTheme.textStyles.body1,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (materials.size > MAX_COLLAPSED_MATERIALS) {
+                TextButton(
+                    text = stringResource(
+                        if (showAll) R.string.detail_material_collapse
+                        else R.string.detail_material_show_all,
+                    ),
+                    onClick = { showAll = !showAll },
+                    minWidth = 0.dp,
+                    minHeight = 32.dp,
+                    insideMargin = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(10.dp))
         if (materials.isEmpty()) {
             Text(
@@ -233,11 +341,99 @@ internal fun BlueprintDetailMaterialsSection(
             )
         } else {
             val maxCount = materials.maxOf { it.count }.coerceAtLeast(1)
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                materials.forEach { material ->
+            LazyColumn(
+                modifier = Modifier.heightIn(max = if (showAll) 460.dp else 520.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(visibleMaterials, key = { it.name }) { material ->
                     MaterialRow(
                         material = material,
                         fraction = material.count.toFloat() / maxCount,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val MAX_COLLAPSED_MATERIALS = 10
+
+@Composable
+internal fun BlueprintDetailNamespacesSection(
+    namespaces: List<BlueprintNamespaceItem>,
+    onNamespaceClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.detail_namespaces_title),
+            color = MiuixTheme.colorScheme.onSurfaceContainer,
+            style = MiuixTheme.textStyles.body1,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.detail_namespaces_subtitle),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.body2,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            namespaces.forEach { item ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onNamespaceClick(item.namespace) }
+                        .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.54f))
+                        .padding(horizontal = 10.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Icon(
+                        imageVector = if (item.isInstalled) MiuixIcons.Ok else MiuixIcons.Download,
+                        contentDescription = null,
+                        tint = if (item.isInstalled) {
+                            MiuixTheme.colorScheme.primary
+                        } else {
+                            MiuixTheme.colorScheme.onSurfaceVariantSummary
+                        },
+                        modifier = Modifier.width(20.dp),
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.namespace,
+                            color = MiuixTheme.colorScheme.onSurfaceContainer,
+                            style = MiuixTheme.textStyles.body1,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = stringResource(
+                                if (item.isInstalled) {
+                                    R.string.detail_namespace_installed
+                                } else {
+                                    R.string.detail_namespace_missing
+                                },
+                            ),
+                            color = if (item.isInstalled) {
+                                MiuixTheme.colorScheme.primary
+                            } else {
+                                MiuixTheme.colorScheme.onSurfaceVariantSummary
+                            },
+                            style = MiuixTheme.textStyles.body2,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Icon(
+                        imageVector = MiuixIcons.ChevronForward,
+                        contentDescription = stringResource(R.string.detail_namespace_manage),
+                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.width(18.dp),
                     )
                 }
             }
@@ -378,7 +574,8 @@ private fun MaterialRow(
             MaterialIcon(material = material)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = material.name.removePrefix("minecraft:").replace("_", " "),
+                    text = material.displayName
+                        ?: material.name.removePrefix("minecraft:").replace("_", " "),
                     color = MiuixTheme.colorScheme.onSurfaceContainer,
                     style = MiuixTheme.textStyles.body2,
                     fontWeight = FontWeight.SemiBold,
@@ -431,11 +628,14 @@ private fun MaterialIcon(
         }
         val url = material.iconUrls.getOrNull(attemptState.intValue)
         if (url != null) {
-            SubcomposeAsyncImage(
-                model = ImageRequest.Builder(context)
+            val request = androidx.compose.runtime.remember(context, url) {
+                ImageRequest.Builder(context)
                     .data(url)
                     .crossfade(true)
-                    .build(),
+                    .build()
+            }
+            SubcomposeAsyncImage(
+                model = request,
                 contentDescription = material.name,
                 modifier = modifier
                     .width(34.dp)

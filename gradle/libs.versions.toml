@@ -26,6 +26,7 @@ navigation3 = "1.1.4"
 navigationEvent = "1.1.2"
 datastorePreferences = "1.2.1"
 truth = "1.4.4"
+bugly = "4.1.9.3"
 
 [libraries]
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -70,6 +71,7 @@ markdown-renderer-m3 = { group = "com.mikepenz", name = "multiplatform-markdown-
 blockprint-core = { group = "io.github.moxisuki", name = "blockprint-core-android", version.ref = "blockprint" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
+bugly-crashreport = { group = "com.tencent.bugly", name = "crashreport", version.ref = "bugly" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

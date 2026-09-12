@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintFormat
 import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintImportPreview
 import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.LocalBlueprint
+import io.github.moxisuki.blockprint.cat.app.core.pcbridge.PcBridgeDefaultPort
+import io.github.moxisuki.blockprint.cat.app.core.pcbridge.PcBridgeState
 import io.github.moxisuki.blockprint.cat.app.feature.home.category.HomeCategoryId
 import java.text.NumberFormat
 import java.util.Locale
@@ -14,7 +16,10 @@ data class HomeState(
     val localBlueprintTreeDocumentId: String? = null,
     val selectedSource: HomeBlueprintSource = HomeBlueprintSource.Local,
     val localBlueprints: List<HomeBlueprintItem> = emptyList(),
-    val pcBlueprints: List<HomeBlueprintItem> = defaultPcBlueprints(),
+    val pcBridgeState: PcBridgeState = PcBridgeState(),
+    val pcHostInput: String = "",
+    val pcPortInput: String = PcBridgeDefaultPort.toString(),
+    val pcTokenInput: String = "",
     val customCategories: List<String> = emptyList(),
     val selectedCategoryId: String = HomeCategoryId.All,
     val isCategoryBarVisible: Boolean = false,
@@ -116,33 +121,6 @@ internal fun previewLocalBlueprints(): List<HomeBlueprintItem> = listOf(
         regionCount = 1,
         size = "420 KB",
         updatedAt = "07-14 18:06",
-    ),
-)
-
-private fun defaultPcBlueprints(): List<HomeBlueprintItem> = listOf(
-    HomeBlueprintItem(
-        id = "pc-hub",
-        name = "Spawn Hub Draft",
-        fileName = "spawn_hub_draft.litematic",
-        format = HomeBlueprintFormat.Litematica,
-        category = "PC World",
-        author = "Server Team",
-        blockCount = "91,024",
-        regionCount = 5,
-        size = "4.8 MB",
-        updatedAt = "LAN · 2 min",
-    ),
-    HomeBlueprintItem(
-        id = "pc-farm",
-        name = "Copper Farm",
-        fileName = "copper_farm.schematic",
-        format = HomeBlueprintFormat.Schematic,
-        category = "PC World",
-        author = "Alex",
-        blockCount = "28,900",
-        regionCount = 2,
-        size = "1.6 MB",
-        updatedAt = "LAN · 9 min",
     ),
 )
 

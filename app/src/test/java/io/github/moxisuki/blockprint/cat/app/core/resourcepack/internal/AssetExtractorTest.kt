@@ -24,6 +24,9 @@ class AssetExtractorTest {
         val jar = java.io.File("src/test/resources/resourcepack/fixtures/minecraft.jar")
         val dest = tmp.newFolder("dest")
         val result = AssetExtractor.extractFromModJar(jar, dest)
-        assertThat(result.namespaces).isEmpty()
+        assertThat(result.namespaces).containsExactly("create")
+        assertThat(result.fileCount).isEqualTo(1)
+        assertThat(java.io.File(dest, "create/models/block/shaft.json").isFile).isTrue()
+        assertThat(java.io.File(dest, "minecraft/models/block/stone.json").exists()).isFalse()
     }
 }

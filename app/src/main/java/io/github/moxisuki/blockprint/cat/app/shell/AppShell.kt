@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -29,6 +30,8 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.NavDisplayTransitionEffects
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.app.core.design.AppMotion
+import io.github.moxisuki.blockprint.cat.app.core.design.LocalAppWindowWidthSize
+import io.github.moxisuki.blockprint.cat.app.core.design.rememberAppWindowWidthSize
 import io.github.moxisuki.blockprint.cat.app.core.navigation.AppRoute
 import io.github.moxisuki.blockprint.cat.app.core.navigation.AppTopLevelRoute
 import io.github.moxisuki.blockprint.cat.app.core.navigation.rememberAppNavigator
@@ -40,9 +43,15 @@ import io.github.moxisuki.blockprint.cat.app.feature.community.CommunityRoute
 import io.github.moxisuki.blockprint.cat.app.feature.detail.BlueprintDetailRoute
 import io.github.moxisuki.blockprint.cat.app.feature.debug.DebugRoute
 import io.github.moxisuki.blockprint.cat.app.feature.home.HomeRoute
+import io.github.moxisuki.blockprint.cat.app.feature.preview.PreviewRoute
 import io.github.moxisuki.blockprint.cat.app.feature.resourcepacks.ResourcePacksRoute
 import io.github.moxisuki.blockprint.cat.app.feature.settings.SettingsRoute
 import io.github.moxisuki.blockprint.cat.app.feature.settings.theme.ThemeSettingsRoute
+import io.github.moxisuki.blockprint.cat.app.feature.tools.BlockPaintRoute
+import io.github.moxisuki.blockprint.cat.app.feature.tools.ImageToBlueprintRoute
+import io.github.moxisuki.blockprint.cat.app.feature.tools.TextToBlueprintRoute
+import io.github.moxisuki.blockprint.cat.app.feature.tools.ToolDestination
+import io.github.moxisuki.blockprint.cat.app.feature.tools.ToolsRoute
 
 @Composable
 fun AppShell() {
@@ -50,7 +59,8 @@ fun AppShell() {
     val communityEnabled by shellViewModel.communityEnabled.collectAsStateWithLifecycle()
     val navigator = rememberAppNavigator()
     val currentTopLevelRoute = navigator.currentTopLevelRoute
-    val showBottomBar = navigator.currentRoute is AppTopLevelRoute
+    val isPreview = navigator.currentRoute is AppRoute.Preview
+    val showBottomBar = navigator.currentRoute is AppTopLevelRoute && !isPreview
     val navigationItems = remember(communityEnabled) {
         AppTopLevelDestinations.filter { item ->
             communityEnabled || item.route != AppRoute.Community
@@ -58,6 +68,7 @@ fun AppShell() {
     }
     var showThemeAppBarTitle by remember { mutableStateOf(false) }
     var showAboutAppBarTitle by remember { mutableStateOf(false) }
+    var showResourcePacksAppBarTitle by remember { mutableStateOf(false) }
 
     LaunchedEffect(communityEnabled, currentTopLevelRoute) {
         if (!communityEnabled && currentTopLevelRoute == AppRoute.Community) {
@@ -72,13 +83,21 @@ fun AppShell() {
         if (navigator.currentRoute != AppRoute.About) {
             showAboutAppBarTitle = false
         }
+        if (navigator.currentRoute !is AppRoute.ResourcePacks) {
+            showResourcePacksAppBarTitle = false
+        }
     }
     val currentTitle = when (navigator.currentRoute) {
         AppRoute.Home -> stringResource(R.string.nav_title_home)
+        AppRoute.Tools -> stringResource(R.string.nav_title_tools)
+        AppRoute.ImageToBlueprint -> stringResource(R.string.itb_title)
+        AppRoute.TextToBlueprint -> stringResource(R.string.tool_text_to_blueprint)
+        AppRoute.BlockPaint -> stringResource(R.string.tool_block_paint)
         AppRoute.Community -> stringResource(R.string.nav_title_community)
         AppRoute.CommunityLogin -> ""
         is AppRoute.CommunityDetail -> stringResource(R.string.nav_title_detail_default)
         is AppRoute.BlueprintDetail -> stringResource(R.string.nav_title_detail_default)
+        is AppRoute.Preview -> ""
         AppRoute.Settings -> stringResource(R.string.nav_title_settings)
         AppRoute.ThemeSettings -> if (showThemeAppBarTitle) {
             stringResource(R.string.theme_settings_title)
@@ -91,7 +110,11 @@ fun AppShell() {
             ""
         }
         AppRoute.Debug -> stringResource(R.string.nav_title_debug)
-        AppRoute.ResourcePacks -> ""  // ResourcePacksScreen owns its TopAppBar (with large title).
+        is AppRoute.ResourcePacks -> if (showResourcePacksAppBarTitle) {
+            stringResource(R.string.resourcepacks_title)
+        } else {
+            ""
+        }
     }
     val entryProvider = remember {
         entryProvider<NavKey> {
@@ -101,6 +124,28 @@ fun AppShell() {
                         navigator.navigate(AppRoute.BlueprintDetail(blueprintId))
                     },
                 )
+            }
+            entry(AppRoute.Tools) {
+                ToolsRoute(
+                    onToolClick = { destination ->
+                        navigator.navigate(
+                            when (destination) {
+                                ToolDestination.ImageToBlueprint -> AppRoute.ImageToBlueprint
+                                ToolDestination.TextToBlueprint -> AppRoute.TextToBlueprint
+                                ToolDestination.BlockPaint -> AppRoute.BlockPaint
+                            },
+                        )
+                    },
+                )
+            }
+            entry(AppRoute.ImageToBlueprint) {
+                ImageToBlueprintRoute()
+            }
+            entry(AppRoute.TextToBlueprint) {
+                TextToBlueprintRoute()
+            }
+            entry(AppRoute.BlockPaint) {
+                BlockPaintRoute()
             }
             entry(AppRoute.Community) {
                 CommunityRoute(
@@ -157,6 +202,31 @@ fun AppShell() {
             entry<AppRoute.BlueprintDetail> { route ->
                 BlueprintDetailRoute(
                     blueprintId = route.blueprintId,
+                    onPreviewClick = {
+                        navigator.navigate(AppRoute.Preview(route.blueprintId))
+                    },
+                    onRegeneratePreviewClick = {
+                        navigator.navigate(
+                            AppRoute.Preview(
+                                blueprintId = route.blueprintId,
+                                forceRegenerate = true,
+                            ),
+                        )
+                    },
+                    onResourceNamespaceClick = { namespace ->
+                        navigator.navigate(
+                            AppRoute.ResourcePacks(
+                                initialQuery = namespace.takeUnless { it == "minecraft" },
+                            ),
+                        )
+                    },
+                )
+            }
+            entry<AppRoute.Preview> { route ->
+                PreviewRoute(
+                    blueprintId = route.blueprintId,
+                    forceRegenerate = route.forceRegenerate,
+                    onBack = { navigator.navigateBack() },
                 )
             }
             entry(AppRoute.Settings) {
@@ -164,7 +234,7 @@ fun AppShell() {
                     onThemeClick = { navigator.navigate(AppRoute.ThemeSettings) },
                     onAboutClick = { navigator.navigate(AppRoute.About) },
                     onDebugClick = { navigator.navigate(AppRoute.Debug) },
-                    onResourcePacksClick = { navigator.navigate(AppRoute.ResourcePacks) },
+                    onResourcePacksClick = { navigator.navigate(AppRoute.ResourcePacks()) },
                 )
             }
             entry(AppRoute.ThemeSettings) {
@@ -184,21 +254,30 @@ fun AppShell() {
             entry(AppRoute.Debug) {
                 DebugRoute()
             }
-            entry(AppRoute.ResourcePacks) {
-                ResourcePacksRoute()
+            entry<AppRoute.ResourcePacks> { route ->
+                ResourcePacksRoute(
+                    initialQuery = route.initialQuery,
+                    onAppBarTitleVisibleChange = { visible ->
+                        showResourcePacksAppBarTitle = visible
+                    },
+                )
             }
         }
     }
     val saveableStateHolder = rememberSaveableStateHolder()
-    AppScaffold(
-        title = currentTitle,
-        currentRoute = currentTopLevelRoute,
-        navigationItems = navigationItems,
-        onNavigationItemClick = navigator::navigateTopLevel,
-        canNavigateBack = navigator.canNavigateBack,
-        showBottomBar = showBottomBar,
-        onNavigateBack = { navigator.navigateBack() },
-    ) { innerPadding ->
+    val windowWidthSize = rememberAppWindowWidthSize()
+    CompositionLocalProvider(LocalAppWindowWidthSize provides windowWidthSize) {
+        AppScaffold(
+            title = currentTitle,
+            currentRoute = currentTopLevelRoute,
+            navigationItems = navigationItems,
+            onNavigationItemClick = navigator::navigateTopLevel,
+            windowWidthSize = windowWidthSize,
+            canNavigateBack = navigator.canNavigateBack,
+            showTopBar = !isPreview,
+            showBottomBar = showBottomBar,
+            onNavigateBack = { navigator.navigateBack() },
+        ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
         val contentPadding = PaddingValues(
             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -235,6 +314,7 @@ fun AppShell() {
             }
         }
     }
+}
 }
 
 @Composable

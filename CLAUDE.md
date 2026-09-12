@@ -131,6 +131,43 @@ or repositories. Screens must never issue network calls directly. For example,
 About's Hitokoto quote flows through
 `AboutViewModel -> AboutRepository -> HitokotoRemoteDataSource -> AppHttpClient`.
 
+PC bridge code lives in `app/core/pcbridge` and is separate from Home UI:
+
+```text
+HomeAction -> HomeViewModel -> PcBridgeRepository
+PcBridgeRepository -> PcBridgeClient(OkHttp WebSocket)
+PcBridgeRepository -> PcBridgeDiscovery(UDP 18081)
+PcBridgeRepository -> BlueprintRepository.importDownloadedBlueprint(...)
+PcBridgeRepository.state -> HomeState.pcBridgeState -> PcBridgePage
+```
+
+- `PcBridgeClient` owns WebSocket protocol details only: connect, list,
+  task creation/cancel, framed binary chunk accumulation, and protocol errors.
+- `PcBridgeDiscovery` only converts LAN UDP broadcasts into
+  `PcDiscoveredDevice`; token validation happens during WebSocket connect.
+- `PcBridgeRepository` is the orchestration boundary. It merges connection,
+  discovery, remote list, task progress, and download-to-local import into one
+  `PcBridgeState`. Multi-task UI reads `PcBridgeState.tasks`; do not add
+  per-row network state in Home components.
+- Home components must not import OkHttp, sockets, repositories, or platform
+  services. The PC tab renders `PcBridgePage` from state and emits callbacks
+  back through `HomeAction`.
+- The bridge protocol is shared with the PC mod in the sibling
+  `blockprint-link` repository. Keep message types, error codes, and
+  binary frame layout compatible with `blockprint-link/docs/bridge-protocol.md`.
+- PC bridge protocol v1 uses UDP discovery packets with type
+  `bp.discovery.v1`, then WebSocket `ws://host:port/bp/link` with subprotocol
+  `bp.link.v1` and `Authorization: Bearer <token>`.
+- Text messages are JSON envelopes with `messageId`, optional `replyTo`,
+  `type`, `timestamp`, and `payload`. Blueprint download is a task flow:
+  `task.create(kind=blueprint.download)` -> `task.created` ->
+  `task.progress` -> `task.finished`/`task.failed`; cancellation uses
+  `task.cancel` -> `task.cancelled`.
+- Binary payloads are transfer chunks framed as `BPL1` + big-endian header
+  length + UTF-8 JSON header + raw bytes. The header must carry `taskId`,
+  `transferId`, `offset`, `length`, and `seq`; Cat validates offsets before
+  importing through `BlueprintRepository.importDownloadedBlueprint(...)`.
+
 ## Compose stability
 
 - Wrap event lambdas in `remember(...)` so children can skip recompose.
@@ -189,6 +226,16 @@ Route collects state -> Screen renders state
 - The default bottom tab chrome uses Miuix `FloatingNavigationBar`. Let the
   component handle navigation-bar insets and bottom spacing; avoid adding
   extra vertical padding around it unless a specific screen mode requires it.
+- Adaptive (tablet/wide-screen) layout lives in
+  `app/core/design/AppWindowSize.kt`: `AppWindowWidthSize` breakpoints
+  (600/840dp), `LocalAppWindowWidthSize`, and `Modifier.appMaxContentWidth()`.
+  On Medium/Expanded widths `AppScaffold` swaps the bottom
+  `FloatingNavigationBar` for a left Miuix `NavigationRail` that stays visible
+  on child pages (hidden only on Preview). Top app bar and page content share
+  one centered content column (`appMaxContentWidth()`, 1100dp cap) so their
+  left edges stay aligned; wide card lists use
+  `LazyVerticalGrid(GridCells.Adaptive(300.dp))` with full-span
+  header/footer items instead of switching containers per width.
 - Navigation3 requires a root `NavigationEventDispatcherOwner`. `MainActivity`
   owns the dispatcher, exposes it via the ViewTree, and adapts
   `OnBackPressedDispatcher` into `NavigationEventInput` so system back stays

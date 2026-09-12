@@ -4,6 +4,8 @@ import androidx.lifecycle.viewModelScope
 import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintFormat
 import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintImportPreview
 import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintRepository
+import io.github.moxisuki.blockprint.cat.app.core.pcbridge.PcBridgeDefaultPort
+import io.github.moxisuki.blockprint.cat.app.core.pcbridge.PcBridgeRepository
 import io.github.moxisuki.blockprint.cat.app.core.persistence.AppSettingsRepository
 import io.github.moxisuki.blockprint.cat.app.feature.home.category.HomeCategoryId
 import androidx.lifecycle.ViewModel
@@ -21,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 class HomeViewModel @Inject constructor(
     private val settingsRepository: AppSettingsRepository,
     private val blueprintRepository: BlueprintRepository,
+    private val pcBridgeRepository: PcBridgeRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -33,6 +36,8 @@ class HomeViewModel @Inject constructor(
         observeLocalBlueprints()
         observeRefreshState()
         observeCategories()
+        observePcBridge()
+        pcBridgeRepository.startDiscovery()
     }
 
     fun onAction(action: HomeAction) {
@@ -71,13 +76,62 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(searchQuery = "") }
             }
             HomeAction.RefreshClicked -> {
-                if (_state.value.selectedSource == HomeBlueprintSource.Local &&
-                    _state.value.isSafDirectorySelected
-                ) {
-                    viewModelScope.launch {
-                        blueprintRepository.refreshLocalBlueprints()
+                when (_state.value.selectedSource) {
+                    HomeBlueprintSource.Local -> {
+                        if (_state.value.isSafDirectorySelected) {
+                            viewModelScope.launch {
+                                blueprintRepository.refreshLocalBlueprints()
+                            }
+                        }
                     }
+                    HomeBlueprintSource.Pc -> pcBridgeRepository.refreshList()
                 }
+            }
+            is HomeAction.PcHostChanged -> {
+                _state.update { it.copy(pcHostInput = action.host) }
+            }
+            is HomeAction.PcPortChanged -> {
+                _state.update { it.copy(pcPortInput = action.port.filter { char -> char.isDigit() }.take(5)) }
+            }
+            is HomeAction.PcTokenChanged -> {
+                _state.update { it.copy(pcTokenInput = action.token) }
+            }
+            is HomeAction.PcDeviceSelected -> {
+                _state.update {
+                    it.copy(
+                        pcHostInput = action.host,
+                        pcPortInput = action.port.toString(),
+                    )
+                }
+            }
+            HomeAction.PcConnectClicked -> {
+                val state = _state.value
+                val port = state.pcPortInput.toIntOrNull() ?: PcBridgeDefaultPort
+                pcBridgeRepository.connect(
+                    host = state.pcHostInput,
+                    port = port,
+                    token = state.pcTokenInput,
+                )
+            }
+            HomeAction.PcDisconnectClicked -> {
+                pcBridgeRepository.disconnect()
+            }
+            HomeAction.PcRefreshClicked -> {
+                pcBridgeRepository.refreshList()
+            }
+            is HomeAction.PcDownloadClicked -> {
+                val blueprint = _state.value.pcBridgeState.blueprints.firstOrNull {
+                    it.id == action.blueprintId
+                }
+                if (blueprint != null) {
+                    pcBridgeRepository.download(blueprint)
+                }
+            }
+            is HomeAction.PcTaskCancelClicked -> {
+                pcBridgeRepository.cancelTask(action.taskId)
+            }
+            HomeAction.PcErrorDismissed -> {
+                pcBridgeRepository.clearError()
             }
             is HomeAction.ImportFileSelected -> {
                 viewModelScope.launch {
@@ -171,6 +225,18 @@ class HomeViewModel @Inject constructor(
                             false
                         } else {
                             state.isCategoryManageVisible
+                        },
+                    )
+                }
+            }
+            is HomeAction.CategoryBarVisibilityChanged -> {
+                _state.update { state ->
+                    state.copy(
+                        isCategoryBarVisible = action.visible,
+                        isCategoryManageVisible = if (action.visible) {
+                            state.isCategoryManageVisible
+                        } else {
+                            false
                         },
                     )
                 }
@@ -354,5 +420,18 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun observePcBridge() {
+        viewModelScope.launch {
+            pcBridgeRepository.state.collect { pcState ->
+                _state.update { it.copy(pcBridgeState = pcState) }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        pcBridgeRepository.stopDiscovery()
+        super.onCleared()
     }
 }

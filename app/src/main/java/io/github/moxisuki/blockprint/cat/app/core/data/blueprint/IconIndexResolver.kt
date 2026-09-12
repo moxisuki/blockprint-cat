@@ -55,6 +55,17 @@ class IconIndexResolver @Inject constructor(
             getIconUrl(blockId, "_item"),
         )
 
+    suspend fun invalidateCache() {
+        loadMutex.withLock {
+            withContext(Dispatchers.IO) {
+                namespaces.clear()
+                loaded = false
+                _ready.value = false
+                cacheFile.delete()
+            }
+        }
+    }
+
     private fun loadFromCache() {
         if (!cacheFile.exists()) return
         runCatching {

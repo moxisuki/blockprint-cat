@@ -10,16 +10,16 @@ sealed interface ResourcePacksAction {
     data object VanillaDownload : ResourcePacksAction
     data object VanillaRedownload : ResourcePacksAction
     data object VanillaDelete : ResourcePacksAction
-    data object VanillaDeleteConfirm : ResourcePacksAction
     data object VanillaCancel : ResourcePacksAction
-    data class VanillaFeedbackDismiss(val message: String) : ResourcePacksAction
 
     data class ModRedownload(val id: ResourcePackId) : ResourcePacksAction
     data class ModDelete(val id: ResourcePackId) : ResourcePacksAction
-    data class ModDeleteConfirm(val id: ResourcePackId) : ResourcePacksAction
     data class ModCancel(val id: ResourcePackId) : ResourcePacksAction
 
-    data object ModSearchOpen : ResourcePacksAction
+    data object PendingDeleteConfirm : ResourcePacksAction
+    data object PendingDeleteDismiss : ResourcePacksAction
+
+    data class ModSearchOpen(val initialQuery: String = "") : ResourcePacksAction
     data class ModSearchQueryChanged(val query: String) : ResourcePacksAction
     data object ModSearchSubmit : ResourcePacksAction
     data class ModSearchHitSelected(val hit: ModSearchHit) : ResourcePacksAction

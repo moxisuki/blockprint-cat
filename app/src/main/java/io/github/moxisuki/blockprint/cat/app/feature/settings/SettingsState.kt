@@ -1,6 +1,8 @@
 package io.github.moxisuki.blockprint.cat.app.feature.settings
 
 import androidx.compose.runtime.Immutable
+import io.github.moxisuki.blockprint.cat.app.core.cache.AppCacheCategory
+import io.github.moxisuki.blockprint.cat.app.core.cache.AppCacheStats
 import io.github.moxisuki.blockprint.cat.app.core.persistence.McsAuthCookies
 
 @Immutable
@@ -17,6 +19,12 @@ data class SettingsState(
     val isRestoreRunning: Boolean = false,
     val backupRestoreFeedback: SettingsBackupRestoreFeedback? = null,
     val installedResourcePackCount: Int = 0,
+    val isCacheManagerVisible: Boolean = false,
+    val cacheStats: AppCacheStats? = null,
+    val isCacheStatsLoading: Boolean = false,
+    val isCacheClearing: Boolean = false,
+    val pendingCacheClearCategory: AppCacheCategory? = null,
+    val cacheErrorMessage: String? = null,
 )
 
 @Immutable

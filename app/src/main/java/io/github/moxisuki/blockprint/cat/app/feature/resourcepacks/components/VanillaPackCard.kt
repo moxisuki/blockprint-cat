@@ -61,7 +61,7 @@ internal fun VanillaPackCard(
 private fun formatBytes(bytes: Long): String {
     if (bytes < 1024L) return "$bytes B"
     val units = listOf("KB", "MB", "GB")
-    var value = bytes.toDouble(); var i = 0
+    var value = bytes.toDouble() / 1024.0; var i = 0
     while (value >= 1024.0 && i < units.lastIndex) { value /= 1024.0; i++ }
     return "%.1f %s".format(value, units[i])
 }

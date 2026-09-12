@@ -52,6 +52,39 @@ class DefaultResourcePackAssetLocatorTest {
         assertThat(locator.hasAssets("missing")).isFalse()
     }
 
+    @Test fun `namespaceInfo reports namespace capabilities`() {
+        File(renderRoot, "minecraft/blockstates").mkdirs()
+        File(renderRoot, "minecraft/blockstates/stone.json").writeText("{}")
+        File(renderRoot, "minecraft/models/block").mkdirs()
+        File(renderRoot, "minecraft/models/block/stone.json").writeText("{}")
+        File(renderRoot, "minecraft/textures/block").mkdirs()
+        File(renderRoot, "minecraft/textures/block/stone.png").writeBytes(byteArrayOf(1))
+
+        val info = newLocator().namespaceInfo("minecraft")
+        assertThat(info).isNotNull()
+        assertThat(info!!.namespace).isEqualTo("minecraft")
+        assertThat(info.hasBlockStates).isTrue()
+        assertThat(info.hasModels).isTrue()
+        assertThat(info.hasTextures).isTrue()
+    }
+
+    @Test fun `asset path helpers resolve block resources`() {
+        File(renderRoot, "minecraft/blockstates").mkdirs()
+        File(renderRoot, "minecraft/blockstates/stone.json").writeText("{}")
+        File(renderRoot, "minecraft/models/block").mkdirs()
+        File(renderRoot, "minecraft/models/block/stone.json").writeText("{}")
+        File(renderRoot, "minecraft/textures/block").mkdirs()
+        File(renderRoot, "minecraft/textures/block/stone.png").writeBytes(byteArrayOf(1))
+
+        val locator = newLocator()
+        assertThat(locator.blockstatePath("minecraft:stone")?.relativePath)
+            .isEqualTo("blockstates/stone.json")
+        assertThat(locator.blockModelPath("minecraft", "block/stone")?.relativePath)
+            .isEqualTo("models/block/stone.json")
+        assertThat(locator.texturePath("minecraft", "block/stone")?.relativePath)
+            .isEqualTo("textures/block/stone.png")
+    }
+
     @Test fun `textureCandidates ranks by stem-equality descending`() {
         File(renderRoot, "minecraft/textures/block").mkdirs()
         File(renderRoot, "minecraft/textures/block/stone.png").writeBytes(byteArrayOf(0))
@@ -65,5 +98,17 @@ class DefaultResourcePackAssetLocatorTest {
 
     @Test fun `textureCandidates returns empty when namespace absent`() {
         assertThat(newLocator().textureCandidates("minecraft:stone")).isEmpty()
+    }
+
+    @Test fun `loadDisplayName reads the requested locale from a mod lang file`() {
+        File(renderRoot, "create/lang/zh_cn.json").apply {
+            requireNotNull(parentFile).mkdirs()
+            writeText("{\"item.create.wrench\":\"扳手\"}")
+        }
+
+        val name = kotlinx.coroutines.runBlocking {
+            newLocator().loadDisplayName("create:wrench", listOf("zh_cn", "en_us"))
+        }
+        assertThat(name).isEqualTo("扳手")
     }
 }

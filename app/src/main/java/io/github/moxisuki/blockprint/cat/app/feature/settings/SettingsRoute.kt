@@ -114,6 +114,12 @@ fun SettingsRoute(
                 SettingsAction.RestoreConfirmed,
                 SettingsAction.RestoreConfirmDismissed,
                 SettingsAction.BackupRestoreFeedbackDismissed,
+                SettingsAction.CacheClicked,
+                SettingsAction.CacheDismissed,
+                SettingsAction.CacheRefreshClicked,
+                is SettingsAction.CacheClearRequested,
+                SettingsAction.CacheClearConfirmed,
+                SettingsAction.CacheClearDismissed,
                 -> Unit
             }
             viewModel.onAction(action)

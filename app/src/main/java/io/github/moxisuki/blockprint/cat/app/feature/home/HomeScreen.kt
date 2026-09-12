@@ -21,8 +21,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,12 +41,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
@@ -51,6 +61,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
+import io.github.moxisuki.blockprint.cat.app.core.design.appMaxContentWidth
 import io.github.moxisuki.blockprint.cat.app.core.design.appScrollEndHaptic
 import io.github.moxisuki.blockprint.cat.app.feature.home.category.BlueprintCategoryFilter
 import io.github.moxisuki.blockprint.cat.app.feature.home.category.CategoryFilterBar
@@ -61,6 +72,7 @@ import io.github.moxisuki.blockprint.cat.app.feature.home.components.CategoryEmp
 import io.github.moxisuki.blockprint.cat.app.feature.home.components.EmptyBlueprintPanel
 import io.github.moxisuki.blockprint.cat.app.feature.home.components.HomeTopControls
 import io.github.moxisuki.blockprint.cat.app.feature.home.components.ImportPreviewSheet
+import io.github.moxisuki.blockprint.cat.app.feature.home.components.PcBridgePage
 import io.github.moxisuki.blockprint.cat.app.feature.home.components.SafDirectoryRequiredPanel
 import io.github.moxisuki.blockprint.cat.app.feature.home.components.SearchEmptyPanel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -142,11 +154,13 @@ internal fun HomeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MiuixTheme.colorScheme.surface),
+            .background(MiuixTheme.colorScheme.surface)
+            .appMaxContentWidth(),
     ) {
         HomeTopControls(
             selectedSource = state.selectedSource,
             sourceSlideProgress = sourceSlideProgress,
+            pcConnection = state.pcBridgeState.connection,
             onSourceSelected = { onAction(HomeAction.SourceSelected(it)) },
             isSearchExpanded = state.isSearchExpanded,
             searchQuery = state.searchQuery,
@@ -216,43 +230,70 @@ internal fun HomeScreen(
                 .fillMaxSize(),
         ) { page ->
             val source = HomeSources[page]
-            val blueprints = when (source) {
-                HomeBlueprintSource.Local -> state.localBlueprints
-                HomeBlueprintSource.Pc -> state.pcBlueprints
+            when (source) {
+                HomeBlueprintSource.Local -> {
+                    BlueprintListPage(
+                        source = source,
+                        blueprints = state.localBlueprints,
+                        onBlueprintClick = onBlueprintClick,
+                        selectedCategoryId = if (state.isCategoryBarVisible) {
+                            state.selectedCategoryId
+                        } else {
+                            HomeCategoryId.All
+                        },
+                        searchQuery = state.searchQuery,
+                        selectedBlueprintIds = state.selectedBlueprintIds,
+                        selectionMode = state.isSelectionMode,
+                        showLocalActions = true,
+                        onBlueprintLongClick = { blueprintId ->
+                            onAction(HomeAction.BlueprintLongPressed(blueprintId))
+                        },
+                        onBlueprintSelectionToggle = {
+                            onAction(HomeAction.BlueprintSelectionToggled(it))
+                        },
+                        onMoveCategoryClick = { blueprintId ->
+                            onAction(HomeAction.MoveCategoryRequested(setOf(blueprintId)))
+                        },
+                        onRenameClick = { blueprintId ->
+                            onAction(HomeAction.RenameRequested(blueprintId))
+                        },
+                        onDeleteClick = { blueprintId ->
+                            onAction(HomeAction.DeleteRequested(blueprintId))
+                        },
+                        onImportClick = onImportBlueprint,
+                        enablePullToRevealCategory = showLocalCategoryControls &&
+                            !state.isCategoryBarVisible,
+                        onRevealCategoryBar = {
+                            onAction(HomeAction.CategoryBarVisibilityChanged(visible = true))
+                        },
+                    )
+                }
+                HomeBlueprintSource.Pc -> {
+                    PcBridgePage(
+                        bridgeState = state.pcBridgeState,
+                        host = state.pcHostInput,
+                        port = state.pcPortInput,
+                        token = state.pcTokenInput,
+                        searchQuery = state.searchQuery,
+                        onHostChange = { onAction(HomeAction.PcHostChanged(it)) },
+                        onPortChange = { onAction(HomeAction.PcPortChanged(it)) },
+                        onTokenChange = { onAction(HomeAction.PcTokenChanged(it)) },
+                        onDeviceClick = {
+                            onAction(HomeAction.PcDeviceSelected(it.host, it.port))
+                        },
+                        onConnectClick = { onAction(HomeAction.PcConnectClicked) },
+                        onDisconnectClick = { onAction(HomeAction.PcDisconnectClicked) },
+                        onRefreshClick = { onAction(HomeAction.PcRefreshClicked) },
+                        onDownloadClick = {
+                            onAction(HomeAction.PcDownloadClicked(it.id))
+                        },
+                        onCancelTaskClick = {
+                            onAction(HomeAction.PcTaskCancelClicked(it))
+                        },
+                        onDismissError = { onAction(HomeAction.PcErrorDismissed) },
+                    )
+                }
             }
-
-            BlueprintListPage(
-                source = source,
-                blueprints = blueprints,
-                onBlueprintClick = onBlueprintClick,
-                selectedCategoryId = if (source == HomeBlueprintSource.Local && state.isCategoryBarVisible) {
-                    state.selectedCategoryId
-                } else {
-                    HomeCategoryId.All
-                },
-                searchQuery = state.searchQuery,
-                selectedBlueprintIds = state.selectedBlueprintIds,
-                selectionMode = state.isSelectionMode && source == HomeBlueprintSource.Local,
-                showLocalActions = source == HomeBlueprintSource.Local,
-                onBlueprintLongClick = { blueprintId ->
-                    if (source == HomeBlueprintSource.Local) {
-                        onAction(HomeAction.BlueprintLongPressed(blueprintId))
-                    }
-                },
-                onBlueprintSelectionToggle = {
-                    onAction(HomeAction.BlueprintSelectionToggled(it))
-                },
-                onMoveCategoryClick = { blueprintId ->
-                    onAction(HomeAction.MoveCategoryRequested(setOf(blueprintId)))
-                },
-                onRenameClick = { blueprintId ->
-                    onAction(HomeAction.RenameRequested(blueprintId))
-                },
-                onDeleteClick = { blueprintId ->
-                    onAction(HomeAction.DeleteRequested(blueprintId))
-                },
-                onImportClick = onImportBlueprint,
-            )
         }
     }
 
@@ -329,8 +370,40 @@ private fun BlueprintListPage(
     onRenameClick: (String) -> Unit,
     onDeleteClick: (String) -> Unit,
     onImportClick: () -> Unit,
+    enablePullToRevealCategory: Boolean,
+    onRevealCategoryBar: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyGridState()
+    val currentOnRevealCategoryBar by rememberUpdatedState(onRevealCategoryBar)
+    val pullDistancePx = remember { mutableFloatStateOf(0f) }
+    val revealThresholdPx = with(LocalDensity.current) { 48.dp.toPx() }
+    val pullToRevealCategoryConnection = remember(
+        enablePullToRevealCategory,
+        listState,
+        revealThresholdPx,
+    ) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!enablePullToRevealCategory || source != NestedScrollSource.UserInput) {
+                    pullDistancePx.floatValue = 0f
+                    return Offset.Zero
+                }
+                val isAtTop = listState.firstVisibleItemIndex == 0 &&
+                    listState.firstVisibleItemScrollOffset == 0
+                if (available.y > 0f && isAtTop) {
+                    pullDistancePx.floatValue += available.y
+                    if (pullDistancePx.floatValue >= revealThresholdPx) {
+                        pullDistancePx.floatValue = 0f
+                        currentOnRevealCategoryBar()
+                    }
+                } else if (available.y < 0f || !isAtTop) {
+                    pullDistancePx.floatValue = 0f
+                }
+                return Offset.Zero
+            }
+        }
+    }
     val categorizedBlueprints = remember(blueprints, selectedCategoryId) {
         blueprints.filterByCategory(selectedCategoryId)
     }
@@ -340,9 +413,12 @@ private fun BlueprintListPage(
     val isCategoryFiltered = selectedCategoryId != HomeCategoryId.All
     val isSearchActive = searchQuery.isNotBlank()
 
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 300.dp),
+        state = listState,
         modifier = modifier
             .fillMaxSize()
+            .nestedScroll(pullToRevealCategoryConnection)
             .appScrollEndHaptic(),
         contentPadding = PaddingValues(
             start = 16.dp,
@@ -351,9 +427,10 @@ private fun BlueprintListPage(
             bottom = FloatingNavigationListBottomPadding,
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (visibleBlueprints.isEmpty()) {
-            item(key = "empty") {
+            item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
                 if (isSearchActive && categorizedBlueprints.isNotEmpty()) {
                     SearchEmptyPanel()
                 } else if (isCategoryFiltered) {

@@ -36,13 +36,19 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,8 +57,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -60,10 +68,16 @@ import androidx.compose.ui.unit.sp
 import io.github.moxisuki.blockprint.cat.R
 import io.github.moxisuki.blockprint.cat.app.core.design.AppMotion
 import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
+import io.github.moxisuki.blockprint.cat.app.core.design.appMaxContentWidth
 import io.github.moxisuki.blockprint.cat.app.core.design.appScrollEndHaptic
+import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownTypography
+import com.mikepenz.markdown.model.markdownDimens
+import com.mikepenz.markdown.model.markdownPadding
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val GITHUB_RELEASES_URL = "https://github.com/moxisuki/blockprint-cat/releases"
@@ -77,6 +91,7 @@ internal fun AboutScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     val listState = rememberLazyListState()
+    var showChangelogSheet by rememberSaveable { mutableStateOf(false) }
     val heroThresholdPx = with(LocalDensity.current) { 220.dp.roundToPx() }
     val heroRawProgress by remember(listState, heroThresholdPx) {
         derivedStateOf {
@@ -100,115 +115,129 @@ internal fun AboutScreen(
         onAppBarTitleVisibleChange(showAppBarTitle)
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier
-            .fillMaxSize()
-            .background(MiuixTheme.colorScheme.surface)
-            .appScrollEndHaptic(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        // ── Hero ──
-        item(key = "hero") {
-            AboutHero(
-                hitokoto = state.hitokoto,
-                showHitokoto = state.isChineseLocale,
-                onRefreshHitokoto = { onAction(AboutAction.RefreshHitokoto) },
-                scrollProgress = heroProgress,
-            )
-        }
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MiuixTheme.colorScheme.surface)
+                .appScrollEndHaptic()
+                .appMaxContentWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            // ── Hero ──
+            item(key = "hero") {
+                AboutHero(
+                    hitokoto = state.hitokoto,
+                    showHitokoto = state.isChineseLocale,
+                    onRefreshHitokoto = { onAction(AboutAction.RefreshHitokoto) },
+                    scrollProgress = heroProgress,
+                )
+            }
 
-        item(key = "app-info-title") {
-            SectionTitle(
-                text = stringResource(R.string.about_section_info),
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        item(key = "app-info") {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                insideMargin = PaddingValues(0.dp),
-            ) {
-                Column {
-                    InfoBadgeRow(
-                        label = stringResource(R.string.about_label_version),
-                        value = stringResource(R.string.about_version, state.appVersionName),
-                    )
-                    SectionDivider()
-                    InfoBadgeRow(
-                        label = stringResource(R.string.about_engine_label),
-                        value = stringResource(R.string.about_engine_version, state.blockPrintCoreVersion),
-                    )
-                    SectionDivider()
-                    InfoBadgeRow(
-                        label = stringResource(R.string.about_label_license),
-                        value = stringResource(R.string.about_license_mit),
-                    )
-                    SectionDivider()
-                    ClickableRow(
-                        text = stringResource(R.string.about_view_releases),
-                        onClick = { uriHandler.openUri(GITHUB_RELEASES_URL) },
-                    )
+            item(key = "app-info-title") {
+                SectionTitle(
+                    text = stringResource(R.string.about_section_info),
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+            item(key = "app-info") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    insideMargin = PaddingValues(0.dp),
+                ) {
+                    Column {
+                        InfoBadgeRow(
+                            label = stringResource(R.string.about_label_version),
+                            value = stringResource(R.string.about_version, state.appVersionName),
+                        )
+                        SectionDivider()
+                        InfoBadgeRow(
+                            label = stringResource(R.string.about_engine_label),
+                            value = stringResource(R.string.about_engine_version, state.blockPrintCoreVersion),
+                        )
+                        SectionDivider()
+                        InfoBadgeRow(
+                            label = stringResource(R.string.about_label_license),
+                            value = stringResource(R.string.about_license_mit),
+                        )
+                        SectionDivider()
+                        ClickableRow(
+                            text = stringResource(R.string.about_view_releases),
+                            onClick = { uriHandler.openUri(GITHUB_RELEASES_URL) },
+                        )
+                        SectionDivider()
+                        ChangelogRow(
+                            text = stringResource(R.string.about_view_changelog),
+                            onClick = { showChangelogSheet = true },
+                        )
+                    }
                 }
             }
-        }
 
-        // ── 外部链接 ──
-        item(key = "links-title") {
-            SectionTitle(
-                text = stringResource(R.string.about_section_links),
-                modifier = Modifier.padding(top = 12.dp),
-            )
-        }
-        item(key = "links") {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                insideMargin = PaddingValues(0.dp),
-            ) {
-                Column {
-                    state.externalLinks.forEachIndexed { index, link ->
-                        LinkRow(
-                            title = link.title,
-                            type = link.type,
-                            onClick = { uriHandler.openUri(link.url) },
-                        )
-                        if (index != state.externalLinks.lastIndex) {
-                            SectionDivider()
+            // ── 外部链接 ──
+            item(key = "links-title") {
+                SectionTitle(
+                    text = stringResource(R.string.about_section_links),
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+            item(key = "links") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    insideMargin = PaddingValues(0.dp),
+                ) {
+                    Column {
+                        state.externalLinks.forEachIndexed { index, link ->
+                            LinkRow(
+                                title = link.title,
+                                type = link.type,
+                                onClick = { uriHandler.openUri(link.url) },
+                            )
+                            if (index != state.externalLinks.lastIndex) {
+                                SectionDivider()
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // ── 开源库 ──
-        item(key = "libraries-title") {
-            SectionTitle(
-                text = stringResource(R.string.about_section_libraries),
-                modifier = Modifier.padding(top = 12.dp),
-            )
-        }
-        item(key = "libraries") {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                insideMargin = PaddingValues(0.dp),
-            ) {
-                Column {
-                    state.libraries.forEachIndexed { index, library ->
-                        LibraryRow(
-                            library = library,
-                            onClick = { uriHandler.openUri(library.url) },
-                        )
-                        if (index != state.libraries.lastIndex) {
-                            SectionDivider()
+            // ── 开源库 ──
+            item(key = "libraries-title") {
+                SectionTitle(
+                    text = stringResource(R.string.about_section_libraries),
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+            item(key = "libraries") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    insideMargin = PaddingValues(0.dp),
+                ) {
+                    Column {
+                        state.libraries.forEachIndexed { index, library ->
+                            LibraryRow(
+                                library = library,
+                                onClick = { uriHandler.openUri(library.url) },
+                            )
+                            if (index != state.libraries.lastIndex) {
+                                SectionDivider()
+                            }
                         }
                     }
                 }
             }
+
+            item(key = "bottom-space") {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
 
-        item(key = "bottom-space") {
-            Spacer(modifier = Modifier.height(12.dp))
-        }
+        ChangelogSheet(
+            show = showChangelogSheet,
+            changelog = state.changelog,
+            onDismissRequest = { showChangelogSheet = false },
+        )
     }
 }
 
@@ -535,6 +564,121 @@ private fun ClickableRow(text: String, onClick: () -> Unit) {
             tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.size(16.dp),
         )
+    }
+}
+
+@Composable
+private fun ChangelogRow(text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = text, style = MiuixTheme.textStyles.body1)
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowDown,
+            contentDescription = null,
+            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
+private fun ChangelogSheet(
+    show: Boolean,
+    changelog: String,
+    onDismissRequest: () -> Unit,
+) {
+    val fallbackText = stringResource(R.string.changelog_intro)
+    val changelogText = remember(changelog, fallbackText) {
+        changelog.trim().ifBlank { fallbackText }
+    }
+    val markdownBody = MiuixTheme.textStyles.body2.copy(
+        fontSize = 13.sp,
+        lineHeight = 19.sp,
+    )
+    val markdownHeader = MiuixTheme.textStyles.title3.copy(
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+    val markdownSmallHeader = MiuixTheme.textStyles.body1.copy(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+    val markdownTypography = markdownTypography(
+        h1 = markdownHeader.copy(fontSize = 18.sp, lineHeight = 24.sp),
+        h2 = markdownHeader,
+        h3 = markdownSmallHeader,
+        h4 = markdownSmallHeader,
+        h5 = markdownSmallHeader,
+        h6 = markdownSmallHeader,
+        text = markdownBody,
+        paragraph = markdownBody,
+        ordered = markdownBody,
+        bullet = markdownBody,
+        list = markdownBody,
+        quote = markdownBody,
+        code = markdownBody.copy(fontSize = 12.sp, lineHeight = 18.sp),
+        inlineCode = markdownBody.copy(fontSize = 12.sp),
+        table = markdownBody.copy(fontSize = 12.sp, lineHeight = 18.sp),
+        textLink = TextLinkStyles(
+            style = markdownBody.copy(
+                fontWeight = FontWeight.SemiBold,
+                textDecoration = TextDecoration.Underline,
+            ).toSpanStyle(),
+        ),
+    )
+    val markdownPadding = markdownPadding(
+        block = 1.dp,
+        list = 1.dp,
+        listItemTop = 2.dp,
+        listItemBottom = 2.dp,
+        listIndent = 10.dp,
+        codeBlock = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+        blockQuote = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        blockQuoteText = PaddingValues(vertical = 2.dp),
+        blockQuoteBar = PaddingValues.Absolute(left = 3.dp, top = 1.dp, right = 4.dp, bottom = 1.dp),
+    )
+    val markdownDimens = markdownDimens(
+        codeBackgroundCornerSize = 6.dp,
+        tableCellWidth = 132.dp,
+        tableCellPadding = 8.dp,
+        tableCornerSize = 6.dp,
+    )
+
+    OverlayBottomSheet(
+        show = show,
+        title = stringResource(R.string.nav_title_changelog),
+        onDismissRequest = onDismissRequest,
+        insideMargin = androidx.compose.ui.unit.DpSize(16.dp, 18.dp),
+        defaultWindowInsetsPadding = false,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.changelog_intro),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.body2,
+            )
+            Markdown(
+                content = changelogText,
+                modifier = Modifier.fillMaxWidth(),
+                typography = markdownTypography,
+                padding = markdownPadding,
+                dimens = markdownDimens,
+            )
+        }
     }
 }
 

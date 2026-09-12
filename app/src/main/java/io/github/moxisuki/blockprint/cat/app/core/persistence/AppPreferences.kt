@@ -2,6 +2,7 @@ package io.github.moxisuki.blockprint.cat.app.core.persistence
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -44,6 +45,20 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
 
     val localBlueprintTreeDocumentId: Flow<String?> = dataStore.data.map { prefs ->
         prefs[KEY_LOCAL_BLUEPRINT_TREE_DOCUMENT_ID]
+    }
+
+    val communityEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_COMMUNITY_ENABLED] ?: true
+    }
+
+    val mcsAuthCookies: Flow<McsAuthCookies> = dataStore.data.map { prefs ->
+        McsAuthCookies(
+            uuid = prefs[KEY_MCS_UUID].orEmpty(),
+            userAuth = prefs[KEY_MCS_USER_AUTH].orEmpty(),
+            cfClearance = prefs[KEY_MCS_CF_CLEARANCE].orEmpty(),
+            nickname = prefs[KEY_MCS_NICKNAME].orEmpty(),
+            savedAt = prefs[KEY_MCS_SAVED_AT] ?: 0L,
+        )
     }
 
     suspend fun setThemeMode(mode: AppThemeMode) {
@@ -90,6 +105,44 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun setCommunityEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_COMMUNITY_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setMcsAuthCookies(cookies: McsAuthCookies) {
+        dataStore.edit { prefs ->
+            if (cookies.uuid.isBlank()) {
+                prefs.remove(KEY_MCS_UUID)
+            } else {
+                prefs[KEY_MCS_UUID] = cookies.uuid
+            }
+            prefs[KEY_MCS_USER_AUTH] = cookies.userAuth
+            if (cookies.cfClearance.isBlank()) {
+                prefs.remove(KEY_MCS_CF_CLEARANCE)
+            } else {
+                prefs[KEY_MCS_CF_CLEARANCE] = cookies.cfClearance
+            }
+            if (cookies.nickname.isBlank()) {
+                prefs.remove(KEY_MCS_NICKNAME)
+            } else {
+                prefs[KEY_MCS_NICKNAME] = cookies.nickname
+            }
+            prefs[KEY_MCS_SAVED_AT] = System.currentTimeMillis()
+        }
+    }
+
+    suspend fun clearMcsAuthCookies() {
+        dataStore.edit { prefs ->
+            prefs.remove(KEY_MCS_UUID)
+            prefs.remove(KEY_MCS_USER_AUTH)
+            prefs.remove(KEY_MCS_CF_CLEARANCE)
+            prefs.remove(KEY_MCS_NICKNAME)
+            prefs.remove(KEY_MCS_SAVED_AT)
+        }
+    }
+
     companion object {
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_THEME_COLOR_SOURCE = stringPreferencesKey("theme_color_source")
@@ -99,6 +152,13 @@ class AppPreferences(private val dataStore: DataStore<Preferences>) {
         private val KEY_LOCAL_BLUEPRINT_TREE_URI = stringPreferencesKey("local_blueprint_tree_uri")
         private val KEY_LOCAL_BLUEPRINT_TREE_DOCUMENT_ID =
             stringPreferencesKey("local_blueprint_tree_document_id")
+        private val KEY_COMMUNITY_ENABLED = booleanPreferencesKey("community_enabled")
+        private val KEY_MCS_UUID = stringPreferencesKey("mcs_uuid")
+        private val KEY_MCS_USER_AUTH = stringPreferencesKey("mcs_user_auth")
+        private val KEY_MCS_CF_CLEARANCE = stringPreferencesKey("mcs_cf_clearance")
+        private val KEY_MCS_NICKNAME = stringPreferencesKey("mcs_nickname")
+        private val KEY_MCS_SAVED_AT =
+            androidx.datastore.preferences.core.longPreferencesKey("mcs_saved_at")
 
         private const val DEFAULT_SEED_COLOR = 0xFF3482FF.toInt()
 

@@ -3,6 +3,7 @@ package io.github.moxisuki.blockprint.cat.app.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.moxisuki.blockprint.cat.app.core.cache.AppCacheManager
 import io.github.moxisuki.blockprint.cat.app.core.data.backup.BlueprintBackupRepository
 import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguage
 import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguageManager
@@ -23,6 +24,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: AppSettingsRepository,
     private val backupRepository: BlueprintBackupRepository,
     private val resourcePackRepository: ResourcePackRepository,
+    private val cacheManager: AppCacheManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -73,6 +75,42 @@ class SettingsViewModel @Inject constructor(
             SettingsAction.ThemeSettingsClicked,
             SettingsAction.AboutClicked,
             -> Unit
+
+            SettingsAction.CacheClicked -> {
+                _state.update {
+                    it.copy(
+                        isCacheManagerVisible = true,
+                        cacheErrorMessage = null,
+                    )
+                }
+                refreshCacheStats()
+            }
+
+            SettingsAction.CacheDismissed -> {
+                _state.update {
+                    it.copy(
+                        isCacheManagerVisible = false,
+                        pendingCacheClearCategory = null,
+                        cacheErrorMessage = null,
+                    )
+                }
+            }
+
+            SettingsAction.CacheRefreshClicked -> refreshCacheStats()
+
+            is SettingsAction.CacheClearRequested -> {
+                if (!_state.value.isCacheClearing) {
+                    _state.update {
+                        it.copy(pendingCacheClearCategory = action.category)
+                    }
+                }
+            }
+
+            SettingsAction.CacheClearDismissed -> {
+                _state.update { it.copy(pendingCacheClearCategory = null) }
+            }
+
+            SettingsAction.CacheClearConfirmed -> clearCache()
 
             is SettingsAction.CommunityEnabledChanged -> {
                 viewModelScope.launch {
@@ -158,6 +196,66 @@ class SettingsViewModel @Inject constructor(
             SettingsAction.BackupRestoreFeedbackDismissed -> {
                 _state.update { it.copy(backupRestoreFeedback = null) }
             }
+        }
+    }
+
+    private fun refreshCacheStats() {
+        if (_state.value.isCacheStatsLoading || _state.value.isCacheClearing) return
+        viewModelScope.launch {
+            _state.update { it.copy(isCacheStatsLoading = true, cacheErrorMessage = null) }
+            runCatching { cacheManager.inspect() }
+                .onSuccess { stats ->
+                    _state.update {
+                        it.copy(
+                            cacheStats = stats,
+                            isCacheStatsLoading = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _state.update {
+                        it.copy(
+                            isCacheStatsLoading = false,
+                            cacheErrorMessage = throwable.message.orEmpty().ifBlank {
+                                throwable::class.java.simpleName
+                            },
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun clearCache() {
+        val category = _state.value.pendingCacheClearCategory ?: return
+        if (_state.value.isCacheClearing) return
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    pendingCacheClearCategory = null,
+                    isCacheClearing = true,
+                    cacheErrorMessage = null,
+                )
+            }
+            runCatching { cacheManager.clear(category) }
+                .onSuccess {
+                    val stats = runCatching { cacheManager.inspect() }.getOrNull()
+                    _state.update {
+                        it.copy(
+                            cacheStats = stats ?: it.cacheStats,
+                            isCacheClearing = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _state.update {
+                        it.copy(
+                            isCacheClearing = false,
+                            cacheErrorMessage = throwable.message.orEmpty().ifBlank {
+                                throwable::class.java.simpleName
+                            },
+                        )
+                    }
+                }
         }
     }
 

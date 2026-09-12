@@ -10,7 +10,7 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class MojangVersionManifestSourceTest {
-    @Test fun `latestVersion returns parsed release string`() = runTest {
+    @Test fun `latestVersion returns parsed release metadata`() = runTest {
         val body = """
             { "latest": { "release": "1.21.4", "snapshot": "1.21.5" },
               "versions": [
@@ -22,9 +22,13 @@ class MojangVersionManifestSourceTest {
         val source = MojangVersionManifestSource(
             FakeAppHttpClient(jsonResponses = mapOf("https://bmclapi2.bangbang93.com/mc/game/version_manifest.json" to body)),
         )
-        val result = source.latestRelease()
+
+        val result = source.latestVersionInfo()
+
         assertThat(result).isInstanceOf(AppNetworkResult.Success::class.java)
-        assertThat((result as AppNetworkResult.Success).value).isEqualTo("1.21.4")
+        val success = result as AppNetworkResult.Success<VanillaVersionInfo>
+        assertThat(success.value.release).isEqualTo("1.21.4")
+        assertThat(success.value.officialVersionUrl).isEqualTo("https://example.test/1.21.4.json")
     }
 
     @Test fun `versionJson returns parsed json object for given id`() = runTest {

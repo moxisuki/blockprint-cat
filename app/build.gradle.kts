@@ -83,6 +83,11 @@ android {
         buildConfigField("String", "SCENEVIEW_VERSION", "\"${libs.versions.sceneview.get()}\"")
         buildConfigField("String", "BLOCKPRINT_CORE_VERSION", "\"${libs.versions.blockprint.get()}\"")
         buildConfigField("String", "MIUIX_VERSION", "\"${libs.versions.miuix.get()}\"")
+        buildConfigField("String", "BUGLY_VERSION", "\"${libs.versions.bugly.get()}\"")
+        // Bugly App ID is local-only and must never be committed.
+        val buglyAppId = localProps.getProperty("BUGLY_APP_ID", "")
+        buildConfigField("String", "BUGLY_APP_ID", buglyAppId.toBuildConfigStringLiteral())
+        manifestPlaceholders["BUGLY_APP_ID"] = buglyAppId
         buildConfigField("String", "CHANGELOG", changelogText.toBuildConfigStringLiteral())
     }
 
@@ -157,6 +162,7 @@ dependencies {
     implementation(libs.markdown.renderer.android)
     implementation(libs.markdown.renderer.m3)
     implementation(libs.blockprint.core)
+    implementation(libs.bugly.crashreport)
     implementation(libs.coil.compose)
     implementation(libs.okhttp)
     implementation(libs.room.runtime)

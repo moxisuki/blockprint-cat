@@ -9,6 +9,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
 
 @Singleton
 class DefaultResourcePackObserver @Inject constructor(
@@ -21,5 +23,5 @@ class DefaultResourcePackObserver @Inject constructor(
             kotlinx.coroutines.delay(2_000L)
             emit(locator.installedNamespaces())
         }
-    }.distinctUntilChanged()
+    }.distinctUntilChanged().flowOn(Dispatchers.IO)
 }

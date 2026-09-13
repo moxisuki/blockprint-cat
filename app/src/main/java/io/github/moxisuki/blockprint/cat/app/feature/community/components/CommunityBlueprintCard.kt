@@ -78,7 +78,7 @@ internal fun CommunityBlueprintCard(
                     color = MiuixTheme.colorScheme.onSurfaceContainer,
                     style = MiuixTheme.textStyles.body1,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -103,7 +103,10 @@ internal fun CommunityBlueprintCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        FormatBadge(format = item.format)
+                        FormatBadge(
+                            format = item.format,
+                            rawLabel = item.formatLabel,
+                        )
                         item.primaryMetric()?.let { InfoPill(text = it, highlighted = true) }
                     }
                     FlowRow(
@@ -112,6 +115,12 @@ internal fun CommunityBlueprintCard(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         item.secondaryMetric()?.let { InfoPill(text = it) }
+                        item.categoryName?.let { category ->
+                            InfoPill(text = category)
+                        }
+                        item.gameVersion?.let { version ->
+                            InfoPill(text = version)
+                        }
                         item.stress?.let { stress ->
                             InfoPill(text = stringResource(R.string.cdl_stress_value, stress))
                         }
@@ -213,7 +222,10 @@ private fun CommunityPreviewFallback(
 }
 
 @Composable
-private fun FormatBadge(format: BlueprintFormat) {
+private fun FormatBadge(
+    format: BlueprintFormat,
+    rawLabel: String?,
+) {
     Box(
         modifier = Modifier
             .height(CommunityCardChipHeight)
@@ -228,7 +240,10 @@ private fun FormatBadge(format: BlueprintFormat) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = format.localizedLabel(),
+            text = rawLabel?.takeIf { format == BlueprintFormat.Unknown }
+                ?.replace('_', ' ')
+                ?.replaceFirstChar { it.uppercase() }
+                ?: format.localizedLabel(),
             color = format.accentColor(),
             style = MiuixTheme.textStyles.body2,
             fontWeight = FontWeight.SemiBold,
@@ -304,8 +319,8 @@ private fun communityAccentColor(index: Int): Color {
 @Composable
 private fun CommunityBlueprintUiItem.primaryMetric(): String? =
     when (source) {
-        CommunitySourceUi.MCS -> heat?.let {
-            "${stringResource(R.string.community_metric_heat)} ${it.compactCount()}"
+        CommunitySourceUi.MCS -> downloads?.let {
+            "${stringResource(R.string.community_metric_downloads)} ${it.compactCount()}"
         }
         CommunitySourceUi.CMS -> downloads?.let {
             "${stringResource(R.string.community_metric_downloads)} ${it.compactCount()}"
@@ -314,7 +329,7 @@ private fun CommunityBlueprintUiItem.primaryMetric(): String? =
 
 private fun CommunityBlueprintUiItem.secondaryMetric(): String? =
     when (source) {
-        CommunitySourceUi.MCS -> dimensions
+        CommunitySourceUi.MCS -> dimensions ?: categoryName
         CommunitySourceUi.CMS -> sizeText
     }
 

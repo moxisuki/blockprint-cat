@@ -10,5 +10,4 @@ internal sealed interface CommunityAction {
     data object SearchCleared : CommunityAction
     data class TopicToggled(val topic: String) : CommunityAction
     data class OverviewDismissed(val source: CommunitySourceUi) : CommunityAction
-    data object LogoutRequested : CommunityAction
 }

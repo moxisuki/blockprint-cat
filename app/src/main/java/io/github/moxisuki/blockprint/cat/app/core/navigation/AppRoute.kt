@@ -25,9 +25,6 @@ sealed interface AppRoute : NavKey {
     data object BlockPaint : AppRoute
 
     @Serializable
-    data object CommunityLogin : AppRoute
-
-    @Serializable
     data class CommunityDetail(
         val source: String,
         val blueprintId: String,
@@ -45,6 +42,10 @@ sealed interface AppRoute : NavKey {
         val tags: List<String> = emptyList(),
         val downloadable: Boolean = true,
         val webUrl: String? = null,
+        val gameVersion: String? = null,
+        val versionNumber: Int = 1,
+        val categoryName: String? = null,
+        val formatLabel: String? = null,
     ) : AppRoute
 
     @Serializable
@@ -99,7 +100,6 @@ fun AppRoute.topLevelRoute(): AppTopLevelRoute = when (this) {
     AppRoute.BlockPaint,
     -> AppRoute.Tools
     AppRoute.Community,
-    AppRoute.CommunityLogin,
     is AppRoute.CommunityDetail,
     -> AppRoute.Community
     is AppRoute.BlueprintDetail -> AppRoute.Home

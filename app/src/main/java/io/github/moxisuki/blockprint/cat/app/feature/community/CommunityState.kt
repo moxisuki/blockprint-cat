@@ -2,19 +2,16 @@ package io.github.moxisuki.blockprint.cat.app.feature.community
 
 import androidx.compose.runtime.Immutable
 import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintFormat
-import io.github.moxisuki.blockprint.cat.app.core.persistence.McsAuthCookies
 import io.github.moxisuki.blockprint.cat.app.feature.community.data.CmsBaseUrl
 import io.github.moxisuki.blockprint.cat.app.feature.community.data.CmsListItem
+import io.github.moxisuki.blockprint.cat.app.feature.community.data.McsBlueprintSummary
+import io.github.moxisuki.blockprint.cat.app.feature.community.data.McsCommunityCategory
 import io.github.moxisuki.blockprint.cat.app.feature.community.data.McsBaseUrl
-import io.github.moxisuki.blockprint.cat.app.feature.community.data.McsSchematic
-import io.github.moxisuki.blockprint.cat.app.feature.community.data.toAbsoluteCmsUrl
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 import java.util.Locale
-import kotlin.math.absoluteValue
 
 @Immutable
 internal data class CommunityState(
@@ -32,8 +29,6 @@ internal data class CommunityState(
 
 @Immutable
 internal data class CommunityMcsState(
-    val cookies: McsAuthCookies = McsAuthCookies(),
-    val isCheckingLogin: Boolean = false,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val items: List<CommunityBlueprintUiItem> = emptyList(),
@@ -43,12 +38,11 @@ internal data class CommunityMcsState(
     val searchDraft: String = "",
     val selectedTopics: List<String> = emptyList(),
     val topics: List<String> = emptyList(),
+    val categories: List<McsCommunityCategory> = emptyList(),
+    val selectedCategorySlug: String? = null,
     val isSearchExpanded: Boolean = false,
     val errorMessage: String? = null,
-) {
-    val isLoggedIn: Boolean
-        get() = cookies.isLoggedIn
-}
+)
 
 @Immutable
 internal data class CommunityCmsState(
@@ -67,12 +61,6 @@ internal data class CommunityCmsState(
     fun toSourceContent(): CommunitySourceContent = CommunitySourceContent(
         source = CommunitySourceUi.CMS,
         total = total,
-        status = "CMS · Creative Mechanic Server",
-        hint = if (filter.isBlank()) {
-            "下拉刷新 CMS 蓝图，支持标题搜索"
-        } else {
-            "筛选: $filter"
-        },
         topics = (selectedTopics + topics).distinct().take(12),
         items = items,
         isLoading = isLoading,
@@ -87,25 +75,14 @@ internal data class CommunityCmsState(
 }
 
 internal fun CommunityMcsState.toSourceContent(): CommunitySourceContent {
-    val accountName = cookies.nickname
-        .ifBlank { cookies.uuid.take(8) }
-        .ifBlank { "MCS" }
     val visibleTopics = (selectedTopics + topics)
         .distinct()
         .take(12)
-        .ifEmpty { listOf("litematic", "farm", "factory", "survival") }
     return CommunitySourceContent(
         source = CommunitySourceUi.MCS,
         total = total,
-        status = if (isLoggedIn) "已登录 · $accountName" else "MCS · 未登录",
-        hint = if (filter.isBlank()) {
-            "下拉刷新社区蓝图，支持标签与标题搜索"
-        } else {
-            "筛选: $filter"
-        },
         topics = visibleTopics,
         items = items,
-        isLoggedIn = isLoggedIn,
         isLoading = isLoading,
         isRefreshing = isRefreshing,
         hasMore = hasMore,
@@ -117,21 +94,26 @@ internal fun CommunityMcsState.toSourceContent(): CommunitySourceContent {
     )
 }
 
-internal fun McsSchematic.toCommunityItem(index: Int): CommunityBlueprintUiItem =
+internal fun McsBlueprintSummary.toCommunityItem(index: Int): CommunityBlueprintUiItem =
     CommunityBlueprintUiItem(
-        id = uuid,
+        id = id,
         source = CommunitySourceUi.MCS,
-        title = name.ifBlank { uuid },
-        author = nickName.ifBlank { authorUuid.ifBlank { "-" } },
-        heat = heat,
-        dimensions = size?.let { "${it.first} x ${it.second} x ${it.third}" },
-        format = type.toCommunityBlueprintFormat(),
-        tags = tags,
+        title = title.ifBlank { id },
+        author = author.displayName.ifBlank { author.id.ifBlank { "MCS" } },
+        downloads = engagement.downloadCount,
+        dimensions = null,
+        format = currentVersion.sourceFormat.toCommunityBlueprintFormat(),
+        formatLabel = currentVersion.sourceFormat.takeIf { it.isNotBlank() },
+        tags = namespaces,
         description = description,
-        updateTime = updateTime.ifBlank { uploadTime }.toCommunityDisplayTime(),
-        coverUrl = "$McsBaseUrl/api/preview/uuid/$uuid?v=${previewVersion()}",
-        downloadable = userPrivate == 0,
-        webUrl = "$McsBaseUrl/home/$uuid",
+        updateTime = updatedAt.ifBlank { createdAt }.toCommunityDisplayTime(),
+        gameVersion = gameVersion.release.takeIf { it.isNotBlank() },
+        coverUrl = previewUrl,
+        downloadable = true,
+        webUrl = "$McsBaseUrl/blueprints/$id",
+        versionNumber = currentVersion.number,
+        categoryName = category?.name,
+        categorySlug = category?.slug,
         accentIndex = index,
     )
 
@@ -154,34 +136,28 @@ internal fun CmsListItem.toCommunityItem(index: Int): CommunityBlueprintUiItem =
         accentIndex = index + 3,
     )
 
-private fun McsSchematic.previewVersion(): Int =
-    listOf(uuid, updateTime, uploadTime)
-        .joinToString(":")
-        .hashCode()
-        .absoluteValue
-
-private fun Int.toCommunityBlueprintFormat(): BlueprintFormat =
-    when (this) {
-        0 -> BlueprintFormat.Nbt
-        1 -> BlueprintFormat.Litematica
-        2, 3 -> BlueprintFormat.Schematic
+internal fun String.toCommunityBlueprintFormat(): BlueprintFormat =
+    when (lowercase()) {
+        "litematic", "litematica" -> BlueprintFormat.Litematica
+        "schem", "schematic", "sponge" -> BlueprintFormat.Schematic
+        "nbt", "structure" -> BlueprintFormat.Nbt
+        "json", "buildinghelper", "building_helper" -> BlueprintFormat.BuildingHelper
         else -> BlueprintFormat.Unknown
     }
 
-private fun String.toCommunityDisplayTime(): String {
+private fun String.toAbsoluteCmsUrl(): String =
+    when {
+        startsWith("http://") || startsWith("https://") -> this
+        startsWith("/") -> "$CmsBaseUrl$this"
+        else -> "$CmsBaseUrl/$this"
+    }
+
+internal fun String.toCommunityDisplayTime(): String {
     if (isBlank()) return ""
     val formatter = DateTimeFormatter.ofPattern("MM-dd HH:mm", Locale.getDefault())
     return runCatching {
         Instant.parse(this).atZone(ZoneId.systemDefault()).format(formatter)
     }.recoverCatching {
         LocalDateTime.parse(this, DateTimeFormatter.ISO_DATE_TIME).format(formatter)
-    }.recoverCatching {
-        substringBefore('.')
-            .replace('T', ' ')
-            .takeIf { it.length >= 16 }
-            ?.substring(5, 16)
-            ?: this
-    }.getOrElse { error ->
-        if (error is DateTimeParseException) this else this
-    }
+    }.getOrElse { this }
 }

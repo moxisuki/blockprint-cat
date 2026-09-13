@@ -3,27 +3,51 @@ package io.github.moxisuki.blockprint.cat.app.feature.community
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.moxisuki.blockprint.cat.app.core.data.blueprint.BlueprintFormat
+import io.github.moxisuki.blockprint.cat.app.core.resourcepack.ResourcePackRepository
+import io.github.moxisuki.blockprint.cat.app.feature.detail.BlueprintNamespaceItem
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @HiltViewModel
 internal class CommunityDetailViewModel @Inject constructor(
     private val detailInteractor: CommunityDetailInteractor,
+    private val resourcePackRepository: ResourcePackRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(CommunityDetailState())
     val state: StateFlow<CommunityDetailState> = _state.asStateFlow()
 
     private var loadedBlueprintId: String? = null
+    private var resourcePackObservationJob: Job? = null
 
     fun setSeed(seed: CommunityDetailSeed) {
         if (loadedBlueprintId == seed.blueprintId && _state.value.seed == seed) return
+        resourcePackObservationJob?.cancel()
         loadedBlueprintId = seed.blueprintId
         _state.value = CommunityDetailState(seed = seed)
+        resourcePackObservationJob = viewModelScope.launch {
+            resourcePackRepository.installedPacks.collect { packs ->
+                val installedNamespaces = packs
+                    .asSequence()
+                    .flatMap { it.namespaces.asSequence() }
+                    .map(String::normalizeNamespace)
+                    .toSet()
+                _state.update { state ->
+                    state.copy(
+                        namespaces = state.payload.namespaces.toNamespaceItems(installedNamespaces),
+                    )
+                }
+            }
+        }
         loadDetail(seed)
     }
 
@@ -94,6 +118,12 @@ internal class CommunityDetailViewModel @Inject constructor(
             runCatching {
                 detailInteractor.load(seed)
             }.onSuccess { payload ->
+                val installedNamespaces = resourcePackRepository.installedPacks
+                    .first()
+                    .asSequence()
+                    .flatMap { pack -> pack.namespaces.asSequence() }
+                    .map(String::normalizeNamespace)
+                    .toSet()
                 _state.update {
                     it.copy(
                         seed = it.seed.copy(
@@ -102,8 +132,15 @@ internal class CommunityDetailViewModel @Inject constructor(
                             dimensions = payload.dimensions ?: it.seed.dimensions,
                             sizeText = payload.sizeText ?: it.seed.sizeText,
                             stress = payload.stress ?: it.seed.stress,
+                            format = payload.viewerSourceFormat
+                                ?.toCommunityBlueprintFormat()
+                                ?.takeUnless { format -> format == BlueprintFormat.Unknown }
+                                ?: it.seed.format,
+                            categoryName = payload.categoryName ?: it.seed.categoryName,
+                            formatLabel = payload.viewerSourceFormat ?: it.seed.formatLabel,
                         ),
                         payload = payload,
+                        namespaces = payload.namespaces.toNamespaceItems(installedNamespaces),
                         isLoadingDetail = false,
                     )
                 }
@@ -120,6 +157,25 @@ internal class CommunityDetailViewModel @Inject constructor(
         }
     }
 }
+
+private fun List<String>.toNamespaceItems(
+    installedNamespaces: Set<String>,
+): List<BlueprintNamespaceItem> =
+    asSequence()
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .map(String::normalizeNamespace)
+        .distinct()
+        .sortedWith(compareBy<String> { it != "minecraft" }.thenBy { it })
+        .map { namespace ->
+            BlueprintNamespaceItem(
+                namespace = namespace,
+                isInstalled = namespace in installedNamespaces,
+            )
+        }
+        .toList()
+
+private fun String.normalizeNamespace(): String = trim().lowercase(Locale.ROOT)
 
 private fun Throwable.toDisplayMessage(): String =
     message?.takeIf { it.isNotBlank() } ?: this::class.java.simpleName

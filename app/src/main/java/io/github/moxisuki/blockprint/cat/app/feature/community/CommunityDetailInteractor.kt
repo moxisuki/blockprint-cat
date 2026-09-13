@@ -29,9 +29,10 @@ internal class CommunityDetailInteractor @Inject constructor(
     ) {
         when (seed.source) {
             CommunitySourceUi.MCS.displayName -> mcsRepository.downloadToLocalBlueprints(
-                uuid = seed.blueprintId,
+                id = seed.blueprintId,
                 title = seed.title,
                 format = seed.format,
+                version = seed.versionNumber,
                 onProgress = onProgress,
             )
             CommunitySourceUi.CMS.displayName -> {
@@ -50,26 +51,44 @@ internal class CommunityDetailInteractor @Inject constructor(
     private suspend fun loadMcs(uuid: String): CommunityDetailPayload {
         if (uuid.isBlank()) return CommunityDetailPayload()
         iconIndexResolver.ensureLoaded()
-        val requirements = mcsRepository.loadRequirements(uuid)
-        val markdown = runCatching {
-            mcsRepository.loadMarkdown(uuid)
-        }.getOrDefault("")
+        val detail = mcsRepository.loadDetail(uuid)
+        val summary = detail.summary
+        val analysis = detail.analysis
         return CommunityDetailPayload(
-            markdown = markdown,
-            materials = requirements
-                .sortedByDescending { it.count }
-                .take(10)
-                .map { requirement ->
+            markdown = detail.contentMarkdown,
+            materials = analysis.materials.map { material ->
                     BlueprintDetailMaterialItem(
-                        name = requirement.blockId,
-                        count = requirement.count,
-                        iconUrls = iconIndexResolver.getIconUrls(requirement.blockId),
+                        name = material.blockId,
+                        count = material.count,
+                        iconUrls = iconIndexResolver.getIconUrls(material.blockId),
                         displayName = assetLocator.loadDisplayName(
-                            blockId = requirement.blockId,
+                            blockId = material.blockId,
                             locales = languageManager.resourcePackLocaleCandidates(),
                         ),
                     )
-                },
+            },
+            coverUrl = detail.previewImages.firstOrNull() ?: summary.previewUrl,
+            downloadable = detail.downloadUrl != null && analysis.transportAvailable,
+            dimensions = analysis.dimensions?.toString(),
+            categoryName = summary.category?.name,
+            namespaces = analysis.namespaces.ifEmpty { summary.namespaces },
+            gameVersion = analysis.gameVersion.takeIf { it.isNotBlank() },
+            blockCount = analysis.sourceBlockCount.takeIf { it > 0 },
+            visibleBlockCount = analysis.visibleBlockCount.takeIf { it > 0 },
+            paletteSize = analysis.paletteSize.takeIf { it > 0 },
+            tileEntityCount = analysis.tileEntityCount.takeIf { it > 0 },
+            entityCount = analysis.entityCount.takeIf { it > 0 },
+            materialKindCount = analysis.materialKindCount.takeIf { it > 0 },
+            sourceFormat = summary.currentVersion.sourceFormat.takeIf { it.isNotBlank() },
+            viewerSourceFormat = detail.viewerSourceFormat.takeIf { it.isNotBlank() },
+            validationState = detail.validationState,
+            fileSizeBytes = detail.originalSourceByteSize,
+            viewerFileSizeBytes = detail.viewerSourceByteSize,
+            viewCount = summary.engagement.viewCount,
+            downloadCount = summary.engagement.downloadCount,
+            likeCount = summary.engagement.likeCount,
+            favouriteCount = summary.engagement.favouriteCount,
+            attribution = summary.attribution.takeIf { it.isNotBlank() },
         )
     }
 

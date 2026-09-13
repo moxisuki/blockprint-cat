@@ -47,6 +47,7 @@ import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
 import io.github.moxisuki.blockprint.cat.app.core.design.appMaxContentWidth
 import io.github.moxisuki.blockprint.cat.app.feature.detail.components.BlueprintDetailMaterialItem
 import io.github.moxisuki.blockprint.cat.app.feature.detail.components.BlueprintDetailMaterialsSection
+import io.github.moxisuki.blockprint.cat.app.feature.detail.components.BlueprintDetailNamespacesSection
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -73,6 +74,11 @@ internal fun CommunityDetailRoute(
     tags: List<String>,
     downloadable: Boolean,
     webUrl: String?,
+    gameVersion: String? = null,
+    versionNumber: Int = 1,
+    categoryName: String? = null,
+    formatLabel: String? = null,
+    onResourceNamespaceClick: (String) -> Unit = {},
     viewModel: CommunityDetailViewModel = hiltViewModel(),
 ) {
     val seed = CommunityDetailSeed(
@@ -92,6 +98,10 @@ internal fun CommunityDetailRoute(
         tags = tags,
         downloadable = downloadable,
         webUrl = webUrl,
+        gameVersion = gameVersion,
+        versionNumber = versionNumber,
+        categoryName = categoryName,
+        formatLabel = formatLabel,
     )
     LaunchedEffect(seed) {
         viewModel.setSeed(seed)
@@ -104,6 +114,7 @@ internal fun CommunityDetailRoute(
         onOpenWebClick = {
             state.seed.webUrl?.let(uriHandler::openUri)
         },
+        onResourceNamespaceClick = onResourceNamespaceClick,
     )
 }
 
@@ -112,6 +123,7 @@ private fun CommunityDetailScreen(
     state: CommunityDetailState,
     onDownloadClick: () -> Unit,
     onOpenWebClick: () -> Unit,
+    onResourceNamespaceClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val seed = state.seed
@@ -131,6 +143,20 @@ private fun CommunityDetailScreen(
         }
         item(key = "header") {
             CommunityDetailHeader(state = state)
+        }
+        val namespaces = state.namespaces
+        if (namespaces.isNotEmpty()) {
+            item(key = "namespaces") {
+                BlueprintDetailNamespacesSection(
+                    namespaces = namespaces,
+                    onNamespaceClick = onResourceNamespaceClick,
+                )
+            }
+        }
+        if (state.hasStats()) {
+            item(key = "stats") {
+                CommunityDetailStats(state = state)
+            }
         }
         if (seed.downloadable || seed.webUrl != null) {
             item(key = "actions") {
@@ -236,6 +262,7 @@ private fun CommunityDetailHeader(
     modifier: Modifier = Modifier,
 ) {
     val seed = state.seed
+    val categoryName = state.payload.categoryName ?: seed.categoryName
     Card(
         modifier = modifier.fillMaxWidth(),
         insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
@@ -256,19 +283,60 @@ private fun CommunityDetailHeader(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        categoryName?.let { category ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = category,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.body2,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Spacer(modifier = Modifier.height(12.dp))
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            val sourceFormat = state.payload.sourceFormat
+                ?: seed.formatLabel
+                ?: seed.format.localizedLabel()
             CommunityDetailChip(
-                text = seed.format.localizedLabel(),
+                text = stringResource(
+                    R.string.community_detail_source_format,
+                    sourceFormat.displayCommunityFormat(),
+                ),
                 selected = true,
                 contentColor = seed.format.accentColor(),
                 containerColor = seed.format.accentColor().copy(alpha = 0.12f),
                 borderColor = seed.format.accentColor().copy(alpha = 0.2f),
             )
+            state.payload.viewerSourceFormat
+                ?.takeIf { it.isNotBlank() && !it.equals(sourceFormat, ignoreCase = true) }
+                ?.let { viewerFormat ->
+                    CommunityDetailChip(
+                        text = stringResource(
+                            R.string.community_detail_viewer_format,
+                            viewerFormat.displayCommunityFormat(),
+                        ),
+                    )
+                }
+            if (seed.versionNumber > 0) {
+                CommunityDetailChip(
+                    text = stringResource(R.string.community_detail_version, seed.versionNumber),
+                )
+            }
+            (state.payload.gameVersion ?: seed.gameVersion)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { gameVersion ->
+                    CommunityDetailChip(
+                        text = gameVersion,
+                    )
+                }
+            categoryName?.let { category ->
+                CommunityDetailChip(text = category)
+            }
             state.primaryMetricText()?.let { CommunityDetailChip(text = it) }
             state.secondaryMetricText()?.let { CommunityDetailChip(text = it) }
         }
@@ -282,6 +350,105 @@ private fun CommunityDetailHeader(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        state.payload.attribution?.let { attribution ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = attribution.localizedCommunityAttribution(),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                style = MiuixTheme.textStyles.body2,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CommunityDetailStats(
+    state: CommunityDetailState,
+    modifier: Modifier = Modifier,
+) {
+    val payload = state.payload
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        CommunityDetailSectionTitle(text = stringResource(R.string.community_detail_stats))
+        Spacer(modifier = Modifier.height(10.dp))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            maxItemsInEachRow = 2,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            (payload.gameVersion ?: state.seed.gameVersion)?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_game_version), it)
+            }
+            payload.dimensions?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_dimensions), it)
+            }
+            payload.blockCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_blocks), it.toString())
+            }
+            payload.visibleBlockCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_visible_blocks), it.toString())
+            }
+            payload.materialKindCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_material_kinds), it.toString())
+            }
+            payload.paletteSize?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_palette), it.toString())
+            }
+            payload.tileEntityCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_tile_entities), it.toString())
+            }
+            payload.entityCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_entities), it.toString())
+            }
+            payload.viewCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_views), it.compactCommunityCount())
+            }
+            payload.downloadCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_downloads), it.compactCommunityCount())
+            }
+            payload.likeCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_likes), it.compactCommunityCount())
+            }
+            payload.favouriteCount?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_favourites), it.compactCommunityCount())
+            }
+            payload.fileSizeBytes?.let {
+                CommunityDetailStatItem(stringResource(R.string.community_detail_file_size), it.communityFileSize())
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommunityDetailStatItem(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.width(140.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = label,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.body2,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = value,
+            color = MiuixTheme.colorScheme.onSurfaceContainer,
+            style = MiuixTheme.textStyles.body1,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -462,7 +629,10 @@ private fun CommunityDetailChip(
 
 @Composable
 private fun CommunityDetailState.primaryMetricText(): String? =
-    seed.heat?.let { "${stringResource(R.string.community_metric_heat)} ${it.compactCommunityCount()}" }
+    payload.downloadCount?.let {
+        "${stringResource(R.string.community_metric_downloads)} ${it.compactCommunityCount()}"
+    }
+        ?: seed.heat?.let { "${stringResource(R.string.community_metric_heat)} ${it.compactCommunityCount()}" }
         ?: seed.downloads?.let { "${stringResource(R.string.community_metric_downloads)} ${it.compactCommunityCount()}" }
 
 @Composable
@@ -471,6 +641,52 @@ private fun CommunityDetailState.secondaryMetricText(): String? =
         ?: seed.sizeText
         ?: seed.stress?.let { stringResource(R.string.cdl_stress_value, it) }
         ?: seed.source.takeIf { it.isNotBlank() }
+
+private fun CommunityDetailState.hasStats(): Boolean =
+    payload.gameVersion != null ||
+        seed.gameVersion != null ||
+        payload.dimensions != null ||
+        payload.blockCount != null ||
+        payload.visibleBlockCount != null ||
+        payload.materialKindCount != null ||
+        payload.paletteSize != null ||
+        payload.tileEntityCount != null ||
+        payload.entityCount != null ||
+        payload.viewCount != null ||
+        payload.downloadCount != null ||
+        payload.likeCount != null ||
+        payload.favouriteCount != null ||
+        payload.fileSizeBytes != null
+
+private fun String.displayCommunityFormat(): String =
+    replace('_', ' ')
+        .replace('-', ' ')
+        .trim()
+        .replaceFirstChar { character -> character.uppercase() }
+
+@Composable
+private fun String.localizedCommunityAttribution(): String =
+    when (lowercase()) {
+        "original" -> stringResource(R.string.community_detail_attribution_original)
+        "repost", "reposted" -> stringResource(R.string.community_detail_attribution_repost)
+        else -> this
+    }
+
+private fun Long.communityFileSize(): String {
+    if (this < 1024L) return "$this B"
+    val units = arrayOf("KB", "MB", "GB")
+    var value = this.toDouble()
+    var unitIndex = -1
+    while (value >= 1024.0 && unitIndex < units.lastIndex) {
+        value /= 1024.0
+        unitIndex += 1
+    }
+    return if (value >= 100.0 || value % 1.0 == 0.0) {
+        "${value.toInt()} ${units[unitIndex]}"
+    } else {
+        String.format(java.util.Locale.US, "%.1f %s", value, units[unitIndex])
+    }
+}
 
 private fun Int.compactCommunityCount(): String =
     if (this >= 1000) {
@@ -543,6 +759,7 @@ private fun CommunityDetailScreenPreview() {
             ),
             onDownloadClick = {},
             onOpenWebClick = {},
+            onResourceNamespaceClick = {},
         )
     }
 }

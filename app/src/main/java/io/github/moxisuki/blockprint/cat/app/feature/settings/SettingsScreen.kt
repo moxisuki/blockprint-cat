@@ -249,15 +249,8 @@ private fun LazyListScope.communitySectionItems(
     item(key = "community") {
         SettingsCommunitySection(
             communityEnabled = state.communityEnabled,
-            mcsAuthCookies = state.mcsAuthCookies,
             onCommunityEnabledChange = {
                 onAction(SettingsAction.CommunityEnabledChanged(it))
-            },
-            onMcsCookiesChange = {
-                onAction(SettingsAction.McsCookiesChanged(it))
-            },
-            onClearMcsCookiesClick = {
-                onAction(SettingsAction.ClearMcsCookiesClicked)
             },
         )
     }

@@ -102,8 +102,6 @@ fun SettingsRoute(
                 SettingsAction.AboutClicked -> onAboutClick()
                 is SettingsAction.LanguageSelected,
                 is SettingsAction.CommunityEnabledChanged,
-                is SettingsAction.McsCookiesChanged,
-                SettingsAction.ClearMcsCookiesClicked,
                 SettingsAction.Opened,
                 SettingsAction.BlueprintDirectoryClicked,
                 SettingsAction.BlueprintDirectoryPickerDismissed,

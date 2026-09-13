@@ -1,137 +1,66 @@
 package io.github.moxisuki.blockprint.cat.app.feature.community.data
 
 import android.util.Log
-import io.github.moxisuki.blockprint.cat.app.core.persistence.AppSettingsRepository
-import io.github.moxisuki.blockprint.cat.app.core.persistence.McsAuthCookies
-import io.github.moxisuki.blockprint.cat.app.feature.community.McsLoginLogTag
-import io.github.moxisuki.blockprint.cat.app.feature.community.toDebugSummary
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONTokener
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.net.URLDecoder
+import java.util.zip.GZIPInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 internal class McsCommunityRemoteDataSource @Inject constructor(
     private val okHttpClient: OkHttpClient,
-    private val settingsRepository: AppSettingsRepository,
 ) {
-    private val baseUrl = McsBaseUrl.toHttpUrl()
+    private val apiBaseUrl = McsApiBaseUrl.toHttpUrl()
 
-    suspend fun loginStatus(cookies: McsAuthCookies? = null): McsLoginStatus {
-        Log.d(
-            McsLoginLogTag,
-            "Remote loginStatus start: cookieSource=${if (cookies == null) "datastore" else "candidate"}, cookies=${cookies?.toDebugSummary() ?: "datastore"}",
-        )
-        return McsCommunityParser.parseLoginStatus(
-            getString(
-                path = "/api/loginStatus",
-                query = mapOf("t" to timestamp()),
-                cookies = cookies,
-            ),
-        ).also { status ->
-            Log.d(
-                McsLoginLogTag,
-                "Remote loginStatus parsed: uuid=${status.uuid.ifBlank { "-" }}, authority=${status.authority}, permissions=${status.permissions}, message=${status.message.ifBlank { "-" }}",
-            )
-        }
-    }
-
-    suspend fun schematicCount(filter: String): Int =
-        getString(
-            path = "/api/schematicNum",
-            query = mapOf(
-                "filter" to filter,
-                "type" to "0",
-                "t" to timestamp(),
-            ),
-        ).trim().toIntOrNull() ?: 0
-
-    suspend fun schematics(
-        begin: Int,
-        filter: String,
-        heatSort: Boolean,
-        type: Int = 0,
-    ): List<McsSchematic> =
-        McsCommunityParser.parseSchematics(
-            getString(
-                path = "/api/schematics",
-                query = mapOf(
-                    "begin" to begin.toString(),
-                    "filter" to filter,
-                    "heatSort" to heatSort.toString(),
-                    "type" to type.toString(),
-                    "t" to timestamp(),
-                ),
+    suspend fun blueprints(
+        page: Int,
+        query: String,
+        category: String?,
+    ): McsCommunityPage =
+        McsCommunityParser.parsePage(
+            getJson(
+                path = "/blueprints",
+                query = buildMap {
+                    put("page", page.toString())
+                    put("limit", McsApiPageSize.toString())
+                    put("sort", "latest")
+                    put("extra", "none")
+                    if (query.isNotBlank()) put("q", query)
+                    if (!category.isNullOrBlank()) put("category", category)
+                },
             ),
         )
 
-    suspend fun tags(begin: Int = 0): List<McsCommunityTag> =
-        McsCommunityParser.parseTags(
-            getString(
-                path = "/api/tagList",
-                query = mapOf(
-                    "begin" to begin.toString(),
-                    "t" to timestamp(),
-                ),
-            ),
-        )
+    suspend fun categories(): List<McsCommunityCategory> =
+        McsCommunityParser.parseCategories(getJson("/categories", emptyMap()))
 
-    suspend fun requirements(uuid: String): List<McsSchematicRequirement> =
-        McsCommunityParser.parseRequirements(
-            getString(
-                path = "/api/requirements",
-                query = mapOf(
-                    "uuid" to uuid,
-                    "t" to timestamp(),
-                ),
-            ),
-        )
+    suspend fun detail(id: String): McsBlueprintDetail =
+        McsCommunityParser.parseDetail(getJson("/blueprints/$id", emptyMap()))
 
-    suspend fun markdown(uuid: String): String =
-        getString(
-            path = "/api/markdown",
-            query = mapOf(
-                "uuid" to uuid,
-                "t" to timestamp(),
-            ),
-        ).toMarkdownText()
-
-    suspend fun downloadSchematic(
-        uuid: String,
+    suspend fun download(
+        id: String,
+        version: Int,
         onProgress: suspend (bytes: Long, total: Long) -> Unit,
-    ): ByteArray = withContext(Dispatchers.IO) {
-        val url = buildUrl(
-            path = "/api/schematicFile",
-            query = mapOf("uuid" to uuid),
+    ): McsDownload = withContext(Dispatchers.IO) {
+        val response = execute(
+            path = "/blueprints/$id/versions/$version/download",
+            query = emptyMap(),
+            accept = "application/octet-stream, */*",
         )
-        val cookieHeader = settingsRepository.mcsAuthCookies.first().toHeaderValue()
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", McsBrowserUserAgent)
-            .header("Accept", "application/octet-stream, */*")
-            .apply {
-                if (cookieHeader.isNotBlank()) {
-                    header("Cookie", cookieHeader)
-                }
-            }
-            .get()
-            .build()
-
-        okHttpClient.newCall(request).execute().use { response ->
-            val body = response.body
-            if (!response.isSuccessful || body == null) {
-                throw McsCommunityException("MCS HTTP ${response.code}: ${response.message}")
-            }
-            val total = body.contentLength().takeIf { it > 0 } ?: -1L
+        response.use {
+            val body = it.body ?: throw McsCommunityException("MCS 下载响应为空")
+            val total = body.contentLength().takeIf { length -> length > 0L } ?: -1L
+            val output = ByteArrayOutputStream()
             body.byteStream().use { input ->
-                val output = ByteArrayOutputStream()
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                 var copied = 0L
                 while (true) {
@@ -141,58 +70,62 @@ internal class McsCommunityRemoteDataSource @Inject constructor(
                     copied += read
                     onProgress(copied, total)
                 }
-                output.toByteArray()
             }
+            val raw = output.toByteArray()
+            McsDownload(
+                bytes = if (raw.startsWith(GZIP_MAGIC)) {
+                    GZIPInputStream(raw.inputStream()).use { gzip -> gzip.readBytes() }
+                } else {
+                    raw
+                },
+                fileName = parseFileName(it.header("Content-Disposition")),
+            )
         }
     }
 
-    private suspend fun getString(
+    private suspend fun getJson(
         path: String,
         query: Map<String, String>,
-        cookies: McsAuthCookies? = null,
     ): String = withContext(Dispatchers.IO) {
+        execute(path, query, "application/json, text/plain, */*").use { response ->
+            response.body?.string()
+                ?: throw McsCommunityException("MCS 响应为空")
+        }
+    }
+
+    private fun execute(
+        path: String,
+        query: Map<String, String>,
+        accept: String,
+    ): okhttp3.Response {
         val url = buildUrl(path, query)
-        val cookieHeader = (cookies ?: settingsRepository.mcsAuthCookies.first())
-            .toHeaderValue()
-        Log.d(
-            McsLoginLogTag,
-            "Remote GET start: path=$path, url=${url.redactQueryForLog()}, hasCookie=${cookieHeader.isNotBlank()}, cookieSource=${if (cookies == null) "datastore" else "candidate"}",
-        )
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", McsBrowserUserAgent)
-            .header("Accept", "application/json, text/plain, */*")
+            .header("Accept", accept)
             .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-            .apply {
-                if (cookieHeader.isNotBlank()) {
-                    header("Cookie", cookieHeader)
-                }
-            }
             .get()
             .build()
-
-        okHttpClient.newCall(request).execute().use { response ->
-            val body = response.body?.string()
-            Log.d(
-                McsLoginLogTag,
-                "Remote GET response: path=$path, code=${response.code}, successful=${response.isSuccessful}, bodyLength=${body?.length ?: -1}",
-            )
-            if (!response.isSuccessful || body == null) {
-                Log.w(
-                    McsLoginLogTag,
-                    "Remote GET failed: path=$path, code=${response.code}, message=${response.message}",
-                )
-                throw McsCommunityException("MCS HTTP ${response.code}: ${response.message}")
+        val response = runCatching { okHttpClient.newCall(request).execute() }
+            .getOrElse { error ->
+                throw McsCommunityException("MCS 网络请求失败: ${error.message ?: error::class.java.simpleName}")
             }
-            body
+        if (!response.isSuccessful) {
+            val detail = response.body?.string()?.let(::responseError).orEmpty()
+            response.close()
+            throw McsCommunityException(
+                "MCS HTTP ${response.code}: ${detail.ifBlank { response.message }}",
+            )
         }
+        Log.d("McsCommunityApi", "${request.method} ${url.redactQuery()} -> ${response.code}")
+        return response
     }
 
     private fun buildUrl(
         path: String,
         query: Map<String, String>,
     ): HttpUrl {
-        val builder = baseUrl.newBuilder()
+        val builder = apiBaseUrl.newBuilder()
         path.trim('/')
             .split('/')
             .filter { it.isNotBlank() }
@@ -200,22 +133,43 @@ internal class McsCommunityRemoteDataSource @Inject constructor(
         query.forEach { (key, value) -> builder.addQueryParameter(key, value) }
         return builder.build()
     }
-
-    private fun timestamp(): String = System.currentTimeMillis().toString()
 }
 
-private fun HttpUrl.redactQueryForLog(): String {
-    if (querySize == 0) return toString()
-    val builder = newBuilder()
-    queryParameterNames.forEach { name ->
-        builder.setQueryParameter(name, "***")
-    }
-    return builder.build().toString()
+@Immutable
+internal data class McsDownload(
+    val bytes: ByteArray,
+    val fileName: String?,
+)
+
+private const val McsApiPageSize = 50
+private val GZIP_MAGIC = byteArrayOf(0x1f, 0x8b.toByte())
+
+private fun responseError(body: String): String =
+    runCatching {
+        val json = JSONObject(body)
+        json.optString("detail")
+            .ifBlank { json.optString("message") }
+            .ifBlank { body.take(160) }
+    }.getOrDefault(body.take(160))
+
+private fun parseFileName(contentDisposition: String?): String? {
+    if (contentDisposition.isNullOrBlank()) return null
+    val encoded = Regex("""filename\*\s*=\s*UTF-8''([^;]+)""", RegexOption.IGNORE_CASE)
+        .find(contentDisposition)
+        ?.groupValues
+        ?.getOrNull(1)
+    if (encoded != null) return URLDecoder.decode(encoded, Charsets.UTF_8.name())
+    return Regex("""filename\s*=\s*"?([^";]+)""", RegexOption.IGNORE_CASE)
+        .find(contentDisposition)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.trim()
 }
 
-private fun String.toMarkdownText(): String {
-    val body = trim()
-    return runCatching {
-        JSONTokener(body).nextValue() as? String
-    }.getOrNull()?.trim() ?: body.trim('"')
-}
+private fun ByteArray.startsWith(prefix: ByteArray): Boolean =
+    size >= prefix.size && prefix.indices.all { this[it] == prefix[it] }
+
+private fun HttpUrl.redactQuery(): String =
+    if (querySize == 0) toString() else newBuilder().apply {
+        queryParameterNames.forEach { name -> setQueryParameter(name, "***") }
+    }.build().toString()

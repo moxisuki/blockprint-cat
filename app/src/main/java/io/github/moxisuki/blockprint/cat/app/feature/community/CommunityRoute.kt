@@ -7,7 +7,6 @@ import androidx.compose.runtime.getValue
 
 @Composable
 internal fun CommunityRoute(
-    onLoginClick: () -> Unit,
     onBlueprintClick: (CommunityBlueprintUiItem) -> Unit,
     viewModel: CommunityViewModel = hiltViewModel(),
 ) {
@@ -15,7 +14,6 @@ internal fun CommunityRoute(
     CommunityScreen(
         state = state,
         onAction = viewModel::onAction,
-        onLoginClick = onLoginClick,
         onBlueprintClick = onBlueprintClick,
     )
 }

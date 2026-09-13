@@ -2,7 +2,6 @@ package io.github.moxisuki.blockprint.cat.app.feature.settings
 
 import io.github.moxisuki.blockprint.cat.app.core.locale.AppLanguage
 import io.github.moxisuki.blockprint.cat.app.core.cache.AppCacheCategory
-import io.github.moxisuki.blockprint.cat.app.core.persistence.McsAuthCookies
 
 sealed interface SettingsAction {
     data object Opened : SettingsAction
@@ -10,8 +9,6 @@ sealed interface SettingsAction {
     data object AboutClicked : SettingsAction
     data class LanguageSelected(val language: AppLanguage) : SettingsAction
     data class CommunityEnabledChanged(val enabled: Boolean) : SettingsAction
-    data class McsCookiesChanged(val cookies: McsAuthCookies) : SettingsAction
-    data object ClearMcsCookiesClicked : SettingsAction
     data object BlueprintDirectoryClicked : SettingsAction
     data object BlueprintDirectoryPickerDismissed : SettingsAction
     data class BlueprintDirectorySelected(

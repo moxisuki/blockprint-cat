@@ -44,14 +44,12 @@ class SettingsViewModel @Inject constructor(
                 settingsRepository.localBlueprintTreeUri,
                 settingsRepository.localBlueprintTreeDocumentId,
                 settingsRepository.communityEnabled,
-                settingsRepository.mcsAuthCookies,
                 resourcePackRepository.installedPacks.map { it.size },
-            ) { treeUri, treeDocumentId, communityEnabled, mcsAuthCookies, packsSize ->
+            ) { treeUri, treeDocumentId, communityEnabled, packsSize ->
                 SettingsState(
                     localBlueprintTreeUri = treeUri,
                     localBlueprintTreeDocumentId = treeDocumentId,
                     communityEnabled = communityEnabled,
-                    mcsAuthCookies = mcsAuthCookies,
                     installedResourcePackCount = packsSize,
                 )
             }.collect { persistedState ->
@@ -60,7 +58,6 @@ class SettingsViewModel @Inject constructor(
                         localBlueprintTreeUri = persistedState.localBlueprintTreeUri,
                         localBlueprintTreeDocumentId = persistedState.localBlueprintTreeDocumentId,
                         communityEnabled = persistedState.communityEnabled,
-                        mcsAuthCookies = persistedState.mcsAuthCookies,
                         installedResourcePackCount = persistedState.installedResourcePackCount,
                     )
                 }
@@ -115,18 +112,6 @@ class SettingsViewModel @Inject constructor(
             is SettingsAction.CommunityEnabledChanged -> {
                 viewModelScope.launch {
                     settingsRepository.setCommunityEnabled(action.enabled)
-                }
-            }
-
-            is SettingsAction.McsCookiesChanged -> {
-                viewModelScope.launch {
-                    settingsRepository.setMcsAuthCookies(action.cookies)
-                }
-            }
-
-            SettingsAction.ClearMcsCookiesClicked -> {
-                viewModelScope.launch {
-                    settingsRepository.clearMcsAuthCookies()
                 }
             }
 

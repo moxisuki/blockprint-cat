@@ -54,13 +54,11 @@ import io.github.moxisuki.blockprint.cat.app.core.design.AppMotion
 import io.github.moxisuki.blockprint.cat.app.core.design.PreviewAppTheme
 import io.github.moxisuki.blockprint.cat.app.core.design.appMaxContentWidth
 import io.github.moxisuki.blockprint.cat.app.core.design.appScrollEndHaptic
-import io.github.moxisuki.blockprint.cat.app.core.persistence.McsAuthCookies
 import io.github.moxisuki.blockprint.cat.app.feature.community.components.CommunityBlueprintCard
 import io.github.moxisuki.blockprint.cat.app.feature.community.components.CommunitySectionTitle
 import io.github.moxisuki.blockprint.cat.app.feature.community.components.CommunitySourceControls
 import io.github.moxisuki.blockprint.cat.app.feature.community.components.CommunitySourceOverview
 import io.github.moxisuki.blockprint.cat.app.feature.community.components.CommunityTopicStrip
-import io.github.moxisuki.blockprint.cat.app.feature.community.components.McsLoginRequiredPanel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import top.yukonga.miuix.kmp.basic.Card
@@ -74,7 +72,6 @@ private val FloatingNavigationCommunityBottomPadding = 104.dp
 internal fun CommunityScreen(
     state: CommunityState,
     onAction: (CommunityAction) -> Unit,
-    onLoginClick: () -> Unit,
     onBlueprintClick: (CommunityBlueprintUiItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -86,8 +83,8 @@ internal fun CommunityScreen(
     val activeContent = remember(state.selectedSource, state.mcs, state.cms) {
         state.activeContent
     }
-    val showTopicButton = activeContent.isLoggedIn &&
-        (activeContent.topics.isNotEmpty() || activeContent.selectedTopics.isNotEmpty())
+    val showTopicButton =
+        activeContent.topics.isNotEmpty() || activeContent.selectedTopics.isNotEmpty()
     val sourceSlideProgress by remember {
         derivedStateOf {
             (pagerState.currentPage + pagerState.currentPageOffsetFraction)
@@ -155,13 +152,11 @@ internal fun CommunityScreen(
             }
             CommunitySourcePage(
                 content = content,
-                isCheckingLogin = state.mcs.isCheckingLogin,
                 showOverview = source in state.visibleOverviewSources,
                 showTopics = showTopics,
                 onRefresh = { onAction(CommunityAction.RefreshRequested) },
                 onLoadMore = { onAction(CommunityAction.LoadMoreRequested) },
                 onTopicClick = { topic -> onAction(CommunityAction.TopicToggled(topic)) },
-                onLoginClick = onLoginClick,
                 onBlueprintClick = onBlueprintClick,
             )
         }
@@ -171,13 +166,11 @@ internal fun CommunityScreen(
 @Composable
 private fun CommunitySourcePage(
     content: CommunitySourceContent,
-    isCheckingLogin: Boolean,
     showOverview: Boolean,
     showTopics: Boolean,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onTopicClick: (String) -> Unit,
-    onLoginClick: () -> Unit,
     onBlueprintClick: (CommunityBlueprintUiItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -227,35 +220,6 @@ private fun CommunitySourcePage(
             }
     }
 
-    if (content.source == CommunitySourceUi.MCS && !content.isLoggedIn) {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 340.dp),
-            state = listState,
-            modifier = modifier
-                .fillMaxSize()
-                .nestedScroll(pullRefreshConnection)
-                .appScrollEndHaptic(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                top = 0.dp,
-                end = 16.dp,
-                bottom = FloatingNavigationCommunityBottomPadding,
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item(key = "mcs-login", span = { GridItemSpan(maxLineSpan) }) {
-                McsLoginRequiredPanel(
-                    isCheckingLogin = isCheckingLogin,
-                    errorMessage = content.errorMessage,
-                    onLoginClick = onLoginClick,
-                    onRetryClick = onRefresh,
-                )
-            }
-        }
-        return
-    }
-
     Column(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -268,8 +232,13 @@ private fun CommunitySourcePage(
             CommunitySourceOverview(
                 totalCount = stringResource(R.string.community_total_x, content.total),
                 loadedCount = stringResource(R.string.community_loaded_x, content.items.size),
-                status = content.status,
-                hint = content.hint,
+                status = stringResource(
+                    when (content.source) {
+                        CommunitySourceUi.MCS -> R.string.community_mcs_status
+                        CommunitySourceUi.CMS -> R.string.community_cms_status
+                    },
+                ),
+                hint = communitySourceHint(content),
                 visible = showOverview,
             )
             CommunityRefreshIndicator(
@@ -277,7 +246,7 @@ private fun CommunitySourcePage(
             )
             content.errorMessage?.let { message ->
                 CommunityMessageCard(
-                    title = "加载失败",
+                    title = stringResource(R.string.community_load_failed),
                     message = message,
                 )
             }
@@ -340,9 +309,9 @@ private fun CommunitySourcePage(
                     CommunityMessageCard(
                         title = stringResource(R.string.community_empty),
                         message = if (content.filter.isBlank()) {
-                            "下拉刷新，或稍后再试。"
+                            stringResource(R.string.community_pull_to_refresh)
                         } else {
-                            "没有匹配 “${content.filter}” 的蓝图。"
+                            stringResource(R.string.community_no_match, content.filter)
                         },
                     )
                 }
@@ -416,7 +385,7 @@ private fun CommunityLoadMoreIndicator(
             fadeOut(animationSpec = AppMotion.fadeExitSpec(AppMotion.Duration.TabExitMillis)),
     ) {
         CommunityProgressRow(
-            text = "继续载入",
+            text = stringResource(R.string.community_load_more),
             modifier = modifier,
         )
     }
@@ -471,7 +440,7 @@ private fun CommunityLoadingPanel(
                 strokeWidth = 2.dp,
             )
             Text(
-                text = "正在载入 ${source.displayName} 蓝图",
+                text = stringResource(R.string.community_loading_source, source.displayName),
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 style = MiuixTheme.textStyles.body2,
             )
@@ -515,11 +484,8 @@ internal enum class CommunitySourceUi(val displayName: String) {
 internal data class CommunitySourceContent(
     val source: CommunitySourceUi,
     val total: Int,
-    val status: String,
-    val hint: String,
     val topics: List<String>,
     val items: List<CommunityBlueprintUiItem>,
-    val isLoggedIn: Boolean = true,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val hasMore: Boolean = false,
@@ -529,6 +495,21 @@ internal data class CommunitySourceContent(
     val selectedTopics: List<String> = emptyList(),
     val isSearchExpanded: Boolean = false,
 )
+
+@Composable
+private fun communitySourceHint(content: CommunitySourceContent): String =
+    when {
+        content.filter.isNotBlank() -> stringResource(
+            R.string.community_filter_label,
+            content.filter,
+        )
+        content.selectedTopics.isNotEmpty() -> stringResource(
+            R.string.community_category_filter,
+            content.selectedTopics.joinToString(),
+        )
+        content.source == CommunitySourceUi.MCS -> stringResource(R.string.community_mcs_hint)
+        else -> stringResource(R.string.community_cms_hint)
+    }
 
 internal data class CommunityBlueprintUiItem(
     val id: String,
@@ -543,10 +524,15 @@ internal data class CommunityBlueprintUiItem(
     val tags: List<String> = emptyList(),
     val description: String,
     val updateTime: String,
+    val gameVersion: String? = null,
     val stress: String? = null,
     val coverUrl: String? = null,
     val downloadable: Boolean = true,
     val webUrl: String? = null,
+    val versionNumber: Int = 1,
+    val formatLabel: String? = null,
+    val categoryName: String? = null,
+    val categorySlug: String? = null,
     val accentIndex: Int,
 )
 
@@ -594,7 +580,6 @@ private fun CommunityScreenPreview() {
         CommunityScreen(
             state = CommunityState(
                 mcs = CommunityMcsState(
-                    cookies = McsAuthCookies(userAuth = "preview", nickname = "moxisuki"),
                     items = listOf(
                         CommunityBlueprintUiItem(
                             id = "mcs-foundry",
@@ -604,9 +589,11 @@ private fun CommunityScreenPreview() {
                             heat = 8421,
                             dimensions = "96 x 28 x 64",
                             format = BlueprintFormat.Litematica,
+                            formatLabel = "litematica",
                             tags = listOf("minecraft:furnace", "factory", "survival"),
                             description = "Multi-smelter line with storage buffer and item routing.",
                             updateTime = "2026-07-18",
+                            gameVersion = "1.21.1",
                             accentIndex = 0,
                         ),
                     ),
@@ -614,7 +601,6 @@ private fun CommunityScreenPreview() {
                 ),
             ),
             onAction = {},
-            onLoginClick = {},
             onBlueprintClick = {},
         )
     }

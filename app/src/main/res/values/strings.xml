@@ -60,7 +60,6 @@
     <string name="nav_title_changelog">更新日志</string>
     <string name="nav_title_terms">使用条款</string>
     <string name="nav_title_community_detail">社区蓝图详情</string>
-    <string name="nav_title_community_login">登录社区</string>
     <string name="dialog_connect_pc_title">连接 PC</string>
     <string name="pad_empty_select_bp">点击左侧蓝图查看详情</string>
     <string name="pad_empty_select_community">点击左侧作品查看详情</string>
@@ -431,16 +430,6 @@
     <string name="cache_total_summary">共 %1$s</string>
     <string name="cache_all_confirm_msg">清理蓝图索引、渲染资源、GLB 预览模型和临时缓存？SAF 目录中的蓝图文件不会被删除。</string>
     <string name="cache_note">清理缓存不会影响 SAF 目录中的蓝图文件。</string>
-    <string name="community_logged_in_with">已登录 (%1$s)</string>
-    <string name="community_logged_in_short">已登录</string>
-    <string name="community_logged_out_short">未登录</string>
-    <string name="cookie_uuid">uuid</string>
-    <string name="cookie_user_auth">user_auth</string>
-    <string name="cookie_user_auth_required">user_auth (必填)</string>
-    <string name="cookie_cf_clearance_optional">cf_clearance (可选)</string>
-    <string name="action_logout">退出登录</string>
-    <string name="cookie_manual">手动填写 Cookie</string>
-    <string name="cookie_manual_hint">手动填写 (从浏览器 DevTools 复制)</string>
     <string name="action_save">保存</string>
     <string name="action_delete">删除</string>
     <string name="action_new">新建</string>
@@ -521,6 +510,16 @@
     <string name="community_stat_loaded">本页载入</string>
     <string name="community_section_topics">热门标签</string>
     <string name="community_section_featured">最新蓝图</string>
+    <string name="community_mcs_status">MCS · 公共蓝图库</string>
+    <string name="community_mcs_hint">公开数据 · 按最新发布排序</string>
+    <string name="community_cms_status">CMS · Creative Mechanic Server</string>
+    <string name="community_cms_hint">下拉刷新 CMS 蓝图，支持标题搜索</string>
+    <string name="community_category_filter">分类: %1$s</string>
+    <string name="community_load_failed">加载失败</string>
+    <string name="community_pull_to_refresh">下拉刷新，或稍后再试。</string>
+    <string name="community_no_match">没有匹配“%1$s”的蓝图。</string>
+    <string name="community_loading_source">正在载入 %1$s 蓝图</string>
+    <string name="community_load_more">继续载入</string>
     <string name="community_metric_downloads">下载</string>
     <string name="community_metric_blocks">方块</string>
     <string name="community_metric_heat">热度</string>
@@ -547,14 +546,26 @@
     <string name="disclaimer_close_confirm_yes">确定关闭</string>
     <string name="disclaimer_close_confirm_no">取消</string>
     <string name="disclaimer_closed_toast">社区功能已关闭，可在设置 → 社区配置中重新启用。</string>
-    <string name="community_login_title">登录 mcschematic.top</string>
-    <string name="community_login_desc">通过 QQ 一键登录后可浏览、下载社区蓝图</string>
-    <string name="community_login_qq">QQ 登录</string>
-    <string name="community_login_scan_hint_title">请保持登录页可见</string>
-    <string name="community_login_scan_hint_summary">QQ 扫码登录不能切到后台完成。请使用小窗、分屏，或用另一台设备扫码。</string>
-    <string name="community_login_privacy_notice">登录过程中不会存储任何 OAuth 数据（如 QQ 的 access_token、refresh_token 等）。仅 mcschematic.top 的鉴权 Cookie（uuid、user_auth、cf_clearance）会保存在本机，可随时在 设置 → 社区配置 中清除。</string>
-
     <!-- CommunityDetailScreen -->
+    <string name="community_detail_stats">蓝图统计</string>
+    <string name="community_detail_game_version">游戏版本</string>
+    <string name="community_detail_dimensions">尺寸</string>
+    <string name="community_detail_source_format">源格式: %1$s</string>
+    <string name="community_detail_viewer_format">预览格式: %1$s</string>
+    <string name="community_detail_version">版本 %1$d</string>
+    <string name="community_detail_blocks">方块数量</string>
+    <string name="community_detail_visible_blocks">可见方块</string>
+    <string name="community_detail_material_kinds">材料种类</string>
+    <string name="community_detail_palette">调色板</string>
+    <string name="community_detail_tile_entities">方块实体</string>
+    <string name="community_detail_entities">实体</string>
+    <string name="community_detail_views">浏览量</string>
+    <string name="community_detail_downloads">下载量</string>
+    <string name="community_detail_likes">点赞</string>
+    <string name="community_detail_favourites">收藏</string>
+    <string name="community_detail_file_size">源文件大小</string>
+    <string name="community_detail_attribution_original">原创</string>
+    <string name="community_detail_attribution_repost">转载</string>
     <string name="cdl_download">下载</string>
     <string name="cdl_open_web">打开网页</string>
     <string name="cdl_downloaded">已下载</string>
@@ -694,7 +705,7 @@
     <string name="terms_section_3_title">3. 第三方资源</string>
     <string name="terms_section_3_body">本应用集成的资源包（minecraft 原版、第三方 Mod）来自 Mojang 官方和 Modrinth 等社区，遵循其各自的开源协议。\n应用本身不内置任何游戏资源，所有渲染所需资源均由用户主动下载并存储在本地设备上。\nMojang 商标、第三方 Mod 商标及其相关资源的所有权归各自权利人所有，本应用与其无官方关联。</string>
     <string name="terms_section_4_title">4. 社区数据爬虫</string>
-    <string name="terms_section_4_body">本应用的\"社区\"功能使用爬虫技术访问第三方蓝图分享站（mcschematic.top、www.creativemechanicserver.com 等）以聚合公开信息。\n应用不存储、不修改、不商用任何第三方网站的内容；所有列表/详情/文件均实时从源站拉取。\n使用者应遵守源站的使用条款与版权要求；下载的蓝图版权归原作者所有。\n如源站权利人希望停止被本应用访问，请联系开发者。</string>
+    <string name="terms_section_4_body">本应用的\"社区\"功能通过第三方公开接口和公开页面获取蓝图信息（包括 mcschematic.top、www.creativemechanicserver.com 等）。\n应用不运营社区账号，不要求用户登录，也不保存 MCS 账号或鉴权 Cookie；列表、详情和下载文件按需从源站获取。\n使用者应遵守源站的使用条款与版权要求；下载的蓝图版权归原作者所有。\n如源站权利人希望停止被本应用访问，请联系开发者。</string>
 
     <!-- 隐私条款（按 Bugly SDK 合规指南） -->
     <string name="terms_section_5_title">5. 本地数据与存储</string>
@@ -705,13 +716,11 @@
     <string name="terms_section_6_title">6. 第三方 SDK：腾讯 Bugly（崩溃上报）</string>
     <string name="terms_section_6_body">为提升应用稳定性，本应用集成了腾讯 Bugly SDK。\n\nSDK 提供方：深圳市腾讯计算机系统有限公司\n使用目的：排查质量问题，帮助 APP 提升运行质量\n处理方式：通过去标识化、加密传输和处理的安全处理方式；数据存储于中国境内的服务器。\n\n当发生崩溃时，以下信息会被自动采集并上传至腾讯 Bugly 服务器：\n• 手机型号\n• 手机品牌\n• Android 系统版本与 API 等级\n• 厂商系统版本\n• CPU 架构类型\n• 设备是否 root\n• 磁盘 / sdcard / 内存空间占用大小\n• 网络类型\n• 应用当前正在运行的进程名和 PID\n\n上述信息仅用于诊断和修复崩溃，不会用于广告、用户画像或任何商业用途。\n\nBugly 隐私政策：https://privacy.qq.com/document/preview/fc748b3d96224fdb825ea79e132c1a56\nBugly 官网：https://bugly.qq.com/v2/\n\n退出方式：崩溃上报仅在您同意本条款后初始化。如需永久关闭，请卸载应用或清除应用数据以重置条款同意状态。</string>
 
-    <string name="terms_section_7_title">7. 社区登录 Cookie</string>
-    <string name="terms_section_7_body">可选的"社区"功能允许您登录第三方蓝图分享站（MCS / CMS）。登录时，应用会将该站点的鉴权 Cookie（如 MCS 的 user_auth、uuid、cf_clearance；CMS 同类字段）本地存储在 SharedPreferences 中。
-这些 Cookie 仅用于代替您访问对应的源站，不会被上传到任何由本应用开发者控制的第三方服务器。
-您可随时通过 设置 → 社区设置 → 退出登录，或通过清除应用数据来删除这些 Cookie。</string>
+    <string name="terms_section_7_title">7. 公开社区数据</string>
+    <string name="terms_section_7_body">社区页面展示来自第三方公开接口或公开页面的数据。MCS 当前使用无需登录的公开 API，应用不会创建、管理或保存 MCS 账号信息，也不会保存 MCS 鉴权 Cookie。\n为完成部分站点的临时反爬验证，网络客户端可能在内存中维护短期会话信息；这些信息不会作为用户设置持久化，也不会上传到开发者控制的服务器。</string>
 
     <string name="terms_section_8_title">8. 您的权利与联系方式</string>
-    <string name="terms_section_8_body">作为用户，您享有以下权利：\n• 访问 — 通过设置查看所有本地存储的个人数据\n• 删除 — 随时清除 Cookie、缓存资源或全部数据\n• 撤回同意 — 卸载应用以停止所有可选的数据采集\n\n本应用不收集真实姓名、电话号码、邮箱、地理位置等个人身份信息（PII）。第 6 节所述的数据均为设备级诊断信息，无法合理识别您的身份。\n\n如有隐私相关问题或需行使您的权利，请通过\"关于\"页面中的 GitHub 链接联系开发者。</string>
+    <string name="terms_section_8_body">作为用户，您享有以下权利：\n• 访问 — 通过设置查看所有本地存储的个人数据\n• 删除 — 随时清除缓存资源或全部数据\n• 撤回同意 — 卸载应用以停止所有可选的数据采集\n\n本应用不收集真实姓名、电话号码、邮箱、地理位置等个人身份信息（PII）。第 6 节所述的数据均为设备级诊断信息，无法合理识别您的身份。\n\n如有隐私相关问题或需行使您的权利，请通过\"关于\"页面中的 GitHub 链接联系开发者。</string>
 
     <!-- Community Configuration redesign -->
     <string name="settings_community_card_title">社区配置</string>
@@ -722,10 +731,6 @@
     <string name="community_config_enable_subtitle">关闭后,底栏「社区」标签将被隐藏。已下载的社区蓝图不受影响。</string>
     <string name="community_section_mcs">MCS 社区</string>
     <string name="community_section_cms">CMS 社区</string>
-    <string name="community_section_cms_status_none">未保存任何 Cookie</string>
-    <string name="community_section_cms_status_count">已保存 %1$d 个 Cookie</string>
-    <string name="community_section_cms_hint">请先在社区页通过 CMS 完成一次 Cloudflare 验证,Cookie 会自动保存到这里。</string>
-    <string name="community_section_cms_clear">清空 CMS Cookie</string>
 
     <!-- Theme dialog (Dynamic App Icon) -->
     <string name="theme_dialog_title">主题与外观</string>
@@ -854,7 +859,6 @@
     <string name="cd_fullscreen">全屏</string>
     <string name="cd_grid">网格</string>
     <string name="cd_layer">图层</string>
-    <string name="cd_logout">退出登录</string>
     <string name="cd_refresh">刷新</string>
     <string name="cd_reset">重置</string>
     <string name="cd_search">搜索</string>
@@ -868,23 +872,9 @@
     <string name="community_cd_apply">应用</string>
     <string name="community_cd_clear_filter">清除筛选</string>
     <string name="community_cd_clear_input">清除输入</string>
-    <string name="community_disclaimer_consent_text">授权后将使用您的账号获取社区作品</string>
     <string name="community_filter_value">筛选</string>
     <string name="community_loaded_count">已加载 %1$d</string>
     <string name="community_total_count">共 %1$d</string>
-    <string name="cs_cancel_edit">取消编辑</string>
-    <string name="cs_cf_clearance_label">Cloudflare 验证</string>
-    <string name="cs_how_to_get">获取方式</string>
-    <string name="cs_how_to_get_1">在浏览器登录 mcschematic.cn</string>
-    <string name="cs_how_to_get_2">F12 → Network → 复制 Cookie</string>
-    <string name="cs_logout">退出登录</string>
-    <string name="cs_manual_cookie">手动输入 Cookie</string>
-    <string name="cs_not_signed_in">未登录</string>
-    <string name="cs_save_cookie">保存</string>
-    <string name="cs_signed_in">已登录</string>
-    <string name="cs_signed_in_nick">已登录: %1$s</string>
-    <string name="cs_status_title">账号状态</string>
-    <string name="cs_user_auth_label">用户认证</string>
     <string name="detail_convert_running">正在转换…</string>
     <string name="detail_error_bp_missing">蓝图文件不存在</string>
     <string name="detail_error_bp_removed">蓝图已删除</string>
@@ -949,9 +939,8 @@
     <string name="render_section_search_results">搜索结果</string>
     <string name="render_section_version">版本</string>
     <string name="render_version_count">%1$d 个版本</string>
-    <string name="settings_community_nick">社区账号</string>
-    <string name="settings_community_no_nick">未设置</string>
-    <string name="settings_community_not_logged_in">未登录</string>
+    <string name="settings_community_nick">社区来源</string>
+    <string name="settings_community_no_nick">公开数据</string>
     <string name="snackbar_community_downloaded">已下载: %1$s</string>
     <string name="snackbar_convert_failed">转换失败: %1$s (%2$s)</string>
     <string name="snackbar_convert_succeeded">已转换: %1$s</string>

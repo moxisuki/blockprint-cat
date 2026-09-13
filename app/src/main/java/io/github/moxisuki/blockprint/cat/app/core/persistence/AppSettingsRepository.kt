@@ -28,8 +28,6 @@ class AppSettingsRepository @Inject constructor(
 
     val communityEnabled: Flow<Boolean> = prefs.communityEnabled
 
-    val mcsAuthCookies: Flow<McsAuthCookies> = prefs.mcsAuthCookies
-
     suspend fun setThemeMode(mode: AppThemeMode) {
         prefs.setThemeMode(mode)
     }
@@ -61,11 +59,4 @@ class AppSettingsRepository @Inject constructor(
         prefs.setCommunityEnabled(enabled)
     }
 
-    suspend fun setMcsAuthCookies(cookies: McsAuthCookies) {
-        prefs.setMcsAuthCookies(cookies)
-    }
-
-    suspend fun clearMcsAuthCookies() {
-        prefs.clearMcsAuthCookies()
-    }
 }

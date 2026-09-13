@@ -26,13 +26,9 @@ internal class CommunityViewModel @Inject constructor(
     val state: StateFlow<CommunityState> = _state.asStateFlow()
 
     init {
-        observeMcsCookies()
         viewModelScope.launch {
-            if (mcsRepository.hasLocalLogin()) {
-                checkMcsLogin()
-                loadMcsTags()
-                refreshMcs()
-            }
+            loadMcsCategories()
+            refreshMcs()
         }
     }
 
@@ -52,239 +48,211 @@ internal class CommunityViewModel @Inject constructor(
                 }
                 when (action.source) {
                     CommunitySourceUi.MCS -> {
-                        if (_state.value.mcs.isLoggedIn && _state.value.mcs.items.isEmpty()) {
-                            loadMcsTags()
+                        if (_state.value.mcs.items.isEmpty()) {
+                            loadMcsCategories()
                             refreshMcs()
                         }
                     }
                     CommunitySourceUi.CMS -> {
-                        if (_state.value.cms.items.isEmpty()) {
-                            refreshCms()
-                        }
+                        if (_state.value.cms.items.isEmpty()) refreshCms()
                     }
                 }
             }
-            CommunityAction.RefreshRequested -> {
-                when (_state.value.selectedSource) {
-                    CommunitySourceUi.MCS -> {
-                        loadMcsTags(force = true)
-                        refreshMcs()
-                    }
-                    CommunitySourceUi.CMS -> refreshCms()
+            CommunityAction.RefreshRequested -> when (_state.value.selectedSource) {
+                CommunitySourceUi.MCS -> {
+                    loadMcsCategories(force = true)
+                    refreshMcs()
                 }
+                CommunitySourceUi.CMS -> refreshCms()
             }
-            CommunityAction.LoadMoreRequested -> {
-                when (_state.value.selectedSource) {
-                    CommunitySourceUi.MCS -> loadMoreMcs()
-                    CommunitySourceUi.CMS -> loadMoreCms()
-                }
+            CommunityAction.LoadMoreRequested -> when (_state.value.selectedSource) {
+                CommunitySourceUi.MCS -> loadMoreMcs()
+                CommunitySourceUi.CMS -> loadMoreCms()
             }
-            CommunityAction.SearchToggled -> {
-                when (_state.value.selectedSource) {
-                    CommunitySourceUi.MCS -> _state.update { state ->
-                        state.copy(
-                            mcs = state.mcs.copy(
-                                isSearchExpanded = !state.mcs.isSearchExpanded,
-                                searchDraft = if (state.mcs.isSearchExpanded) {
-                                    state.mcs.filter
-                                } else {
-                                    state.mcs.searchDraft
-                                },
-                            ),
-                        )
-                    }
-                    CommunitySourceUi.CMS -> _state.update { state ->
-                        state.copy(
-                            cms = state.cms.copy(
-                                isSearchExpanded = !state.cms.isSearchExpanded,
-                                searchDraft = if (state.cms.isSearchExpanded) {
-                                    state.cms.filter
-                                } else {
-                                    state.cms.searchDraft
-                                },
-                            ),
-                        )
-                    }
-                }
-            }
-            is CommunityAction.SearchQueryChanged -> {
-                when (_state.value.selectedSource) {
-                    CommunitySourceUi.MCS -> _state.update { state ->
-                        state.copy(mcs = state.mcs.copy(searchDraft = action.query))
-                    }
-                    CommunitySourceUi.CMS -> _state.update { state ->
-                        state.copy(cms = state.cms.copy(searchDraft = action.query))
-                    }
-                }
-            }
-            CommunityAction.SearchSubmitted -> {
-                when (_state.value.selectedSource) {
-                    CommunitySourceUi.MCS -> {
-                        val query = _state.value.mcs.searchDraft.trim()
-                        _state.update { state ->
-                            state.copy(
-                                mcs = state.mcs.copy(
-                                    filter = query,
-                                    isSearchExpanded = false,
-                                    searchDraft = query,
-                                    selectedTopics = emptyList(),
-                                ),
-                            )
-                        }
-                        refreshMcs()
-                    }
-                    CommunitySourceUi.CMS -> {
-                        val query = _state.value.cms.searchDraft.trim()
-                        _state.update { state ->
-                            state.copy(
-                                cms = state.cms.copy(
-                                    filter = query,
-                                    isSearchExpanded = false,
-                                    searchDraft = query,
-                                    selectedTopics = emptyList(),
-                                ),
-                            )
-                        }
-                        refreshCms()
-                    }
-                }
-            }
-            CommunityAction.SearchCleared -> {
-                when (_state.value.selectedSource) {
-                    CommunitySourceUi.MCS -> {
-                        _state.update { state ->
-                            state.copy(
-                                mcs = state.mcs.copy(
-                                    filter = "",
-                                    searchDraft = "",
-                                    selectedTopics = emptyList(),
-                                    isSearchExpanded = false,
-                                ),
-                            )
-                        }
-                        refreshMcs()
-                    }
-                    CommunitySourceUi.CMS -> {
-                        _state.update { state ->
-                            state.copy(
-                                cms = state.cms.copy(
-                                    filter = "",
-                                    searchDraft = "",
-                                    selectedTopics = emptyList(),
-                                    isSearchExpanded = false,
-                                ),
-                            )
-                        }
-                        refreshCms()
-                    }
-                }
-            }
-            is CommunityAction.TopicToggled -> {
-                val topic = action.topic.trim()
-                if (topic.isBlank()) return
-                when (_state.value.selectedSource) {
-                    CommunitySourceUi.MCS -> {
-                        _state.update { state ->
-                            val selectedTopics = state.mcs.selectedTopics.toggleTopic(topic)
-                            val filter = selectedTopics.joinToString(" ")
-                            state.copy(
-                                mcs = state.mcs.copy(
-                                    filter = filter,
-                                    searchDraft = filter,
-                                    selectedTopics = selectedTopics,
-                                    isSearchExpanded = false,
-                                ),
-                            )
-                        }
-                        refreshMcs()
-                    }
-                    CommunitySourceUi.CMS -> {
-                        _state.update { state ->
-                            val selectedTopics = state.cms.selectedTopics.toggleTopic(topic)
-                            val filter = selectedTopics.joinToString(" ")
-                            state.copy(
-                                cms = state.cms.copy(
-                                    filter = filter,
-                                    searchDraft = filter,
-                                    selectedTopics = selectedTopics,
-                                    isSearchExpanded = false,
-                                ),
-                            )
-                        }
-                        refreshCms()
-                    }
-                }
-            }
+            CommunityAction.SearchToggled -> updateSearchExpanded()
+            is CommunityAction.SearchQueryChanged -> updateSearchDraft(action.query)
+            CommunityAction.SearchSubmitted -> submitSearch()
+            CommunityAction.SearchCleared -> clearSearch()
+            is CommunityAction.TopicToggled -> toggleTopic(action.topic)
             is CommunityAction.OverviewDismissed -> {
                 _state.update {
                     it.copy(visibleOverviewSources = it.visibleOverviewSources - action.source)
                 }
             }
-            CommunityAction.LogoutRequested -> {
-                viewModelScope.launch {
-                    mcsRepository.clearLogin()
-                    _state.update { it.copy(mcs = CommunityMcsState()) }
-                }
+        }
+    }
+
+    private fun updateSearchExpanded() {
+        _state.update { state ->
+            when (state.selectedSource) {
+                CommunitySourceUi.MCS -> state.copy(
+                    mcs = state.mcs.copy(
+                        isSearchExpanded = !state.mcs.isSearchExpanded,
+                        searchDraft = if (state.mcs.isSearchExpanded) {
+                            state.mcs.filter
+                        } else {
+                            state.mcs.searchDraft
+                        },
+                    ),
+                )
+                CommunitySourceUi.CMS -> state.copy(
+                    cms = state.cms.copy(
+                        isSearchExpanded = !state.cms.isSearchExpanded,
+                        searchDraft = if (state.cms.isSearchExpanded) {
+                            state.cms.filter
+                        } else {
+                            state.cms.searchDraft
+                        },
+                    ),
+                )
             }
         }
     }
 
-    private fun observeMcsCookies() {
-        viewModelScope.launch {
-            mcsRepository.authCookies.collect { cookies ->
-                val wasLoggedIn = _state.value.mcs.isLoggedIn
+    private fun updateSearchDraft(query: String) {
+        _state.update { state ->
+            when (state.selectedSource) {
+                CommunitySourceUi.MCS -> state.copy(mcs = state.mcs.copy(searchDraft = query))
+                CommunitySourceUi.CMS -> state.copy(cms = state.cms.copy(searchDraft = query))
+            }
+        }
+    }
+
+    private fun submitSearch() {
+        when (_state.value.selectedSource) {
+            CommunitySourceUi.MCS -> {
                 _state.update { state ->
-                    state.copy(mcs = state.mcs.copy(cookies = cookies))
+                    state.copy(
+                        mcs = state.mcs.copy(
+                            filter = state.mcs.searchDraft.trim(),
+                            isSearchExpanded = false,
+                            selectedTopics = emptyList(),
+                            selectedCategorySlug = null,
+                        ),
+                    )
                 }
-                if (!cookies.isLoggedIn) {
+                refreshMcs()
+            }
+            CommunitySourceUi.CMS -> {
+                _state.update { state ->
+                    state.copy(
+                        cms = state.cms.copy(
+                            filter = state.cms.searchDraft.trim(),
+                            isSearchExpanded = false,
+                            selectedTopics = emptyList(),
+                        ),
+                    )
+                }
+                refreshCms()
+            }
+        }
+    }
+
+    private fun clearSearch() {
+        when (_state.value.selectedSource) {
+            CommunitySourceUi.MCS -> {
+                _state.update {
+                    it.copy(
+                        mcs = it.mcs.copy(
+                            filter = "",
+                            searchDraft = "",
+                            selectedTopics = emptyList(),
+                            selectedCategorySlug = null,
+                            isSearchExpanded = false,
+                        ),
+                    )
+                }
+                refreshMcs()
+            }
+            CommunitySourceUi.CMS -> {
+                _state.update {
+                    it.copy(
+                        cms = it.cms.copy(
+                            filter = "",
+                            searchDraft = "",
+                            selectedTopics = emptyList(),
+                            isSearchExpanded = false,
+                        ),
+                    )
+                }
+                refreshCms()
+            }
+        }
+    }
+
+    private fun toggleTopic(topic: String) {
+        val normalizedTopic = topic.trim()
+        if (normalizedTopic.isBlank()) return
+        when (_state.value.selectedSource) {
+            CommunitySourceUi.MCS -> {
+                val category = _state.value.mcs.categories.firstOrNull {
+                    it.name.equals(normalizedTopic, ignoreCase = true)
+                }
+                _state.update {
+                    val selected = if (it.mcs.selectedTopics.any {
+                            value -> value.equals(normalizedTopic, ignoreCase = true)
+                        }) {
+                        emptyList()
+                    } else {
+                        listOf(normalizedTopic)
+                    }
+                    it.copy(
+                        mcs = it.mcs.copy(
+                            selectedTopics = selected,
+                            selectedCategorySlug = if (selected.isEmpty()) null else category?.slug,
+                            isSearchExpanded = false,
+                        ),
+                    )
+                }
+                refreshMcs()
+            }
+            CommunitySourceUi.CMS -> {
+                _state.update {
+                    val selected = it.cms.selectedTopics.toggleTopic(normalizedTopic)
+                    it.copy(
+                        cms = it.cms.copy(
+                            filter = selected.joinToString(" "),
+                            searchDraft = selected.joinToString(" "),
+                            selectedTopics = selected,
+                            isSearchExpanded = false,
+                        ),
+                    )
+                }
+                refreshCms()
+            }
+        }
+    }
+
+    private fun loadMcsCategories(force: Boolean = false) {
+        if (!force && _state.value.mcs.categories.isNotEmpty()) return
+        viewModelScope.launch {
+            runCatching { mcsRepository.loadCategories() }
+                .onSuccess { categories ->
                     _state.update { state ->
                         state.copy(
                             mcs = state.mcs.copy(
-                                items = emptyList(),
-                                total = 0,
-                                hasMore = false,
-                                filter = "",
-                                searchDraft = "",
-                                selectedTopics = emptyList(),
-                                topics = emptyList(),
-                                isSearchExpanded = false,
+                                categories = categories,
+                                topics = categories.map { it.name }.distinct(),
                             ),
                         )
                     }
-                } else if (!wasLoggedIn && _state.value.selectedSource == CommunitySourceUi.MCS) {
-                    checkMcsLogin()
-                    loadMcsTags()
-                    refreshMcs()
                 }
-            }
-        }
-    }
-
-    private suspend fun checkMcsLogin() {
-        _state.update { state ->
-            state.copy(mcs = state.mcs.copy(isCheckingLogin = true, errorMessage = null))
-        }
-        runCatching { mcsRepository.refreshLoginStatus() }
-            .onFailure { error ->
-                if (!error.isCancellationNoise()) {
-                    _state.update { state ->
-                        state.copy(mcs = state.mcs.copy(errorMessage = error.toDisplayMessage()))
+                .onFailure { error ->
+                    if (!error.isCancellationNoise()) {
+                        _state.update {
+                            it.copy(mcs = it.mcs.copy(errorMessage = error.toDisplayMessage()))
+                        }
                     }
                 }
-            }
-        _state.update { state ->
-            state.copy(mcs = state.mcs.copy(isCheckingLogin = false))
         }
     }
 
     private fun refreshMcs() {
         val current = _state.value.mcs
-        if (!current.isLoggedIn || current.isLoading || current.isRefreshing) return
+        if (current.isLoading || current.isRefreshing) return
         viewModelScope.launch {
-            if (_state.value.mcs.topics.isEmpty()) {
-                loadMcsTags()
-            }
             val filter = _state.value.mcs.filter
+            val category = _state.value.mcs.selectedCategorySlug
             _state.update { state ->
                 state.copy(
                     mcs = state.mcs.copy(
@@ -298,11 +266,11 @@ internal class CommunityViewModel @Inject constructor(
                 mcsRepository.loadPage(
                     begin = 0,
                     filter = filter,
-                    heatSort = false,
+                    category = category,
                 )
             }.onSuccess { page ->
-                val items = page.items.mapIndexed { index, schematic ->
-                    schematic.toCommunityItem(index)
+                val items = page.items.mapIndexed { index, blueprint ->
+                    blueprint.toCommunityItem(index)
                 }
                 _state.update { state ->
                     state.copy(
@@ -310,20 +278,16 @@ internal class CommunityViewModel @Inject constructor(
                             isLoading = false,
                             isRefreshing = false,
                             items = items,
-                            total = page.total.coerceAtLeast(0),
-                            hasMore = mcsHasMore(
-                                total = page.total,
-                                loaded = items.size,
-                                latestPageSize = page.items.size,
-                            ),
+                            total = page.totalCount,
+                            hasMore = mcsHasMore(page, items.size),
                         ),
                     )
                 }
             }.onFailure { error ->
                 if (!error.isCancellationNoise()) {
-                    _state.update { state ->
-                        state.copy(
-                            mcs = state.mcs.copy(
+                    _state.update {
+                        it.copy(
+                            mcs = it.mcs.copy(
                                 isLoading = false,
                                 isRefreshing = false,
                                 errorMessage = error.toDisplayMessage(),
@@ -335,61 +299,38 @@ internal class CommunityViewModel @Inject constructor(
         }
     }
 
-    private fun loadMcsTags(force: Boolean = false) {
-        val current = _state.value.mcs
-        if (!current.isLoggedIn || (!force && current.topics.isNotEmpty())) return
-        viewModelScope.launch {
-            runCatching { mcsRepository.loadTags() }
-                .onSuccess { tags ->
-                    val topics = tags
-                        .map { it.name }
-                        .distinct()
-                    _state.update { state ->
-                        state.copy(mcs = state.mcs.copy(topics = topics))
-                    }
-                }
-        }
-    }
-
     private fun loadMoreMcs() {
         val current = _state.value.mcs
-        if (!current.isLoggedIn || current.isLoading || current.isRefreshing || !current.hasMore) return
+        if (current.isLoading || current.isRefreshing || !current.hasMore) return
         viewModelScope.launch {
             val start = _state.value.mcs.items.size
-            val filter = _state.value.mcs.filter
-            _state.update { state ->
-                state.copy(mcs = state.mcs.copy(isLoading = true, errorMessage = null))
-            }
+            _state.update { it.copy(mcs = it.mcs.copy(isLoading = true, errorMessage = null)) }
             runCatching {
                 mcsRepository.loadPage(
                     begin = start,
-                    filter = filter,
-                    heatSort = false,
+                    filter = _state.value.mcs.filter,
+                    category = _state.value.mcs.selectedCategorySlug,
                 )
             }.onSuccess { page ->
                 _state.update { state ->
-                    val appended = page.items.mapIndexed { index, schematic ->
-                        schematic.toCommunityItem(start + index)
+                    val appended = page.items.mapIndexed { index, blueprint ->
+                        blueprint.toCommunityItem(start + index)
                     }
                     val combined = state.mcs.items + appended
                     state.copy(
                         mcs = state.mcs.copy(
                             isLoading = false,
                             items = combined,
-                            total = if (page.total >= 0) page.total else state.mcs.total,
-                            hasMore = mcsHasMore(
-                                total = state.mcs.total,
-                                loaded = combined.size,
-                                latestPageSize = page.items.size,
-                            ),
+                            total = page.totalCount.takeIf { it > 0 } ?: state.mcs.total,
+                            hasMore = mcsHasMore(page, combined.size),
                         ),
                     )
                 }
             }.onFailure { error ->
                 if (!error.isCancellationNoise()) {
-                    _state.update { state ->
-                        state.copy(
-                            mcs = state.mcs.copy(
+                    _state.update {
+                        it.copy(
+                            mcs = it.mcs.copy(
                                 isLoading = false,
                                 errorMessage = error.toDisplayMessage(),
                             ),
@@ -415,11 +356,7 @@ internal class CommunityViewModel @Inject constructor(
                 )
             }
             runCatching {
-                cmsRepository.loadPage(
-                    begin = 0,
-                    filter = filter,
-                    heatSort = false,
-                )
+                cmsRepository.loadPage(begin = 0, filter = filter, heatSort = false)
             }.onSuccess { page ->
                 val items = page.items.mapIndexed { index, item ->
                     item.toCommunityItem(index)
@@ -437,9 +374,9 @@ internal class CommunityViewModel @Inject constructor(
                 }
             }.onFailure { error ->
                 if (!error.isCancellationNoise()) {
-                    _state.update { state ->
-                        state.copy(
-                            cms = state.cms.copy(
+                    _state.update {
+                        it.copy(
+                            cms = it.cms.copy(
                                 isLoading = false,
                                 isRefreshing = false,
                                 errorMessage = error.toDisplayMessage(),
@@ -456,14 +393,11 @@ internal class CommunityViewModel @Inject constructor(
         if (current.isLoading || current.isRefreshing || !current.hasMore) return
         viewModelScope.launch {
             val start = _state.value.cms.items.size
-            val filter = _state.value.cms.filter
-            _state.update { state ->
-                state.copy(cms = state.cms.copy(isLoading = true, errorMessage = null))
-            }
+            _state.update { it.copy(cms = it.cms.copy(isLoading = true, errorMessage = null)) }
             runCatching {
                 cmsRepository.loadPage(
                     begin = start,
-                    filter = filter,
+                    filter = _state.value.cms.filter,
                     heatSort = false,
                 )
             }.onSuccess { page ->
@@ -483,9 +417,9 @@ internal class CommunityViewModel @Inject constructor(
                 }
             }.onFailure { error ->
                 if (!error.isCancellationNoise()) {
-                    _state.update { state ->
-                        state.copy(
-                            cms = state.cms.copy(
+                    _state.update {
+                        it.copy(
+                            cms = it.cms.copy(
                                 isLoading = false,
                                 errorMessage = error.toDisplayMessage(),
                             ),

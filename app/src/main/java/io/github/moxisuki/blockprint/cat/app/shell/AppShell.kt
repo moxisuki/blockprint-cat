@@ -38,7 +38,6 @@ import io.github.moxisuki.blockprint.cat.app.core.navigation.rememberAppNavigato
 import io.github.moxisuki.blockprint.cat.app.core.navigation.routeId
 import io.github.moxisuki.blockprint.cat.app.feature.community.CommunityDetailRoute
 import io.github.moxisuki.blockprint.cat.app.feature.about.AboutRoute
-import io.github.moxisuki.blockprint.cat.app.feature.community.CommunityLoginRoute
 import io.github.moxisuki.blockprint.cat.app.feature.community.CommunityRoute
 import io.github.moxisuki.blockprint.cat.app.feature.detail.BlueprintDetailRoute
 import io.github.moxisuki.blockprint.cat.app.feature.debug.DebugRoute
@@ -94,7 +93,6 @@ fun AppShell() {
         AppRoute.TextToBlueprint -> stringResource(R.string.tool_text_to_blueprint)
         AppRoute.BlockPaint -> stringResource(R.string.tool_block_paint)
         AppRoute.Community -> stringResource(R.string.nav_title_community)
-        AppRoute.CommunityLogin -> ""
         is AppRoute.CommunityDetail -> stringResource(R.string.nav_title_detail_default)
         is AppRoute.BlueprintDetail -> stringResource(R.string.nav_title_detail_default)
         is AppRoute.Preview -> ""
@@ -149,7 +147,6 @@ fun AppShell() {
             }
             entry(AppRoute.Community) {
                 CommunityRoute(
-                    onLoginClick = { navigator.navigate(AppRoute.CommunityLogin) },
                     onBlueprintClick = { item ->
                         navigator.navigate(
                             AppRoute.CommunityDetail(
@@ -169,14 +166,13 @@ fun AppShell() {
                                 tags = item.tags,
                                 downloadable = item.downloadable,
                                 webUrl = item.webUrl,
+                                gameVersion = item.gameVersion,
+                                versionNumber = item.versionNumber,
+                                categoryName = item.categoryName,
+                                formatLabel = item.formatLabel,
                             ),
                         )
                     },
-                )
-            }
-            entry(AppRoute.CommunityLogin) {
-                CommunityLoginRoute(
-                    onLoginSuccess = { navigator.navigateBack() },
                 )
             }
             entry<AppRoute.CommunityDetail> { route ->
@@ -197,6 +193,17 @@ fun AppShell() {
                     tags = route.tags,
                     downloadable = route.downloadable,
                     webUrl = route.webUrl,
+                    gameVersion = route.gameVersion,
+                    versionNumber = route.versionNumber,
+                    categoryName = route.categoryName,
+                    formatLabel = route.formatLabel,
+                    onResourceNamespaceClick = { namespace ->
+                        navigator.navigate(
+                            AppRoute.ResourcePacks(
+                                initialQuery = namespace.takeUnless { it == "minecraft" },
+                            ),
+                        )
+                    },
                 )
             }
             entry<AppRoute.BlueprintDetail> { route ->
